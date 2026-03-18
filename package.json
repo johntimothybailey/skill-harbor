@@ -1,7 +1,17 @@
 {
   "name": "skill-harbor",
   "version": "0.1.0",
-  "description": "The Universal Skill Orchestrator for AI Agents",
+  "description": "A lightweight CLI for adding and updating skills across Agentic Editors",
+  "author": "John Bailey",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johntimothybailey/skill-harbor.git"
+  },
+  "homepage": "https://github.com/johntimothybailey/skill-harbor#readme",
+  "bugs": {
+    "url": "https://github.com/johntimothybailey/skill-harbor/issues"
+  },
   "type": "module",
   "main": "src/index.ts",
   "module": "src/index.ts",
