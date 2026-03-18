@@ -1,0 +1,28 @@
+{
+  "name": "skill-harbor",
+  "version": "0.1.0",
+  "description": "The Universal Skill Orchestrator for AI Agents",
+  "type": "module",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "bin": {
+    "skill-harbor": "src/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "test": "bun test",
+    "build": "bun build ./src/index.ts --target bun --outfile dist/skill-harbor"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "kleur": "^4.1.5",
+    "ora": "^7.0.1",
+    "@knoxgraeme/skillfish": "latest",
+    "@yamanu/skill-porter": "latest",
+    "fast-glob": "^3.3.2"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.3.3"
+  }
+}
