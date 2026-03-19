@@ -3,6 +3,7 @@ import { Command } from "commander";
 import kleur from "kleur";
 import { Registry, DEFAULT_BERTHS } from "./registry";
 import { Orchestrator } from "./orchestrator";
+import { HarborServer } from "./server";
 
 const program = new Command();
 
@@ -56,6 +57,20 @@ program
             process.exit(1);
         } finally {
             await orchestrator.cleanup();
+        }
+    });
+
+program
+    .command("up")
+    .description("Start the Skill Harbor Port Authority (local execution server).")
+    .option("-p, --port <number>", "Port to bind the SSE HTTP server to", "42721")
+    .option("--stdio", "Run the server in STDIO mode for direct MCP tool integration")
+    .action(async (options) => {
+        const server = new HarborServer(parseInt(options.port, 10));
+        if (options.stdio) {
+            await server.startStdio();
+        } else {
+            await server.startHttp();
         }
     });
 
