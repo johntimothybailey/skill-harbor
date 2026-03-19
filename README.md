@@ -5,7 +5,7 @@
 <h1 align="center">⚓ Skill Harbor</h1>
 
 <p align="center">
-  <strong>A lightweight CLI for adding and updating skills across Agentic Editors</strong>
+  <strong>The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team.</strong>
 </p>
 
 <p align="center">

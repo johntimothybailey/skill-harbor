@@ -9,8 +9,8 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .version("0.1.1")
-    .description(kleur.blue("The Universal Skill Orchestrator (Maritime Authority)"));
+    .version("0.2.0")
+    .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
 
 program
     .command("dock")

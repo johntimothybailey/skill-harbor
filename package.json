@@ -1,7 +1,7 @@
 {
   "name": "skill-harbor",
   "version": "0.2.0",
-  "description": "A lightweight CLI for adding and updating skills across Agentic Editors",
+  "description": "The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team.",
   "author": "John Bailey",
   "license": "MIT",
   "repository": {
