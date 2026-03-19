@@ -71,8 +71,52 @@ program
     .command("up")
     .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into local agent folders.")
     .action(async () => {
-        // TODO: Implement Workspace Sync Engine logic here
-        console.log(kleur.blue("Setting up the workspace engine..."));
+        const orchestrator = new Orchestrator();
+        const manifestManager = new ManifestManager();
+        try {
+            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Workspace Synchronization Initiated  ⚓\n"));
+            const manifest = await manifestManager.read();
+            const skills = Object.values(manifest.skills);
+
+            if (skills.length === 0) {
+                console.log(kleur.yellow("No skills found in harbor-manifest.json. Run 'dock' to add some.\n"));
+                return;
+            }
+
+            for (const skill of skills) {
+                console.log(kleur.magenta(`\nProcessing cargo: ${skill.name}`));
+                // 1. Fetch cargo to temp space
+                const cargoPath = await orchestrator.moor(skill.source);
+
+                // 2. Transpile for modern Agentic Editors (Claude)
+                const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
+
+                // 3. Inject directly into local workspace configuration contexts
+                const claudeDest = path.join(process.cwd(), ".claude", "skills", skill.name);
+                await orchestrator.berth(claudeProcessed, claudeDest);
+
+                const cursorDest = path.join(process.cwd(), ".cursor", "rules", skill.name);
+                await orchestrator.berth(claudeProcessed, cursorDest);
+
+                // 4. Update the Harbor's local cache registry
+                const harborDir = manifestManager.getHarborDir();
+                const localPath = path.join(harborDir, skill.name);
+                await orchestrator.berth(cargoPath, localPath);
+
+                // Mark success in manifest
+                await manifestManager.addSkill({
+                    ...skill,
+                    localPath: localPath
+                });
+            }
+
+            console.log(kleur.bold().green(`\n🎉  Workspace Sync complete. The fleet is fully loaded with Agent skills.\n`));
+        } catch (error: any) {
+            console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Synchronization failed: ${error.message}\n`));
+            process.exit(1);
+        } finally {
+            await orchestrator.cleanup();
+        }
     });
 
 program.parse(process.argv);
