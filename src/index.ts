@@ -3,7 +3,8 @@ import { Command } from "commander";
 import kleur from "kleur";
 import { Registry, DEFAULT_BERTHS } from "./registry";
 import { Orchestrator } from "./orchestrator";
-import { HarborServer } from "./server";
+import { ManifestManager } from "./manifest";
+import path from "node:path";
 
 const program = new Command();
 
@@ -13,45 +14,37 @@ program
     .description(kleur.blue("The Universal Skill Orchestrator (Maritime Authority)"));
 
 program
-    .command("berth")
+    .command("dock")
     .argument("<url>", "Skill URL to fetch (URL or git repository)")
-    .option("--to <agent>", "Target agent berth (all, claude, gemini, antigravity, codex)", "all")
-    .description("Fetch, transpile, and berth a skill into the specified AI agent directories.")
-    .action(async (url, options) => {
+    .description("Dock a new skill into the local harbor manifest.")
+    .action(async (url) => {
         const orchestrator = new Orchestrator();
+        const manifestManager = new ManifestManager();
 
         try {
-            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Admiralty Level Orchestration Initiated  ⚓\n"));
+            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Docking Operations Initiated  ⚓\n"));
 
-            // 1. Fetch cargo
+            await manifestManager.init();
+
+            // 1. Fetch cargo to temp space
             const cargoPath = await orchestrator.moor(url);
 
-            // 2. Determine targets
-            const targets = options.to === "all"
-                ? Object.keys(DEFAULT_BERTHS)
-                : [options.to];
+            // 2. Berth to local workspace
+            const harborDir = manifestManager.getHarborDir();
+            const urlParts = url.split("/");
+            const skillName = urlParts[urlParts.length - 1].replace(".git", "") || `skill-${Date.now()}`;
 
-            // 3. Check for workspace berth
-            const workspacePath = await Registry.detectWorkspaceBerth();
-            if (workspacePath) {
-                console.log(kleur.yellow(`📡  Local workspace detected. Cargo will also be symlinked to ${workspacePath}`));
-                targets.push("local-workspace");
-            }
+            const localPath = path.join(harborDir, skillName);
+            await orchestrator.berth(cargoPath, localPath);
 
-            // 4. Process and berth for each target
-            for (const agent of targets) {
-                if (agent === "local-workspace") {
-                    // Special case for local workspace symlinking
-                    await orchestrator.berth(cargoPath, workspacePath!);
-                    continue;
-                }
+            // 3. Update Manifest
+            await manifestManager.addSkill({
+                name: skillName,
+                source: url,
+                localPath: localPath,
+            });
 
-                const processedCargoPath = await orchestrator.processCargo(cargoPath, agent);
-                const berthPath = await Registry.getBerthPath(agent);
-                await orchestrator.berth(processedCargoPath, berthPath);
-            }
-
-            console.log(kleur.bold().green("\n🎉  All cargo successfully berthed. The harbor is secure.\n"));
+            console.log(kleur.bold().green(`\n🎉  Skill successfully docked! Added ${skillName} to harbor-manifest.json.\n`));
         } catch (error: any) {
             console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Major malfunction in harbor operations: ${error.message}\n`));
             process.exit(1);
@@ -62,16 +55,10 @@ program
 
 program
     .command("up")
-    .description("Start the Skill Harbor Port Authority (local execution server).")
-    .option("-p, --port <number>", "Port to bind the SSE HTTP server to", "42721")
-    .option("--stdio", "Run the server in STDIO mode for direct MCP tool integration")
-    .action(async (options) => {
-        const server = new HarborServer(parseInt(options.port, 10));
-        if (options.stdio) {
-            await server.startStdio();
-        } else {
-            await server.startHttp();
-        }
+    .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into local agent folders.")
+    .action(async () => {
+        // TODO: Implement Workspace Sync Engine logic here
+        console.log(kleur.blue("Setting up the workspace engine..."));
     });
 
 program.parse(process.argv);
