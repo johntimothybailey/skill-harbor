@@ -19,7 +19,7 @@ export class Orchestrator {
             await fs.mkdir(this.tempDir, { recursive: true });
 
             // We assume skillfish is available as a binary or via npx
-            const process = Bun.spawn(["bunx", "@knoxgraeme/skillfish", "fetch", url, "--out", this.tempDir]);
+            const process = Bun.spawn(["bunx", "skillfish", "fetch", url, "--out", this.tempDir]);
             const output = await new Response(process.stdout).text();
 
             if (process.exitCode !== 0) {
@@ -40,7 +40,7 @@ export class Orchestrator {
             const outputPath = path.join(this.tempDir, "processed", targetAgent);
             await fs.mkdir(outputPath, { recursive: true });
 
-            const process = Bun.spawn(["bunx", "@yamanu/skill-porter", "transpile", cargoPath, "--target", targetAgent, "--out", outputPath]);
+            const process = Bun.spawn(["bunx", "skill-porter", "transpile", cargoPath, "--target", targetAgent, "--out", outputPath]);
             const output = await new Response(process.stdout).text();
 
             if (process.exitCode !== 0) {

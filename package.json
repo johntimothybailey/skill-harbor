@@ -27,8 +27,8 @@
     "commander": "^11.1.0",
     "kleur": "^4.1.5",
     "ora": "^7.0.1",
-    "@knoxgraeme/skillfish": "latest",
-    "@yamanu/skill-porter": "latest",
+    "skillfish": "1.0.30",
+    "skill-porter": "github:jduncan-rva/skill-porter",
     "fast-glob": "^3.3.2"
   },
   "devDependencies": {
