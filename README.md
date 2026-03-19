@@ -26,7 +26,7 @@ Think of it as a specialized port for your AI capabilities: ensuring that every 
 
 Skill Harbor leverages powerful tools from the agent ecosystem to provide its functionality:
 
-- 🐬 **[skillfish](https://github.com/knoxgraeme/skillfish)**: For high-efficiency skill discovery and manifest management.
+- 🐬 **[skillfish](https://www.skill.fish)**: For high-efficiency skill discovery and manifest management.
 - 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter)**: A cross-platform AI converter used for importing and exporting skills between formats.
 
 ## 🚀 Usage
