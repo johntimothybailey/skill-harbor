@@ -10,7 +10,7 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .version("0.1.0")
+    .version("0.1.1")
     .description(kleur.blue("The Universal Skill Orchestrator (Maritime Authority)"));
 
 program
@@ -18,7 +18,6 @@ program
     .argument("<url>", "Skill URL to fetch (URL or git repository)")
     .description("Dock a new skill into the local harbor manifest.")
     .action(async (url) => {
-        const orchestrator = new Orchestrator();
         const manifestManager = new ManifestManager();
 
         try {
@@ -26,30 +25,45 @@ program
 
             await manifestManager.init();
 
-            // 1. Fetch cargo to temp space
-            const cargoPath = await orchestrator.moor(url);
-
-            // 2. Berth to local workspace
-            const harborDir = manifestManager.getHarborDir();
             const urlParts = url.split("/");
-            const skillName = urlParts[urlParts.length - 1].replace(".git", "") || `skill-${Date.now()}`;
-
-            const localPath = path.join(harborDir, skillName);
-            await orchestrator.berth(cargoPath, localPath);
+            let skillName = urlParts[urlParts.length - 1].replace(".git", "");
+            if (!skillName) skillName = `skill-${Date.now()}`;
 
             // 3. Update Manifest
             await manifestManager.addSkill({
                 name: skillName,
                 source: url,
-                localPath: localPath,
+                localPath: "", // Will be populated by the 'up' command
             });
 
-            console.log(kleur.bold().green(`\n🎉  Skill successfully docked! Added ${skillName} to harbor-manifest.json.\n`));
+            console.log(kleur.bold().green(`\n🎉  Skill successfully manifested! Added ${skillName} to harbor-manifest.json.`));
+            console.log(kleur.italic().gray(`Run 'skill-harbor up' to sync and activate this skill in your workspace.\n`));
         } catch (error: any) {
             console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Major malfunction in harbor operations: ${error.message}\n`));
             process.exit(1);
-        } finally {
-            await orchestrator.cleanup();
+        }
+    });
+
+program
+    .command("list")
+    .description("List all skills currently tracked in the local harbor manifest.")
+    .action(async () => {
+        const manifestManager = new ManifestManager();
+        try {
+            const manifest = await manifestManager.read();
+            const skills = Object.values(manifest.skills);
+
+            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Local Fleet Manifest  ⚓\n"));
+            if (skills.length === 0) {
+                console.log(kleur.yellow("No skills are currently docked in this workspace.\n"));
+            } else {
+                for (const skill of skills) {
+                    console.log(`${kleur.green("✓")} ${kleur.bold(skill.name)} - ${kleur.gray(skill.source)}`);
+                }
+                console.log();
+            }
+        } catch (error: any) {
+            console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Cannot read manifest. Run 'dock' first to initialize.\n`));
         }
     });
 
