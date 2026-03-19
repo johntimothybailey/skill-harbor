@@ -24,12 +24,17 @@ Instead of installing skills globally on a single machine or forcing developers 
 
 **It solves the massive problem of standardizing AI context across enterprise teams.**
 
-## 🛠️ The Tech Stack
+## 🛠️ The Architecture: How It Works
 
-Skill Harbor leverages powerful tools from the agent ecosystem:
+Skill Harbor is designed as the **Commander** of your Workspace Sync Engine. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
 
-- 🐬 **[skillfish](https://www.skill.fish)**: For high-efficiency skill discovery and manifest management.
-- 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter)**: Used as the transpilation engine to format skills perfectly for different AI agents.
+Here is exactly how the three tools relate to each other:
+
+- ⚓ **Skill Harbor (The General Contractor)**: The workspace package manager. It manages your project's `harbor-manifest.json`, tracks which skills belong where, and coordinates the synchronization loop when you run `skill-harbor up`.
+- 🐬 **[skillfish](https://www.skill.fish) (The Delivery Truck)**: When Harbor reads your manifest, it calls upon `skillfish` under the hood to locate the correct repository, download the raw markdown files, and bring them to your local temporary folder.
+- 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter) (The Carpenter)**: Raw markdown files from GitHub aren't always perfectly formatted for specific agents. Harbor passes the downloaded files to `skill-porter`, which handles the complex transpilation (e.g., formatting them strictly for Claude Code's prompt expectations or Cursor's rules system).
+
+> **In summary**: Skill Harbor holds the blueprints. It uses `skillfish` to deliver the raw lumber, and `skill-porter` to cut that lumber so it perfectly fits your local `.claude` or `.cursor` directories.
 
 ## 🚀 Usage
 
