@@ -63,9 +63,10 @@ skill-harbor list
 
 ## ⚖️ Alternatives
 
-For developers and organizations looking for a more **robust, enterprise-grade toolset** with advanced automation and cloud synchronization, we highly recommend checking out:
+For developers and organizations looking for a more **robust, enterprise-grade toolset** or specialized porting capabilities, we highly recommend checking out:
 
-👉 **[uberskills.dev](https://uberskills.dev/)**
+- 🚀 **[agent-skill-porter](https://www.npmjs.com/package/agent-skill-porter)**: A powerful, zero-config lifecycle management CLI for AI agent skills.
+- 👉 **[uberskills.dev](https://uberskills.dev/)**
 
 ---
 
