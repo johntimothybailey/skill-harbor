@@ -1,6 +1,6 @@
 {
   "name": "skill-harbor",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A lightweight CLI for adding and updating skills across Agentic Editors",
   "author": "John Bailey",
   "license": "MIT",
