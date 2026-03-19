@@ -71,10 +71,14 @@ skill-harbor up
 
 ## ⚖️ Alternatives
 
-For developers and organizations looking for a more **robust, enterprise-grade toolset** or specialized porting capabilities, we highly recommend checking out:
+While Skill Harbor is built specifically for **team-wide context standardization** via our manifest system, there are other fantastic tools in the ecosystem you might prefer depending on your workflow:
 
 - 🚀 **[agent-skill-porter](https://www.npmjs.com/package/agent-skill-porter)**: A powerful, zero-config lifecycle management CLI for AI agent skills.
-- 👉 **[uberskills.dev](https://uberskills.dev/)**
+    - **How it differs**: Focuses on an all-in-one standalone user experience that doesn't require project-level manifests.
+    - **Why use it**: Choose this if you are an individual developer who wants a single, unified tool to handle skill porting without managing a `harbor-manifest.json`.
+- 👉 **[uberskills.dev](https://uberskills.dev/)**: The enterprise-grade standard for managed AI capabilities.
+    - **How it differs**: Provides a full-managed cloud platform with advanced synchronization, automation, and organizational controls.
+    - **Why use it**: Choose this if you are a large team or organization that requires centralized, cloud-synced context rules with enterprise-level security and management features.
 
 ---
 
