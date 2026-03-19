@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
 import kleur from "kleur";
-import { Registry, DEFAULT_BERTHS } from "./registry";
 import { Orchestrator } from "./orchestrator";
 import { ManifestManager } from "./manifest";
 import path from "node:path";

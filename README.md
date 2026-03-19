@@ -18,16 +18,18 @@
 
 ## 🌊 Overview
 
-**Skill Harbor** is a lightweight command-line interface (CLI) built for AI agent developers. It provides a simple, unified way to **add**, **update**, and **manage** skills across various Agentic Editors and environments. 
+**Skill Harbor** is a lightweight "Package Manager for Agent Context"—a powerful **Workspace Sync Engine** built for AI agent developers.
 
-Think of it as a specialized port for your AI capabilities: ensuring that every "skill container" is properly docked, registered, and ready for deployment.
+Instead of installing skills globally on a single machine or forcing developers to configure MCP servers, Skill Harbor manages a project-level `harbor-manifest.json`. When a developer clones your repo, they simply run `skill-harbor up`, and your specifically chosen skills are instantly fetched, transpiled, and injected natively into their local agent's configuration folders.
+
+**It solves the massive problem of standardizing AI context across enterprise teams.**
 
 ## 🛠️ The Tech Stack
 
-Skill Harbor leverages powerful tools from the agent ecosystem to provide its functionality:
+Skill Harbor leverages powerful tools from the agent ecosystem:
 
 - 🐬 **[skillfish](https://www.skill.fish)**: For high-efficiency skill discovery and manifest management.
-- 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter)**: A cross-platform AI converter used for importing and exporting skills between formats.
+- 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter)**: Used as the transpilation engine to format skills perfectly for different AI agents.
 
 ## 🚀 Usage
 
@@ -41,25 +43,26 @@ bun add -g skill-harbor
 
 ### Basic Commands
 
-Once installed, you can use the `skill-harbor` command to manage your local skill environment:
+Once installed, use `skill-harbor` to standardize your project's AI capabilities:
 
 ```bash
-# Register a new skill from a local path or URL
-skill-harbor dock <path-to-skill>
+# Add a skill to the current project's manifest (like standardizing your team's React rules)
+skill-harbor dock <skill-url-or-name>
 
-# Update an existing skill to its latest version
-skill-harbor refresh <skill-name>
-
-# List all available skills in the current harbor
+# List all skills required by the current project workspace
 skill-harbor list
+
+# The Magic Command: Sync the workspace. 
+# Fetches all manifested skills, transpiles them, and injects them seamlessly into .claude/skills and .cursor/rules.
+skill-harbor up
 ```
 
 ## ✨ Features
 
-- 🚢 **Lightweight CLI**: Fast, minimal, and focused on developers.
-- 🏗️ **Cross-Platform**: Powered by `skill-porter` for broad tool compatibility.
-- ⚡ **Bun Optimized**: Native support for Bun scripts and environments.
-- 🔌 **Agentic-Ready**: Designed to integrate directly with modern agent-based editors.
+- 🚢 **Workspace Sync Engine**: Standardize AI context rules for your entire repo.
+- 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert Claude Code skills to Cursor rules seamlessly.
+- ⚡ **Zero Friction**: Keeps skills as highly effective raw markdown (injected instantly into the agent's brain), without the overhead of MCP servers.
+- 🔌 **Idempotent**: Run `skill-harbor up` repeatedly to pull down the latest transpiled skill updates safely.
 
 ## ⚖️ Alternatives
 
