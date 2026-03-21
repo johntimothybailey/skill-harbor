@@ -9,7 +9,7 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .version("0.2.0")
+    .version("0.2.1")
     .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
 
 program

@@ -18,12 +18,32 @@ export class Orchestrator {
         try {
             await fs.mkdir(this.tempDir, { recursive: true });
 
-            // We assume skillfish is available as a binary or via npx
-            const process = Bun.spawn(["bunx", "skillfish", "fetch", url, "--out", this.tempDir]);
+            // Detect if it's a local path
+            if (url.startsWith('file://') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
+                const localPath = url.replace('file://', '');
+
+                // Ensure local path exists
+                try {
+                    await fs.access(localPath);
+                } catch {
+                    throw new Error(`Local path does not exist: ${localPath}`);
+                }
+
+                // Copy contents to temp dir
+                await fs.cp(localPath, this.tempDir, { recursive: true });
+                spinner.succeed(kleur.green("Local skill cargo successfully moored."));
+                return this.tempDir;
+            }
+
+            // Otherwise assume github or valid degit/git url
+            // Use degit to download the repository or subdirectory without git history
+            const process = Bun.spawn(["bunx", "degit", url, this.tempDir, "--force"]);
             const output = await new Response(process.stdout).text();
+            const stderr = await new Response(process.stderr).text();
 
             if (process.exitCode !== 0) {
-                throw new Error(`Mooring failed: ${output}`);
+                // degit failed, fallback to skillfish if fetch was added in future, or just throw
+                throw new Error(`Mooring failed: ${stderr || output}`);
             }
 
             spinner.succeed(kleur.green("Skill cargo successfully moored locally."));
