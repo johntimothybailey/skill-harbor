@@ -69,8 +69,8 @@ program
 program
     .command("up")
     .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into local agent folders.")
-    .action(async () => {
-        const orchestrator = new Orchestrator();
+    .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
+    .action(async (options: any) => {
         const manifestManager = new ManifestManager();
         try {
             console.log(kleur.bold().blue("\n⚓  SkillHarbor: Workspace Synchronization Initiated  ⚓\n"));
@@ -82,39 +82,61 @@ program
                 return;
             }
 
-            for (const skill of skills) {
-                console.log(kleur.magenta(`\nProcessing cargo: ${skill.name}`));
-                // 1. Fetch cargo to temp space
-                const cargoPath = await orchestrator.moor(skill.source);
+            const syncPromises = skills.map(async (skill) => {
+                const orchestrator = new Orchestrator({ debug: options.debug });
+                try {
+                    console.log(kleur.magenta(`\nProcessing cargo: ${skill.name}`));
+                    // 1. Fetch cargo to temp space
+                    const cargoPath = await orchestrator.moor(skill.source);
 
-                // 2. Transpile for modern Agentic Editors (Claude)
-                const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
+                    // 2. Transpile for modern Agentic Editors (Claude)
+                    const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
-                // 3. Inject directly into local workspace configuration contexts
-                const claudeDest = path.join(process.cwd(), ".claude", "skills", skill.name);
-                await orchestrator.berth(claudeProcessed, claudeDest);
+                    // 3. Inject directly into local workspace configuration contexts
+                    const claudeDest = path.join(process.cwd(), ".claude", "skills", skill.name);
+                    const claudeSuccess = await orchestrator.berth(claudeProcessed, claudeDest);
+                    if (!claudeSuccess) {
+                        // Fallback to raw cargo if transpile did nothing (common for same-platform)
+                        await orchestrator.berth(cargoPath, claudeDest);
+                    }
 
-                const cursorDest = path.join(process.cwd(), ".cursor", "rules", skill.name);
-                await orchestrator.berth(claudeProcessed, cursorDest);
+                    const cursorDest = path.join(process.cwd(), ".cursor", "rules", skill.name);
+                    const cursorSuccess = await orchestrator.berth(claudeProcessed, cursorDest);
+                    if (!cursorSuccess) {
+                        await orchestrator.berth(cargoPath, cursorDest);
+                    }
 
-                // 4. Update the Harbor's local cache registry
-                const harborDir = manifestManager.getHarborDir();
-                const localPath = path.join(harborDir, skill.name);
-                await orchestrator.berth(cargoPath, localPath);
+                    // --- NEW: Antigravity (Gemini) Support ---
+                    const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
+                    const antigravityDest = path.join(process.cwd(), ".antigravity", "skills", skill.name);
+                    const antigravitySuccess = await orchestrator.berth(geminiProcessed, antigravityDest);
+                    if (!antigravitySuccess) {
+                        await orchestrator.berth(cargoPath, antigravityDest);
+                    }
 
-                // Mark success in manifest
-                await manifestManager.addSkill({
-                    ...skill,
-                    localPath: localPath
-                });
-            }
+                    // 4. Update the Harbor's local cache registry
+                    const harborDir = manifestManager.getHarborDir();
+                    const localPath = path.join(harborDir, skill.name);
+                    await orchestrator.berth(cargoPath, localPath);
+
+                    // Mark success in manifest
+                    await manifestManager.addSkill({
+                        ...skill,
+                        localPath: localPath
+                    });
+                } finally {
+                    await orchestrator.cleanup();
+                }
+            });
+
+            await Promise.all(syncPromises);
 
             console.log(kleur.bold().green(`\n🎉  Workspace Sync complete. The fleet is fully loaded with Agent skills.\n`));
         } catch (error: any) {
             console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Synchronization failed: ${error.message}\n`));
+            console.error(kleur.gray(JSON.stringify(error, null, 2)));
+            console.error(kleur.red(`\n ${error.stack} \n`));
             process.exit(1);
-        } finally {
-            await orchestrator.cleanup();
         }
     });
 
