@@ -50,6 +50,8 @@ export class ManifestManager {
 
     public async addSkill(entry: SkillEntry): Promise<void> {
         const manifest = await this.read();
+        if (!manifest.dependencies) manifest.dependencies = {};
+        if (!manifest.skills) manifest.skills = {};
         manifest.dependencies[entry.name] = entry.source;
         manifest.skills[entry.name] = entry;
         await this.write(manifest);
