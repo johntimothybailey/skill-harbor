@@ -176,6 +176,116 @@ export class Orchestrator {
         }
     }
 
+    async purgeTarget(targetPath: string, label: string): Promise<void> {
+        if (!this.spinnies.pick(this.spinnerId)) {
+            this.spinnies.add(this.spinnerId, { text: kleur.yellow(`[${this.skillName}] Purging ${label} berth...`) });
+        } else {
+            this.spinnies.update(this.spinnerId, { text: kleur.yellow(`[${this.skillName}] Purging ${label} berth...`) });
+        }
+        try {
+            await fs.rm(targetPath, { recursive: true, force: true });
+            await fs.mkdir(targetPath, { recursive: true });
+        } catch (error: any) {
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Purge incident at ${label}: ${error.message}`) });
+            throw error;
+        }
+    }
+
+    async stowTarget(targetPath: string, stowagePath: string, label: string): Promise<void> {
+        if (!this.spinnies.pick(this.spinnerId)) {
+            this.spinnies.add(this.spinnerId, { text: kleur.yellow(`[${this.skillName}] Stowing ${label} context...`) });
+        } else {
+            this.spinnies.update(this.spinnerId, { text: kleur.yellow(`[${this.skillName}] Stowing ${label} context...`) });
+        }
+
+        try {
+            if (!(await this.exists(targetPath))) return;
+
+            // Ensure stowage parent exists
+            await fs.mkdir(path.dirname(stowagePath), { recursive: true });
+            
+            // If stowage already exists, remove it first (single-level backup)
+            await fs.rm(stowagePath, { recursive: true, force: true });
+            
+            // Move target to stowage
+            await fs.rename(targetPath, stowagePath);
+            
+            // Re-create target for fresh berthing
+            await fs.mkdir(targetPath, { recursive: true });
+        } catch (error: any) {
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Stowage failure at ${label}: ${error.message}`) });
+            throw error;
+        }
+    }
+
+    async unstowTarget(stowagePath: string, targetPath: string, label: string): Promise<void> {
+        if (!this.spinnies.pick(this.spinnerId)) {
+            this.spinnies.add(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Unstowing ${label} context...`) });
+        } else {
+            this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Unstowing ${label} context...`) });
+        }
+
+        try {
+            if (!(await this.exists(stowagePath))) {
+                this.spinnies.update(this.spinnerId, { text: kleur.gray(`[${this.skillName}] No stowage found for ${label}. Skipping.`) });
+                return;
+            }
+
+            // Clear target if it exists (to avoid merge conflicts)
+            await fs.rm(targetPath, { recursive: true, force: true });
+            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+            // Restore from stowage
+            await fs.rename(stowagePath, targetPath);
+        } catch (error: any) {
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Unstowage failure at ${label}: ${error.message}`) });
+            throw error;
+        }
+    }
+
+    async getMetadata(targetPath: string): Promise<{ name: string; description: string; triggers: string[] } | null> {
+        const skillPath = path.join(targetPath, "SKILL.md");
+        if (!(await this.exists(skillPath))) return null;
+
+        try {
+            const content = await fs.readFile(skillPath, "utf-8");
+            const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            
+            if (!frontmatterMatch) return null;
+
+            const yaml = frontmatterMatch[1];
+            const metadata: any = {
+                name: this.skillName,
+                description: "No description provided.",
+                triggers: []
+            };
+
+            // Simple regex-based YAML parsing for name/description/triggers
+            const nameMatch = yaml.match(/^name:\s*(.*)$/m);
+            const descMatch = yaml.match(/^description:\s*(.*)$/m);
+            const triggersMatch = yaml.match(/^triggers:\s*\[(.*)\]$/m);
+
+            if (nameMatch) metadata.name = nameMatch[1].trim();
+            if (descMatch) metadata.description = descMatch[1].trim();
+            if (triggersMatch) {
+                metadata.triggers = triggersMatch[1].split(",").map(t => t.trim().replace(/^['"](.*)['"]$/, "$1"));
+            }
+
+            return metadata;
+        } catch {
+            return null;
+        }
+    }
+
+    private async exists(path: string): Promise<boolean> {
+        try {
+            await fs.access(path);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     public finalize(message: string): void {
         this.spinnies.succeed(this.spinnerId, { text: kleur.bold().green(`[${this.skillName}] ${message}`) });
     }

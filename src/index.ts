@@ -7,6 +7,7 @@ import path from "node:path";
 import os from "node:os";
 import Spinnies from "spinnies";
 import fs from "node:fs/promises";
+import { printHeader, printSuccess, printError, printInfo, printLighthouseSnippet } from "./ui";
 
 const program = new Command();
 
@@ -35,12 +36,16 @@ program
     .command("dock")
     .argument("<url>", "Skill URL to fetch (URL or git repository)")
     .description("Dock a new skill into the harbor manifest.")
+    .addHelpText("after", `
+Why: Registers a skill's source so all teammates can sync it.
+Use Case: Run this when you find a new specialized skill (like 'react-query-rules') that you want the whole team to use.`)
     .option("-g, --global", "Dock into the global manifest at ~/.harbor/")
-    .action(async (url, options) => {
-        const manifestManager = getManifestManager(options);
+    .action(async (url, options, command) => {
+        const opts = command.opts();
+        const manifestManager = getManifestManager(opts);
 
         try {
-            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Docking Operations Initiated  ⚓\n"));
+            printHeader("Docking Operations Initiated");
 
             await manifestManager.init();
 
@@ -55,10 +60,9 @@ program
                 localPath: "", // Will be populated by the 'up' command
             });
 
-            console.log(kleur.bold().green(`\n🎉  Skill successfully manifested! Added ${skillName} to harbor-manifest.json.`));
-            console.log(kleur.italic().gray(`Run 'skill-harbor up' to sync and activate this skill in your workspace.\n`));
+            printSuccess(`Skill successfully manifested! Added ${skillName}.`);
         } catch (error: any) {
-            console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Major malfunction in harbor operations: ${error.message}\n`));
+            printError(`Major malfunction in harbor operations: ${error.message}`);
             process.exit(1);
         }
     });
@@ -66,45 +70,202 @@ program
 program
     .command("list")
     .description("List all skills currently tracked in the harbor manifest.")
+    .addHelpText("after", `
+Why: Provides a quick overview of what's currently in your project's 'Fleet'.
+Use Case: Check this to see if a specific skill is already tracked before trying to dock it.`)
     .option("-g, --global", "List skills from the global manifest at ~/.harbor/")
-    .action(async (options) => {
-        const manifestManager = getManifestManager(options);
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const manifestManager = getManifestManager(opts);
         try {
             const manifest = await manifestManager.read();
             const skills = Object.values(manifest.skills);
 
-            console.log(kleur.bold().blue(`\n⚓  SkillHarbor: ${options.global ? "Global" : "Local"} Fleet Manifest  ⚓\n`));
+            printHeader(`${options.global ? "Global" : "Local"} Fleet Manifest`);
             if (skills.length === 0) {
-                console.log(kleur.yellow("No skills are currently docked in this workspace.\n"));
+                console.log(kleur.yellow("  No skills are currently docked in this workspace.\n"));
             } else {
                 for (const skill of skills) {
-                    console.log(`${kleur.green("✓")} ${kleur.bold(skill.name)} - ${kleur.gray(skill.source)}`);
+                    console.log(`  ${kleur.green("✓")} ${kleur.bold(skill.name)} - ${kleur.gray(skill.source)}`);
                 }
                 console.log();
             }
         } catch (error: any) {
-            console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Cannot read manifest. Run 'dock' first to initialize.\n`));
+            printError(`Cannot read manifest. Run 'dock' first to initialize.`);
+        }
+    });
+
+program
+    .command("undock")
+    .description("Clear agent skill folders to remove project or global context.")
+    .addHelpText("after", `
+Why: Forcefully removes agent context to prevent 'skill leakage' between projects.
+Use Case: Use this if an agent is getting confused by old skills that are no longer in the manifest.`)
+    .option("-g, --global", "Target user-level agent folders (e.g. ~/.claude)")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const baseDir = opts.global ? os.homedir() : process.cwd();
+        const spinnies = new Spinnies();
+        const orchestrator = new Orchestrator({ 
+            skillName: "Undock", 
+            spinnies,
+        });
+
+        try {
+            printHeader("Undocking Operations Initiated");
+            
+            const targets = [
+                { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
+                { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
+                { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
+            ];
+
+            if (options.global) {
+                targets.push({ path: path.join(os.homedir(), ".rulesync", "skills"), label: "Rulesync" });
+            }
+
+            for (const target of targets) {
+                if (await exists(target.path)) {
+                    await orchestrator.purgeTarget(target.path, target.label);
+                }
+            }
+
+            orchestrator.finalize("All targeted agent berths have been cleared.");
+            printSuccess(`Undock complete. ${opts.global ? "Global" : "Local"} workspace is clean.`);
+        } catch (error: any) {
+            printError(`Undock failed: ${error.message}`);
+            process.exit(1);
+        }
+    });
+
+program
+    .command("stow")
+    .description("Temporarily move existing skills from agent berths to the harbor stowage area.")
+    .addHelpText("after", `
+Why: Safely clears the deck without deleting files.
+Use Case: You want to work on a clean branch without your personal global skills, but you want to restore them later.`)
+    .option("-g, --global", "Stow user-level agent skills (e.g. ~/.claude)")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const baseDir = opts.global ? os.homedir() : process.cwd();
+        const stowageBase = path.join(baseDir, opts.global ? ".harbor" : ".harbor", "stowage");
+        const spinnies = new Spinnies();
+        const orchestrator = new Orchestrator({ skillName: "Stow", spinnies });
+
+        try {
+            printHeader("Stowing Agent Context");
+            
+            const targets = [
+                { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
+                { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
+                { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
+            ];
+
+            if (opts.global) {
+                targets.push({ path: path.join(os.homedir(), ".rulesync", "skills"), label: "Rulesync" });
+            }
+
+            for (const target of targets) {
+                const stowPath = path.join(stowageBase, target.label.toLowerCase());
+                await orchestrator.stowTarget(target.path, stowPath, target.label);
+            }
+
+            orchestrator.finalize("All agent context has been stowed safely.");
+            printSuccess(`Stow complete. Run 'unstow' to restore your environment later.`);
+        } catch (error: any) {
+            printError(`Stowage failed: ${error.message}`);
+            process.exit(1);
+        }
+    });
+
+program
+    .command("unstow")
+    .description("Restore stowed skills from the harbor stowage area back to active agent berths.")
+    .addHelpText("after", `
+Why: Restores your environment to its original state (Unlocks the Harbor).
+Use Case: Run this after finishing a 'Lockdown' session to get your personal skills back.`)
+    .option("-g, --global", "Restore user-level agent skills")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const baseDir = opts.global ? os.homedir() : process.cwd();
+        const stowageBase = path.join(baseDir, opts.global ? ".harbor" : ".harbor", "stowage");
+        const spinnies = new Spinnies();
+        const orchestrator = new Orchestrator({ skillName: "Unstow", spinnies });
+
+        try {
+            printHeader("Restoring Agent Context (Unlock)");
+            
+            const targets = [
+                { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
+                { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
+                { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
+            ];
+
+            if (opts.global) {
+                targets.push({ path: path.join(os.homedir(), ".rulesync", "skills"), label: "Rulesync" });
+            }
+
+            for (const target of targets) {
+                const stowPath = path.join(stowageBase, target.label.toLowerCase());
+                await orchestrator.unstowTarget(stowPath, target.path, target.label);
+            }
+
+            orchestrator.finalize("All agent context has been restored.");
+            printSuccess(`Unstow complete. Your harbor is fully unlocked.`);
+        } catch (error: any) {
+            printError(`Unstowage failed: ${error.message}`);
+            process.exit(1);
         }
     });
 
 program
     .command("up")
     .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into agent folders.")
+    .addHelpText("after", `
+Why: Standardizes your team's AI agent behavior across the entire project.
+Use Case: Run this after cloning a repo or when a teammate adds new skills to the harbor-manifest.json.`)
     .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
     .option("-g, --global", "Sync the global manifest into user-level agent folders")
-    .action(async (options: any) => {
-        const manifestManager = getManifestManager(options);
-        const baseDir = options.global ? os.homedir() : process.cwd();
+    .option("-l, --lockdown", "Clear target agent folders before berthing to ensure ONLY manifest skills exist")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const manifestManager = getManifestManager(opts);
+        const baseDir = opts.global ? os.homedir() : process.cwd();
         const spinnies = new Spinnies();
 
         try {
-            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Workspace Synchronization Initiated  ⚓\n"));
+            printHeader("Workspace Synchronization Initiated");
             const manifest = await manifestManager.read();
             const skills = Object.values(manifest.skills);
 
             if (skills.length === 0) {
-                console.log(kleur.yellow("No skills found in harbor-manifest.json. Run 'dock' to add some.\n"));
+                printInfo("Empty Manifest", "No skills found in harbor-manifest.json. Run 'dock' to add some.");
                 return;
+            }
+
+            // --- Lockdown Operation (Non-Destructive Stow) ---
+            if (opts.lockdown) {
+                const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
+                const stowageBase = path.join(baseDir, opts.global ? ".harbor" : ".harbor", "stowage");
+                
+                const targets = [
+                    { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
+                    { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
+                    { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
+                ];
+                
+                const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
+                if (await exists(rulesyncBase)) {
+                    targets.push({ path: rulesyncBase, label: "Rulesync" });
+                }
+
+                for (const target of targets) {
+                    if (opts.global || await exists(path.dirname(target.path))) {
+                        const stowPath = path.join(stowageBase, target.label.toLowerCase());
+                        await orchestrator.stowTarget(target.path, stowPath, target.label);
+                    }
+                }
+                orchestrator.finalize("Lockdown complete. Workspace context stowed.");
             }
 
             const syncPromises = skills.map(async (skill) => {
@@ -132,10 +293,10 @@ program
                     const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
                     // 3. Inject directly into configuration contexts
-                    // --- Dynamic Target Detection ---
                     const targets = [];
                     
                     const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
+                    const claudeBase = path.join(baseDir, ".claude", "skills");
                     if (options.global || await exists(path.join(baseDir, ".claude"))) {
                         const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
                         if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
@@ -143,6 +304,7 @@ program
                     }
 
                     const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
+                    const cursorBase = path.join(baseDir, ".cursor", "rules");
                     if (options.global || await exists(path.join(baseDir, ".cursor"))) {
                         const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
                         if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
@@ -150,6 +312,7 @@ program
                     }
 
                     const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
+                    const antigravityBase = path.join(baseDir, ".antigravity", "skills");
                     if (options.global || await exists(path.join(baseDir, ".antigravity"))) {
                         const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
                         const success = await orchestrator.berth(geminiProcessed, antigravityDest, "Antigravity");
@@ -184,11 +347,115 @@ program
 
             await Promise.all(syncPromises);
 
-            console.log(kleur.bold().green(`\n🎉  Workspace Sync complete. The fleet is fully loaded with Agent skills.\n`));
+            // --- Lighthouse: Automated Master Fleet Manifest ---
+            console.log(kleur.yellow("\n  💡  Shining the Lighthouse..."));
+            const metadataList = [];
+            for (const skill of skills) {
+                const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
+                // REUSE spinnies from the main command context
+                const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
+                const meta = await orchestrator.getMetadata(cachedPath);
+                if (meta) {
+                    metadataList.push(meta);
+                }
+            }
+
+            if (metadataList.length > 0) {
+                const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agentic skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
+                
+                const fleetIntelligencePath = "000-fleet-intelligence.md";
+                const targets = [
+                    path.join(baseDir, ".claude", "skills", fleetIntelligencePath),
+                    path.join(baseDir, ".cursor", "rules", fleetIntelligencePath),
+                    path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath)
+                ];
+
+                for (const target of targets) {
+                    if (await exists(path.dirname(target))) {
+                        await fs.writeFile(target, manifestContent);
+                    }
+                }
+                console.log(kleur.green("  ✓ [Lighthouse] Master Fleet Manifest berthed to all active agent folders.\n"));
+            }
+
+            printSuccess(`Workspace Sync complete. The fleet is fully loaded with Agent skills.`);
         } catch (error: any) {
-            console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Synchronization failed: ${error.message}\n`));
+            printError(`Synchronization failed: ${error.message}`);
             process.exit(1);
         }
     });
 
-program.parse(process.argv);
+program
+    .command("check")
+    .description("Verify that all berthed skills have valid SKILL.md metadata (Lighthouse Health).")
+    .addHelpText("after", `
+Why: Ensures your skills are actually 'discoverable' by AI agents.
+Use Case: Run this if an agent isn't 'seeing' a skill you think is berthed.`)
+    .option("-g, --global", "Check skills in the global manifest")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const manifestManager = getManifestManager(opts);
+        const spinnies = new Spinnies();
+
+        try {
+            printHeader("Lighthouse Health Check");
+            const manifest = await manifestManager.read();
+            const skills = Object.values(manifest.skills);
+
+            for (const skill of skills) {
+                const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
+                const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
+                
+                spinnies.add(`check-${skill.name}`, { text: `Checking ${skill.name}...` });
+                const meta = await orchestrator.getMetadata(cachedPath);
+
+                if (meta && meta.description && meta.description !== "No description provided.") {
+                    spinnies.succeed(`check-${skill.name}`, { text: kleur.green(`[${skill.name}] Discoverable: ${meta.description.substring(0, 50)}...`) });
+                } else {
+                    spinnies.fail(`check-${skill.name}`, { text: kleur.red(`[${skill.name}] Blind: Missing or invalid SKILL.md metadata.`) });
+                }
+            }
+        } catch (error: any) {
+            printError(`Check failed: ${error.message}`);
+        }
+    });
+
+program
+    .command("lighthouse")
+    .description("Generate a System Prompt Snippet representing your fleet's intelligence.")
+    .addHelpText("after", `
+Why: Gives you a concise block of text to 'prime' any AI agent with your fleet's capabilities.
+Use Case: Copy the output of this command into a custom instructions field or a system prompt.`)
+    .option("-g, --global", "Generate snippet for global manifest skills")
+    .action(async (options, command) => {
+        const opts = command.opts();
+        const manifestManager = getManifestManager(opts);
+        const spinnies = new Spinnies();
+
+        try {
+            const manifest = await manifestManager.read();
+            const skills = Object.values(manifest.skills);
+            const metadataList = [];
+
+            for (const skill of skills) {
+                const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
+                const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
+                const meta = await orchestrator.getMetadata(cachedPath);
+                if (meta) metadataList.push(meta);
+            }
+
+            let snippet = `${kleur.yellow("Available specialized skills in this workspace:")}\n`;
+            for (const meta of metadataList) {
+                snippet += `\n- ${kleur.bold(meta.name)}: ${meta.description}`;
+                if (meta.triggers.length > 0) {
+                    snippet += `\n  Triggers: ${meta.triggers.join(", ")}`;
+                }
+            }
+            
+            printLighthouseSnippet(snippet);
+        } catch (error: any) {
+            printError(`Lighthouse failed: ${error.message}`);
+        }
+    });
+
+await program.parseAsync(process.argv);

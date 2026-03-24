@@ -41,27 +41,44 @@ Here is exactly how the three tools relate to each other:
 
 ### Installation
 
-Install globally or as a project dependency using Bun:
+## ⚓ The Harbor Command Suite
 
-```bash
-bun add -g skill-harbor
-```
+| Command | Why it exists | Typical Use Case |
+| :--- | :--- | :--- |
+| **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
+| **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
+| **`up --lockdown`** | Enforces a strict, manifest-only environment. | Switching from a personal project to a client project with strict rules. |
+| **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |
+| **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
+| **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
+| **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
+| **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
+| **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
 
-### Basic Commands
+### 🔐 Governance & Lockdown
+Enforce team-wide consistency by isolating your agent's context.
 
-Once installed, use `skill-harbor` to standardize your project's AI capabilities:
+*   **Lockdown Mode**: Sync and stow. Moves current agent context to stowage before berthing manifest skills.
+    ```bash
+    skill-harbor up --lockdown
+    ```
+*   **Unstow (Unlock)**: Restore your original environment.
+    ```bash
+    skill-harbor unstow
+    ```
 
-```bash
-# Add a skill to the current project's manifest (like standardizing your team's React rules)
-skill-harbor dock <skill-url-or-name>
+### 💡 Lighthouse & Intelligence
+Coordinate Skill Harbor with the agent's internal routing logic.
 
-# List all skills required by the current project workspace
-skill-harbor list
+*   **Master Fleet Manifest**: Every time you run `up`, Skill Harbor automatically berths a `000-fleet-intelligence.md` file into your agent's folders. This acts as a "Zero-Tier" map that help agents discover your skills instantly.
+*   **Lighthouse Snippet**: Generate a prompt to prime your agent.
+    ```bash
+    skill-harbor lighthouse
+    ```
 
-# The Magic Command: Sync the workspace. 
-# Fetches all manifested skills, transpiles them, and injects them seamlessly into .claude/skills and .cursor/rules.
-skill-harbor up
-```
+### 🌍 Global Fleet
+Manage skills at the user level (e.g., for custom keybindings or personal utilities).
+Use the `-g` or `--global` flag with any command.
 
 ## ✨ Features
 
