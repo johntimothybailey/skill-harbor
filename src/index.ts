@@ -5,12 +5,23 @@ import { Orchestrator } from "./orchestrator";
 import { ManifestManager } from "./manifest";
 import path from "node:path";
 import os from "node:os";
+import Spinnies from "spinnies";
+import fs from "node:fs/promises";
 
 const program = new Command();
 
+async function exists(path: string): Promise<boolean> {
+    try {
+        await fs.access(path);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 program
     .name("skill-harbor")
-    .version("0.2.1")
+    .version("0.4.0")
     .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
 
 function getManifestManager(options: any) {
@@ -84,6 +95,8 @@ program
     .action(async (options: any) => {
         const manifestManager = getManifestManager(options);
         const baseDir = options.global ? os.homedir() : process.cwd();
+        const spinnies = new Spinnies();
+
         try {
             console.log(kleur.bold().blue("\n⚓  SkillHarbor: Workspace Synchronization Initiated  ⚓\n"));
             const manifest = await manifestManager.read();
@@ -95,47 +108,75 @@ program
             }
 
             const syncPromises = skills.map(async (skill) => {
-                const orchestrator = new Orchestrator({ debug: options.debug });
+                const orchestrator = new Orchestrator({ 
+                    skillName: skill.name, 
+                    spinnies, 
+                    debug: options.debug 
+                });
+                
                 try {
-                    console.log(kleur.magenta(`\nProcessing cargo: ${skill.name}`));
-                    // 1. Fetch cargo to temp space
-                    const cargoPath = await orchestrator.moor(skill.source);
+                    // 1. Deduplication / Cache Check
+                    let cargoPath = "";
+                    const harborDir = manifestManager.getHarborDir();
+                    const cachedPath = path.join(harborDir, skill.name);
+
+                    if (await exists(cachedPath)) {
+                        cargoPath = cachedPath;
+                        spinnies.add(`sync-${skill.name}`, { text: kleur.cyan(`[${skill.name}] Using cached cargo from harbor.`) });
+                    } else {
+                        // Fetch cargo to temp space
+                        cargoPath = await orchestrator.moor(skill.source);
+                    }
 
                     // 2. Transpile for modern Agentic Editors (Claude)
                     const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
                     // 3. Inject directly into configuration contexts
+                    // --- Dynamic Target Detection ---
+                    const targets = [];
+                    
                     const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
-                    const claudeSuccess = await orchestrator.berth(claudeProcessed, claudeDest);
-                    if (!claudeSuccess) {
-                        // Fallback to raw cargo if transpile did nothing (common for same-platform)
-                        await orchestrator.berth(cargoPath, claudeDest);
+                    if (options.global || await exists(path.join(baseDir, ".claude"))) {
+                        const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
+                        if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
+                        targets.push("Claude");
                     }
 
                     const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
-                    const cursorSuccess = await orchestrator.berth(claudeProcessed, cursorDest);
-                    if (!cursorSuccess) {
-                        await orchestrator.berth(cargoPath, cursorDest);
+                    if (options.global || await exists(path.join(baseDir, ".cursor"))) {
+                        const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
+                        if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
+                        targets.push("Cursor");
                     }
 
-                    // --- NEW: Antigravity Support ---
-                    const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
                     const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
-                    const antigravitySuccess = await orchestrator.berth(geminiProcessed, antigravityDest);
-                    if (!antigravitySuccess) {
-                        await orchestrator.berth(cargoPath, antigravityDest);
+                    if (options.global || await exists(path.join(baseDir, ".antigravity"))) {
+                        const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
+                        const success = await orchestrator.berth(geminiProcessed, antigravityDest, "Antigravity");
+                        if (!success) await orchestrator.berth(cargoPath, antigravityDest, "Antigravity (Raw)");
+                        targets.push("Antigravity");
+                    }
+
+                    // --- Rulesync Integration ---
+                    const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
+                    if (await exists(rulesyncBase)) {
+                        const rulesyncDest = path.join(rulesyncBase, skill.name);
+                        await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
+                        targets.push("Rulesync");
                     }
 
                     // 4. Update the Harbor's local cache registry
-                    const harborDir = manifestManager.getHarborDir();
-                    const localPath = path.join(harborDir, skill.name);
-                    await orchestrator.berth(cargoPath, localPath);
+                    await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
 
                     // Mark success in manifest
                     await manifestManager.addSkill({
                         ...skill,
-                        localPath: localPath
+                        localPath: cachedPath
                     });
+
+                    orchestrator.finalize(`Successfully berthed to: ${targets.join(", ") || "Harbor Cache"}`);
+                } catch (err: any) {
+                    // Spinnies handles the fail message via orchestrator
                 } finally {
                     await orchestrator.cleanup();
                 }
@@ -146,8 +187,6 @@ program
             console.log(kleur.bold().green(`\n🎉  Workspace Sync complete. The fleet is fully loaded with Agent skills.\n`));
         } catch (error: any) {
             console.error(kleur.red(`\n🛳️  SkillHarbor Alert: Synchronization failed: ${error.message}\n`));
-            console.error(kleur.gray(JSON.stringify(error, null, 2)));
-            console.error(kleur.red(`\n ${error.stack} \n`));
             process.exit(1);
         }
     });

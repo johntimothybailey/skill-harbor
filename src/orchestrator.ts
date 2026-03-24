@@ -1,20 +1,32 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import ora from "ora";
+import Spinnies from "spinnies";
 import kleur from "kleur";
 
 export class Orchestrator {
     private tempDir: string;
     private debugMode: boolean;
+    private spinnies: Spinnies;
+    private skillName: string;
 
-    constructor(options?: { debug?: boolean }) {
+    constructor(options: { 
+        skillName: string, 
+        spinnies: Spinnies, 
+        debug?: boolean 
+    }) {
         this.tempDir = path.join(os.tmpdir(), `skill-harbor-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
         this.debugMode = options?.debug ?? false;
+        this.spinnies = options.spinnies;
+        this.skillName = options.skillName;
+    }
+
+    private get spinnerId(): string {
+        return `sync-${this.skillName}`;
     }
 
     async moor(url: string): Promise<string> {
-        const spinner = ora(kleur.cyan(`Mooring skill from ${url}...`)).start();
+        this.spinnies.add(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Mooring skill from ${url}...`) });
         try {
             await fs.mkdir(this.tempDir, { recursive: true });
 
@@ -25,7 +37,7 @@ export class Orchestrator {
             if (url.startsWith('file://') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
                 const localPath = url.replace('file://', '');
                 await fs.cp(localPath, this.tempDir, { recursive: true });
-                spinner.succeed(kleur.green("Local skill cargo successfully moored."));
+                this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Local skill cargo successfully moored.`) });
                 return this.tempDir;
             }
 
@@ -55,7 +67,7 @@ export class Orchestrator {
                 stderr: "pipe"
             });
             // Bypass interactive prompts that --yes might miss
-            process.stdin.write("\\n\\n\\n");
+            process.stdin.write("\n\n\n");
             process.stdin.flush();
             process.stdin.end();
 
@@ -76,23 +88,22 @@ export class Orchestrator {
                 if (files.length > 0) {
                     downloadedCargoPath = path.join(skillsDir, files[0]);
                 } else {
-                    throw new Error("No skills found after skillfish fetch.");
+                    throw new Error("No skills home found after skillfish fetch.");
                 }
             } catch (e) {
-                const out = await new Response(process.stdout).text();
-                throw new Error(`Skillfish failed to moor cargo: ${e} \\nOutput: ${out}`);
+                throw new Error(`Skillfish failed to moor cargo: ${e} \nOutput: ${out}`);
             }
 
-            spinner.succeed(kleur.green("Skill cargo successfully moored locally using native skillfish."));
+            this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Skill cargo moored using skillfish.`) });
             return downloadedCargoPath;
         } catch (error: any) {
-            spinner.fail(kleur.red(`Mooring incident: ${error.message}`));
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Mooring incident: ${error.message}`) });
             throw error;
         }
     }
 
     async processCargo(cargoPath: string, targetAgent: string): Promise<string> {
-        const spinner = ora(kleur.cyan(`Processing cargo via SkillPorter for ${targetAgent}...`)).start();
+        this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Processing cargo for ${targetAgent}...`) });
         try {
             const outputPath = path.join(this.tempDir, "processed", targetAgent);
             await fs.mkdir(outputPath, { recursive: true });
@@ -110,40 +121,36 @@ export class Orchestrator {
                 throw new Error(`Cargo processing failed: ${output || stderr}`);
             }
 
-            spinner.succeed(kleur.green(`Cargo processed for ${targetAgent} berth.`));
+            this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Cargo processed for ${targetAgent} berth.`) });
             return outputPath;
         } catch (error: any) {
-            spinner.fail(kleur.red(`Processing incident: ${error.message}`));
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Processing incident: ${error.message}`) });
             throw error;
         }
     }
 
-    async berth(cargoPath: string, targetPath: string): Promise<boolean> {
+    async berth(cargoPath: string, targetPath: string, label: string): Promise<boolean> {
         const hasFiles = await this.hasCargo(cargoPath);
         if (!hasFiles) {
             return false;
         }
 
-        const spinner = ora(kleur.cyan(`Transporting cargo to berth: ${targetPath}`)).start();
+        this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`) });
         try {
             // Ensure target directory exists
             await fs.mkdir(targetPath, { recursive: true });
 
-            // Atomic move or copy (since it might be across different filesystems)
             const files = await fs.readdir(cargoPath);
             for (const file of files) {
                 const source = path.join(cargoPath, file);
                 const destination = path.join(targetPath, file);
-
-                // Use symlink or copy? User's "Vision" mentioned "Atomic move or Symlink".
-                // Let's copy the processed files to the global berth.
                 await fs.cp(source, destination, { recursive: true });
             }
 
-            spinner.succeed(kleur.green(`Skill successfully berthed at ${targetPath}`));
+            this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Successfully berthed at ${label}.`) });
             return true;
         } catch (error: any) {
-            spinner.fail(kleur.red(`Berthing incident: ${error.message}`));
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Berthing incident at ${label}: ${error.message}`) });
             throw error;
         }
     }
@@ -167,5 +174,9 @@ export class Orchestrator {
         } catch {
             // Ignore cleanup errors
         }
+    }
+
+    public finalize(message: string): void {
+        this.spinnies.succeed(this.spinnerId, { text: kleur.bold().green(`[${this.skillName}] ${message}`) });
     }
 }

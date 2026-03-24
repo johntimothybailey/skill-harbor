@@ -1,6 +1,6 @@
 {
   "name": "skill-harbor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team.",
   "author": "John Bailey",
   "license": "MIT",
@@ -29,9 +29,11 @@
     "kleur": "^4.1.5",
     "ora": "^7.0.1",
     "skill-porter": "github:jduncan-rva/skill-porter",
-    "skillfish": "1.0.30"
+    "skillfish": "1.0.30",
+    "spinnies": "^0.5.1"
   },
   "devDependencies": {
+    "@types/spinnies": "^0.5.3",
     "bun-types": "latest",
     "typescript": "^5.3.3"
   }
