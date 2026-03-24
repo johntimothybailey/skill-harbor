@@ -1,68 +1,54 @@
-# ⚓ Skill Harbor vs. Vercel's skills.sh vs. skill.fish
+# Why Not Skills.sh?
 
-This document breaks down the differences between three prominent tools in the AI Agent "Skill" ecosystem, detailing why each exists and why Skill Harbor chooses a specific architectural path for team-based workspaces.
-
----
-
-## 🏗️ 1. The Overview
-
-If we use classical software development analogies:
-*   **`skills.sh`** is like **`npm`** — a centralized package registry and simple installer.
-*   **`skill.fish`** is like **`curl`** or **`git clone`** — a low-level fetch utility.
-*   **`Skill Harbor`** is like **`Docker Compose`** — an orchestration engine that governs the entire lifecycle of multiple resources across a team's workspace.
+This document provides a detailed breakdown of the differences between **Skill Harbor**, Vercel's **skills.sh**, and the low-level **skill.fish** utility. It clarifies why you would choose one over the other, and specifically why Skill Harbor does *not* use `skills.sh` under the hood.
 
 ---
 
-## 🐬 2. skill.fish (The Fetcher)
-**`skill.fish`** is a very lightweight utility designed specifically to locate "skills" inside GitHub repositories and fetch their markdown files.
-*   **Role**: *Moor* (Fetch)
-*   **What it does**: You give it a GitHub repo (`bunx skillfish add owner/repo`), and it pulls the raw files down to your local machine.
+## Why use Skills.sh vs Skill Harbor
 
-## 📦 3. skills.sh (The Package Manager)
-**`skills.sh`** (by Vercel Labs) is a massive, centralized registry and CLI for discovering and installing agent skills.
-*   **Role**: *Package Manager* (Fetch & Install)
-*   **What it does**: You run `npx skills add <skill-name>`, and it searches its registry, downloads the skill, and drops the raw files directly into your local `.claude` or `.cursor` folder.
-*   **Best for**: Individual developers who want to discover popular community skills (like "React Best Practices" or "Next.js UI components") and quickly throw them into their personal IDE configuration.
+While both tools deal with "Agent Skills," their core purposes, target audiences, and architectural philosophies are fundamentally different. 
 
-## ⚓ 4. Skill Harbor (The Orchestrator)
-**`Skill Harbor`** was built to solve the **Enterprise/Team Synchronization Problem**. When 50 engineers are working on the same repo, they absolutely must share the exact same AI context rules, regardless of whether they prefer Claude Code, Cursor, or Gemini (Antigravity).
-*   **Role**: *Workspace Team Orchestrator* (Fetch ➔ Transpile ➔ Govern ➔ Distribute)
-*   **How it works**: A repo maintains a `harbor-manifest.json`. Developers run `skill-harbor up`. Harbor fetches the raw files, cross-compiles them for the developer's specific agent, governs the environment (stowing/removing old skills), and routes them automatically to the correct hidden configuration folders.
+**Think of the difference as `npm` (Package Manager) vs. `Docker Compose` (Environment Orchestrator).**
 
----
+### 📦 When to use Skills.sh (The Package Manager)
+**`skills.sh`** (built by Vercel Labs) is a massive, centralized registry and CLI designed for discovering and installing community skills.
 
-## ⚖️ Why Skill Harbor uses `skill.fish` instead of `skills.sh`
+*   **Core Purpose**: Fast discovery and installation of one-off skills.
+*   **How it works**: You run `npx skills add <skill-name>`, and it searches its online directory, downloads the skill, and drops the raw files directly into your local IDE folder (like `.claude` or `.cursor`).
+*   **Best for**: Individual developers looking to enhance their personal workflow. If your goal is simply: *"I need a React skill I saw on a leaderboard, and I want it in my Claude agent right now,"* then `skills.sh` is the absolute best tool for the job.
 
-It might seem logical to use Vercel's shiny new `skills.sh` under the hood. However, doing so breaks the fundamental orchestration lifecycle that enterprise teams require. 
+### ⚓ When to use Skill Harbor (The Orchestrator)
+**`Skill Harbor`** was built to solve the **Enterprise & Team Synchronization Problem**. It governs the entire lifecycle of an AI agent's context across a shared repository.
 
-Skill Harbor's architecture requires three distinct phases:
-1.  **Moor** (Fetch)
-2.  **Process** (Transpile)
-3.  **Berth** (Distribute)
-
-### The Problem with `skills.sh` for Orchestration
-`skills.sh` is monolithic. When executed, it automatically drops the downloaded files *directly into your agent directories natively* (e.g., dropping them straight into `.claude/skills`).
-
-By doing this, it bypasses the most critical parts of the Skill Harbor pipeline:
-*   **Bypassing Transpilation**: Natively dropped skills miss the **Process** phase (powered by `skill-porter`), where skills are translated to work across different agents (e.g., fixing Markdown vs XML structural differences between Claude and Gemini).
-*   **Bypassing Governance**: It ignores Skill Harbor's `stow` and `--lockdown` governance systems, which safely sandboxes and protects developers' global personal skills from bleeding into isolated client projects.
-*   **Blinding the Lighthouse**: Because `skills.sh` installs the files itself, Harbor cannot intercept and synthesize the skill metadata. This prevents Harbor from automatically generating the `000-fleet-intelligence.md` Master Manifest—the critical "Zero-Tier" map that tells your AI agent *how to use* the skills it was just given.
-
-### The `skill.fish` Advantage
-`skill.fish` serves perfectly as a *pure fetcher*. 
-
-It cleanly downloads the raw repository files (Moor) into a temporary staging area and **intentionally stops there**. This allows Skill Harbor to act as the "General Contractor," governing the rest of the lifecycle: analyzing the files, processing them for cross-platform compatibility, extracting intelligence for the Lighthouse prompt, and handling the final safely-governed distribution (Berth).
+*   **Core Purpose**: Enforcing strict consistency and governance across an entire engineering team, regardless of which AI agent each developer prefers.
+*   **How it works**: A repository maintains a declarative `harbor-manifest.json`. Developers run a single `skill-harbor up` command. Harbor then fetches the exact skills defined in the manifest, cross-compiles them for the developer's specific agent (Claude, Cursor, Gemini), safely stows away any conflicting personal skills, and automatically generates a "Lighthouse" system prompt to teach the agent how to use its new capabilities.
+*   **Best for**: Team workspaces. If your goal is: *"I need all 50 engineers on my team to share the exact same custom AI coding standards, strictly locked down, and cross-compiled for 4 different IDEs without manual configuration,"* then you need Skill Harbor.
 
 ---
 
-## 🏗️ 5. The Pros: Why we might consider adapting in the future
-While `skills.sh` doesn't fit our current architecture, it has undeniable strengths that we are watching closely:
-*   **Massive Community Backing**: Backed by Vercel Labs, the `skills.sh` registry is likely to become the de-facto discovery standard.
-*   **Dependency Locking**: Its native `skills-lock.json` implementation is excellent for workspace reproducibility.
+## Why we didn't use Skills.sh inside of Skill Harbor
 
-## 🛳️ 6. The Verdict for v0.5.0
-For the "Lighthouse" release, we are sticking firmly with **skill.fish**. 
+Given that `skills.sh` fetches files, it might seem logical for Skill Harbor to simply wrap `skills.sh` under the hood to handle downloading. However, doing so would completely break the enterprise architecture Skill Harbor provides.
 
-It allows Skill Harbor to remain the sovereign orchestrator of the workspace. By using a pure fetcher, we ensure that every skill—regardless of its source—is subjected to our governance, our transpilation, and our intelligence discovery engines.
+Instead, Skill Harbor relies on low-level utilities like **`skill.fish`** (for fetching) and **`skill-porter`** (for transpiling). Here is the detailed engineering breakdown of why we rejected `skills.sh` as an internal dependency:
 
-**Looking Ahead**: If `skills.sh` eventually releases a clean "download-only" flag that prevents auto-installation, it would become a very compelling alternative to `skill.fish` for the "Moor" phase of our lifecycle.
+### 1. The "Monolithic" Delivery Problem
+Skill Harbor's architecture requires strict separation of concerns into three phases: **Moor** (Fetch) ➔ **Process** (Transpile) ➔ **Berth** (Distribute).
+
+`skills.sh` is highly monolithic. When executed, it automatically drops the downloaded files *directly into your agent directories natively* (e.g., dropping them straight into `.claude/skills`). Because it forcefully handles the final delivery, it prevents Skill Harbor from intercepting the files. 
+
+By contrast, `skill.fish` is a *pure fetcher*. It downloads raw repository files into a temporary staging area and intentionally stops there, handing the baton back to Harbor.
+
+### 2. Loss of Cross-Platform Transpilation
+Because `skills.sh` natively installs the files, it entirely bypasses our **Process** phase (powered by `skill-porter`). Skill Harbor relies on this processing phase to translate skill formats between different AI agents. For example, fixing Markdown vs. XML structural differences between Claude Code and Google's Antigravity agent. If `skills.sh` places the files itself, we lose the ability to guarantee cross-platform compatibility.
+
+### 3. Bypassing Strict Workspace Governance
+Skill Harbor treats agent context as ephemeral and highly sensitive. Our `--lockdown` and `stow`/`unstow` engine guarantees that a developer's global, personal skills do not bleed into isolated client repositories. Because `skills.sh` writes directly to the local machine's configuration folders, it circumvents our sandboxing and governance layers completely.
+
+### 4. Blinding the Lighthouse Intelligence Engine
+One of Skill Harbor's most powerful features is the **Master Fleet Manifest**. Every time Harbor orchestrates a sync, it analyzes all the incoming skills and generates a dynamic `000-fleet-intelligence.md` file—a "Zero-Tier" map that acts as a system prompt, teaching your AI agent exactly what capabilities it has and how to trigger them.
+
+If `skills.sh` handles the fetching and installation independently, Skill Harbor cannot accurately intercept, read, and synthesize the metadata from those skills, effectively "blinding" the Lighthouse engine.
+
+### Summary Verdict
+`skills.sh` is an incredible tool for individual discovery and package management. However, its monolithic approach to fetching and immediately installing makes it incompatible as an underlying dependency for Skill Harbor, which must remain the sovereign "General Contractor" over the fetch, transpile, govern, and distribute lifecycle.
