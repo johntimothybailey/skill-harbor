@@ -4,6 +4,7 @@ import kleur from "kleur";
 import { Orchestrator } from "./orchestrator";
 import { ManifestManager } from "./manifest";
 import path from "node:path";
+import os from "node:os";
 
 const program = new Command();
 
@@ -12,12 +13,20 @@ program
     .version("0.2.1")
     .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
 
+function getManifestManager(options: any) {
+    if (options.global) {
+        return new ManifestManager({ customPath: ManifestManager.getGlobalPath() });
+    }
+    return new ManifestManager();
+}
+
 program
     .command("dock")
     .argument("<url>", "Skill URL to fetch (URL or git repository)")
-    .description("Dock a new skill into the local harbor manifest.")
-    .action(async (url) => {
-        const manifestManager = new ManifestManager();
+    .description("Dock a new skill into the harbor manifest.")
+    .option("-g, --global", "Dock into the global manifest at ~/.harbor/")
+    .action(async (url, options) => {
+        const manifestManager = getManifestManager(options);
 
         try {
             console.log(kleur.bold().blue("\n⚓  SkillHarbor: Docking Operations Initiated  ⚓\n"));
@@ -45,14 +54,15 @@ program
 
 program
     .command("list")
-    .description("List all skills currently tracked in the local harbor manifest.")
-    .action(async () => {
-        const manifestManager = new ManifestManager();
+    .description("List all skills currently tracked in the harbor manifest.")
+    .option("-g, --global", "List skills from the global manifest at ~/.harbor/")
+    .action(async (options) => {
+        const manifestManager = getManifestManager(options);
         try {
             const manifest = await manifestManager.read();
             const skills = Object.values(manifest.skills);
 
-            console.log(kleur.bold().blue("\n⚓  SkillHarbor: Local Fleet Manifest  ⚓\n"));
+            console.log(kleur.bold().blue(`\n⚓  SkillHarbor: ${options.global ? "Global" : "Local"} Fleet Manifest  ⚓\n`));
             if (skills.length === 0) {
                 console.log(kleur.yellow("No skills are currently docked in this workspace.\n"));
             } else {
@@ -68,10 +78,12 @@ program
 
 program
     .command("up")
-    .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into local agent folders.")
+    .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into agent folders.")
     .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
+    .option("-g, --global", "Sync the global manifest into user-level agent folders")
     .action(async (options: any) => {
-        const manifestManager = new ManifestManager();
+        const manifestManager = getManifestManager(options);
+        const baseDir = options.global ? os.homedir() : process.cwd();
         try {
             console.log(kleur.bold().blue("\n⚓  SkillHarbor: Workspace Synchronization Initiated  ⚓\n"));
             const manifest = await manifestManager.read();
@@ -92,23 +104,23 @@ program
                     // 2. Transpile for modern Agentic Editors (Claude)
                     const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
-                    // 3. Inject directly into local workspace configuration contexts
-                    const claudeDest = path.join(process.cwd(), ".claude", "skills", skill.name);
+                    // 3. Inject directly into configuration contexts
+                    const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
                     const claudeSuccess = await orchestrator.berth(claudeProcessed, claudeDest);
                     if (!claudeSuccess) {
                         // Fallback to raw cargo if transpile did nothing (common for same-platform)
                         await orchestrator.berth(cargoPath, claudeDest);
                     }
 
-                    const cursorDest = path.join(process.cwd(), ".cursor", "rules", skill.name);
+                    const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
                     const cursorSuccess = await orchestrator.berth(claudeProcessed, cursorDest);
                     if (!cursorSuccess) {
                         await orchestrator.berth(cargoPath, cursorDest);
                     }
 
-                    // --- NEW: Antigravity (Gemini) Support ---
+                    // --- NEW: Antigravity Support ---
                     const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
-                    const antigravityDest = path.join(process.cwd(), ".antigravity", "skills", skill.name);
+                    const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
                     const antigravitySuccess = await orchestrator.berth(geminiProcessed, antigravityDest);
                     if (!antigravitySuccess) {
                         await orchestrator.berth(cargoPath, antigravityDest);
