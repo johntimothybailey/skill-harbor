@@ -1,6 +1,6 @@
 # Why Not Skills.sh?
 
-This document provides a detailed breakdown of the differences between **Skill Harbor**, Vercel's **skills.sh**, and the low-level **skill.fish** utility. It clarifies why you would choose one over the other, and specifically why Skill Harbor does *not* use `skills.sh` under the hood.
+This document provides a detailed breakdown of the differences between **Skill Harbor**, Vercel's **skills.sh**, and the low-level **skill.fish** utility. It clarifies why you would choose one over the other, and specifically why I do *not* use `skills.sh` under the hood for Skill Harbor.
 
 ---
 
@@ -26,11 +26,11 @@ While both tools deal with "Agent Skills," their core purposes, target audiences
 
 ---
 
-## Why we didn't use Skills.sh inside of Skill Harbor
+## Why I didn't use Skills.sh inside of Skill Harbor
 
 Given that `skills.sh` fetches files, it might seem logical for Skill Harbor to simply wrap `skills.sh` under the hood to handle downloading. However, doing so would completely break the enterprise architecture Skill Harbor provides.
 
-Instead, Skill Harbor relies on low-level utilities like **`skill.fish`** (for fetching) and **`skill-porter`** (for transpiling). Here is the detailed engineering breakdown of why we rejected `skills.sh` as an internal dependency:
+Instead, I rely on low-level utilities like **`skill.fish`** (for fetching) and **`skill-porter`** (for transpiling). Here is the detailed engineering breakdown of why I rejected `skills.sh` as an internal dependency:
 
 ### 1. The "Monolithic" Delivery Problem
 Skill Harbor's architecture requires strict separation of concerns into three phases: **Moor** (Fetch) ➔ **Process** (Transpile) ➔ **Berth** (Distribute).
@@ -40,10 +40,10 @@ Skill Harbor's architecture requires strict separation of concerns into three ph
 By contrast, `skill.fish` is a *pure fetcher*. It downloads raw repository files into a temporary staging area and intentionally stops there, handing the baton back to Harbor.
 
 ### 2. Loss of Cross-Platform Transpilation
-Because `skills.sh` natively installs the files, it entirely bypasses our **Process** phase (powered by `skill-porter`). Skill Harbor relies on this processing phase to translate skill formats between different AI agents. For example, fixing Markdown vs. XML structural differences between Claude Code and Google's Antigravity agent. If `skills.sh` places the files itself, we lose the ability to guarantee cross-platform compatibility.
+Because `skills.sh` natively installs the files, it entirely bypasses my **Process** phase (powered by `skill-porter`). Skill Harbor relies on this processing phase to translate skill formats between different AI agents. For example, fixing Markdown vs. XML structural differences between Claude Code and Google's Antigravity agent. If `skills.sh` places the files itself, I lose the ability to guarantee cross-platform compatibility.
 
 ### 3. Bypassing Strict Workspace Governance
-Skill Harbor treats agent context as ephemeral and highly sensitive. Our `--lockdown` and `stow`/`unstow` engine guarantees that a developer's global, personal skills do not bleed into isolated client repositories. Because `skills.sh` writes directly to the local machine's configuration folders, it circumvents our sandboxing and governance layers completely.
+Skill Harbor treats agent context as ephemeral and highly sensitive. My `--lockdown` and `stow`/`unstow` engine guarantees that a developer's global, personal skills do not bleed into isolated client repositories. Because `skills.sh` writes directly to the local machine's configuration folders, it circumvents my sandboxing and governance layers completely.
 
 ### 4. Blinding the Lighthouse Intelligence Engine
 One of Skill Harbor's most powerful features is the **Master Fleet Manifest**. Every time Harbor orchestrates a sync, it analyzes all the incoming skills and generates a dynamic `000-fleet-intelligence.md` file—a "Zero-Tier" map that acts as a system prompt, teaching your AI agent exactly what capabilities it has and how to trigger them.
