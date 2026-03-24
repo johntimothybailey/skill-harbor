@@ -71,56 +71,41 @@ skill-harbor up
 - 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
 - 🔌 **Idempotent**: Run `skill-harbor up` safely to pull down the latest transpiled skill updates.
 
-## ⚖️ Alternatives
+## ⚓ The Bottom Line: Why Skill Harbor?
 
-While Skill Harbor is built specifically for **team-wide context standardization** via our manifest system, it often works *alongside* **Agent Skill Porter**. 
-
-| Feature | Agent Skill Porter (`sk`) | Skill Harbor |
-| :--- | :--- | :--- |
-| **Model** | Imperative / Utility | Declarative / Management |
-| **Configuration** | Command-line flags | `harbor-manifest.json` |
-| **Distribution** | Manual / Per-command | **Automated Multi-Berthing** |
-| **Workflow** | `sk add`, `sk sync` | `dock`, `up` |
-| **Team Sync** | Local setup per dev | Shared via Git manifest |
-
-### Why use Skill Harbor?
-Choose **Skill Harbor** if you are working on a team project. While individual utilities are great for one-off tasks, Skill Harbor provides the **governance** and **reproducibility** a professional codebase needs. It acts as the "npm" for your AI agents—one `up` command gives every developer the exact same "synced brain."
-
-Skill Harbor automates the entire **Moor-Process-Berth** orchestration cycle:
-1. ⚓ **Moor**: Automatically resolves and fetches remote skills from GitHub or the Sia registry (via **[skillfish](https://www.skill.fish)**).
-2. 📦 **Process**: Parallel-transpiles them into the correct format for your specific agent (via **[skill-porter](https://github.com/skill-mill/agent-skill-porter)**).
-3. 🛳️ **Berth**: Intelligently routes the final skills into the correct (and often hidden) IDE configuration folders across your workspace.
-
-### Why use Agent Skill Porter?
-Choose **[agent-skill-porter](https://github.com/skill-mill/agent-skill-porter)** directly if you are an individual power-user or a "skill developer" who needs granular control over lossless conversions (Chimera Hub workflow) without managing a project manifest.
-
-### Why use Rulesync?
-Choose **Rulesync** if you want a local, unified source of truth for your personal AI agent configurations across multiple tools.
-
-🌏 **[Rulesync](https://github.com/dyoshikawa/rulesync)**: A utility CLI for unified configuration management.
-
-| Feature | Rulesync | SkillHarbor |
-| :--- | :--- | :--- |
-| **Model** | **Specialized Berthing Agent** | **Team Workspace Engine** |
-| **Lifecycle Phase** | 🛳️ **Berth** (Last-Mile Routing) | ⚓ **Moor** 📦 **Process** 🛳️ **Berth** |
-| **Capability** | Unified Config & Transpilation | **Moor-Process-Berth** Loop |
-| **Source** | Local `.rulesync/` folder | Remote `harbor-manifest.json` |
-| **Team Value** | Individual-focused | **Team-focused** (Shared via Git) |
-
-#### How SkillHarbor enhances your workflow beyond Rulesync:
-- **Remote Dependency Resolution**: Instead of managing files manually, "Dock" a skill from a URL and have it delivered and maintained automatically.
-- **Team-Wide Standardization**: It provides the "npm install" experience for your team's AI context—one `up` command gives everyone identical rules.
-- **Automated "Moor-Process-Berth" Pipeline**: It coordinates the entire lifecycle of fetching (`skillfish`) and deep transpilation (`skill-porter`) in a single, parallelized loop.
-
-### ⚓ The Bottom Line: Why Skill Harbor?
-
-If you are an engineer asking *"Why use Harbor when I can just use `sk` or Rulesync?"*, consider this:
+If you are an engineer asking *"Why use Harbor when I can just use `sk` (agent-skill-porter), or skillfish, or Rulesync?"*, consider this:
 
 1. **Orchestration vs. Utility**: Harbor is a **manager**, not just a tool. It coordinates the parallel execution of fetching (**Moor**), transpiling (**Process**), and distributing (**Berth**) across your entire workspace in a single idempotent command.
 2. **Team Standardization (Declarative)**: Harbor uses a manifest (`harbor-manifest.json`). You commit it to Git once, and every developer on your team gets the exact same context. Without it, your team's rules become fragmented and "idiosyncratic" per developer machine.
 3. **The Ecosystem Glue**: Harbor handles the "Hard Parts" of the lifecycle—unique process isolation, parallel synchronization, and automatic agent configuration discovery (e.g., hidden VS Code paths) that simple utilities expect you to handle yourself.
 
-### Why use uberskills.dev?
+## ⚖️ Alternatives & Ecosystem Roles
+
+Skill Harbor is designed to be the **Orchestrator**. It doesn't replace these tools; it coordinates them into a seamless team workflow.
+
+### Feature Matrix
+
+| Feature | [skillfish](https://www.skill.fish) | [Agent Skill Porter](https://github.com/skill-mill/agent-skill-porter) | [Rulesync](https://github.com/dyoshikawa/rulesync) | **⚓ Skill Harbor** |
+| :--- | :---: | :---: | :---: | :---: |
+| **⚓ Moor** (Remote Fetching) | ✅ | ❌ | ❌ | ✅ |
+| **📦 Process** (Transpilation) | ❌ | ✅ | ⚠️ | ✅ |
+| **🛳️ Berth** (Auto-Distribution) | ❌ | ❌ | ✅ | ✅ |
+| **📄 Team Manifest** (`.json`) | ❌ | ❌ | ❌ | ✅ |
+| **⚡ Parallel Syncing** | ❌ | ❌ | ❌ | ✅ |
+| **🎯 Dynamic Target Detection** | ❌ | ❌ | ❌ | ✅ |
+| **🏠 Global & Local Duality** | ❌ | ❌ | ❌ | ✅ |
+| **Best For...** | Discovery | Power Users | Personal Config | **Team Workspaces** |
+
+### When to use Skill Harbor?
+Choose **Skill Harbor** if you are working on a team project. While individual utilities are great for one-off tasks, Skill Harbor provides the **governance** and **reproducibility** a professional codebase needs. It acts as the "npm" for your AI agents—one `up` command gives every developer the exact same "synced brain."
+
+### When to use Agent Skill Porter?
+Choose **[agent-skill-porter](https://github.com/skill-mill/agent-skill-porter)** directly if you are an individual power-user or a "skill developer" who needs granular control over lossless conversions (Chimera Hub workflow) without managing a project manifest.
+
+### When to use Rulesync?
+Choose **Rulesync** if you want a local, unified source of truth for your personal AI agent configurations across multiple tools. Harbor actually supports Rulesync as a **Berthing Target**—it can feed your processed team skills directly into your Rulesync setup.
+
+### When to use uberskills.dev?
 
 👉 **[uberskills.dev](https://uberskills.dev/)**: For large organizations that require centralized, cloud-synced context rules with enterprise-level security.
 
