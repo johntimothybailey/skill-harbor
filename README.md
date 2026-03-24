@@ -76,9 +76,20 @@ Coordinate Skill Harbor with the agent's internal routing logic.
     skill-harbor lighthouse
     ```
 
-### 🌍 Global Fleet
-Manage skills at the user level (e.g., for custom keybindings or personal utilities).
-Use the `-g` or `--global` flag with any command.
+### 🌍 Global Fleet: Personal Skills, Everywhere
+Managing skills shouldn't be limited to a single repo. Skill Harbor allows you to maintain a **Global Manifest** to synchronize your personal utilities across every project you touch.
+
+*   **Sync Anywhere**: Run `skill-harbor up --global` in *any* directory to instantly berth your personal global skills into your local agent folders (Claude, Cursor, etc.).
+*   **The `-g` Flag**: Use `--global` or `-g` with any command to target the user-level manifest at `~/.harbor/harbor-manifest.json`.
+*   **Personal Governance**: Keep your project manifests clean while still having access to your custom keybindings, refactor rules, and personal documentation helpers.
+
+```bash
+# Register a personal skill globally
+skill-harbor dock https://github.com/my-org/my-rules --global
+
+# Sync your personal brain into the current project workspace
+skill-harbor up --global
+```
 
 ## ✨ Features
 
@@ -126,7 +137,20 @@ Choose **Rulesync** if you want a local, unified source of truth for your person
 
 👉 **[uberskills.dev](https://uberskills.dev/)**: For large organizations that require centralized, cloud-synced context rules with enterprise-level security.
 
+### When to use skills.sh? (And why Harbor uses `skill.fish` instead)
+
+**[skills.sh](https://skills.sh/)** (by Vercel Labs) serves as a fantastic, centralized package manager (like "npm") for discovering and installing community agent skills. 
+
+Choose `skills.sh` if your goal is: *"I am an individual developer who wants to find a popular React skill on a leaderboard and quickly throw it into my `.claude` folder."*
+
+**Why does Skill Harbor use `skill.fish` under the hood instead of `skills.sh`?**
+Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team orchestrator, not a simple installer. Our architecture requires three distinct phases: **Moor** (Fetch), **Process** (Transpile), and **Berth** (Distribute).
+
+*   **The problem with `skills.sh` for Orchestration**: It is monolithic. It automatically drops files directly into your agent directories natively (e.g. `.claude` or `.cursor`). By doing this, it entirely bypasses our `skill-porter` transpilation engine (which allows skills to cross-compile between Gemini/Antigravity and Claude identically). It also bypasses our safe `stow` lockdown governance, and it prevents Harbor from accurately intercepting metadata for your dynamic `000-fleet-intelligence.md` Master Manifest.
+*   **The `skill.fish` advantage**: `skill.fish` serves as a *pure fetcher*. It cleanly downloads the raw repository files (Moor) into a temporary harbor and intentionally stops there. This allows Skill Harbor to govern the rest of the lifecycle: processing the skills for the correct platform, enforcing `--lockdown` constraints, extracting intelligence for Lighthouse, and handling the final targeted berthing.
+
 ---
+
 
 ## 📄 License
 
