@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 
 export interface SkillEntry {
     name: string;
@@ -19,9 +20,19 @@ export class ManifestManager {
     private manifestPath: string;
     private harborDir: string;
 
-    constructor(cwd: string = process.cwd()) {
-        this.manifestPath = path.join(cwd, "harbor-manifest.json");
-        this.harborDir = path.join(cwd, ".harbor");
+    constructor(options?: { cwd?: string; customPath?: string }) {
+        if (options?.customPath) {
+            this.manifestPath = options.customPath;
+            this.harborDir = path.dirname(options.customPath);
+        } else {
+            const cwd = options?.cwd || process.cwd();
+            this.manifestPath = path.join(cwd, "harbor-manifest.json");
+            this.harborDir = path.join(cwd, ".harbor");
+        }
+    }
+
+    public static getGlobalPath(): string {
+        return path.join(os.homedir(), ".harbor", "harbor-manifest.json");
     }
 
     public async init(): Promise<void> {
