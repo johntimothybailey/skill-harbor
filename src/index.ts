@@ -279,72 +279,88 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                 });
                 
                 try {
-                    // 1. Deduplication / Cache Check
-                    let cargoPath = "";
+                    // 1. Change Detection
+                    const sourceChanged = skill.source !== skill.lastSyncHash;
                     const harborDir = manifestManager.getHarborDir();
                     const cachedPath = path.join(harborDir, skill.name);
+                    const cacheExists = await exists(cachedPath);
 
-                    if (await exists(cachedPath)) {
+                    // 2. Target Identification
+                    const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
+                    const activeTargets: string[] = [];
+                    
+                    if (hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")))) activeTargets.push("claude");
+                    if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")))) activeTargets.push("cursor");
+                    if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")))) activeTargets.push("antigravity");
+                    if (hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(path.join(os.homedir(), ".rulesync", "skills")))) activeTargets.push("rulesync");
+
+                    const targetsChanged = JSON.stringify(activeTargets.sort()) !== JSON.stringify((skill.lastSyncTargets || []).sort());
+
+                    // 3. Optimization Bypass
+                    if (!sourceChanged && !targetsChanged && cacheExists) {
+                        spinnies.add(`sync-${skill.name}`, { text: kleur.gray(`[${skill.name}] No changes detected. Skipping sync.`) });
+                        spinnies.succeed(`sync-${skill.name}`);
+                        return;
+                    }
+
+                    // 4. Moor (Only if source changed or cache missing)
+                    let cargoPath = "";
+                    if (!sourceChanged && cacheExists) {
                         cargoPath = cachedPath;
-                        spinnies.add(`sync-${skill.name}`, { text: kleur.cyan(`[${skill.name}] Using cached cargo from harbor.`) });
+                        spinnies.add(`sync-${skill.name}`, { text: kleur.cyan(`[${skill.name}] Source unchanged. Reusing cached cargo.`) });
                     } else {
-                        // Fetch cargo to temp space
                         cargoPath = await orchestrator.moor(skill.source);
                     }
 
-                    // 2. Transpile for modern Agentic Editors (Claude)
+                    // 5. Transpile & Berth
+                    const berthedTargets: string[] = [];
                     const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
-                    // 3. Inject directly into configuration contexts
-                    const targets = [];
-                    const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
-                    
-                    const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
-                    const shouldBerthClaude = hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")));
-                    if (shouldBerthClaude) {
+                    // Claude
+                    if (activeTargets.includes("claude")) {
+                        const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
                         const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
                         if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
-                        targets.push("Claude");
+                        berthedTargets.push("Claude");
                     }
 
-                    const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
-                    const shouldBerthCursor = hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")));
-                    if (shouldBerthCursor) {
+                    // Cursor
+                    if (activeTargets.includes("cursor")) {
+                        const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
                         const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
                         if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
-                        targets.push("Cursor");
+                        berthedTargets.push("Cursor");
                     }
 
-                    const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
-                    const shouldBerthAntigravity = hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")));
-                    if (shouldBerthAntigravity) {
+                    // Antigravity
+                    if (activeTargets.includes("antigravity")) {
+                        const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
                         const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
                         const success = await orchestrator.berth(geminiProcessed, antigravityDest, "Antigravity");
                         if (!success) await orchestrator.berth(cargoPath, antigravityDest, "Antigravity (Raw)");
-                        targets.push("Antigravity");
+                        berthedTargets.push("Antigravity");
                     }
 
-                    // --- Rulesync Integration ---
-                    const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-                    const shouldBerthRulesync = hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(rulesyncBase));
-                    if (shouldBerthRulesync) {
-                        const rulesyncDest = path.join(rulesyncBase, skill.name);
+                    // Rulesync
+                    if (activeTargets.includes("rulesync")) {
+                        const rulesyncDest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
                         await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
-                        targets.push("Rulesync");
+                        berthedTargets.push("Rulesync");
                     }
 
-                    // 4. Update the Harbor's local cache registry
+                    // 6. Update Cache & State
                     await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
 
-                    // Mark success in manifest
                     await manifestManager.addSkill({
                         ...skill,
-                        localPath: cachedPath
+                        localPath: cachedPath,
+                        lastSyncHash: skill.source,
+                        lastSyncTargets: activeTargets
                     });
 
-                    orchestrator.finalize(`Successfully berthed to: ${targets.join(", ") || "Harbor Cache"}`);
+                    orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
                 } catch (err: any) {
-                    // Spinnies handles the fail message via orchestrator
+                    // Spinnies handled by orchestrator
                 } finally {
                     await orchestrator.cleanup();
                 }

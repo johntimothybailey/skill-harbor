@@ -1,7 +1,7 @@
 {
   "name": "skill-harbor",
-  "version": "0.5.0",
-  "description": "The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team.",
+  "version": "0.6.0",
+  "description": "The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.",
   "author": "John Bailey",
   "license": "MIT",
   "repository": {

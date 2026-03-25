@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { spawn } from "node:child_process";
 import Spinnies from "spinnies";
 import kleur from "kleur";
 
@@ -9,6 +10,7 @@ export class Orchestrator {
     private debugMode: boolean;
     private spinnies: Spinnies;
     private skillName: string;
+    private packageRoot: string;
 
     constructor(options: { 
         skillName: string, 
@@ -19,6 +21,10 @@ export class Orchestrator {
         this.debugMode = options?.debug ?? false;
         this.spinnies = options.spinnies;
         this.skillName = options.skillName;
+
+        // Resolve package root (one level up from src/)
+        const currentFile = new URL(import.meta.url).pathname;
+        this.packageRoot = path.join(path.dirname(currentFile), "..");
     }
 
     private get spinnerId(): string {
@@ -56,28 +62,36 @@ export class Orchestrator {
                 }
             }
 
-            const args = ["bunx", "skillfish", "add", repo];
+            const binPath = path.join(this.packageRoot, "node_modules", ".bin", "skillfish");
+            const args = [repo];
             if (skillName) args.push(skillName);
             args.push("--project", "--yes");
 
-            const process = Bun.spawn(args, {
+            const child = spawn(binPath, args, {
                 cwd: this.tempDir,
-                stdin: "pipe",
-                stdout: "pipe",
-                stderr: "pipe"
+                shell: true,
+                stdio: ["pipe", "pipe", "pipe"]
             });
-            // Bypass interactive prompts that --yes might miss
-            process.stdin.write("\n\n\n");
-            process.stdin.flush();
-            process.stdin.end();
 
-            await process.exited;
-            const out = await new Response(process.stdout).text();
-            const err = await new Response(process.stderr).text();
+            // Bypass interactive prompts
+            child.stdin?.write("\n\n\n");
+            child.stdin?.end();
 
-            if (process.exitCode !== 0) {
-                throw new Error(`Skillfish failed to moor cargo:\nExit Code: ${process.exitCode}\nStdout: ${out}\nStderr: ${err}`);
+            let stdout = "";
+            let stderr = "";
+
+            child.stdout?.on("data", (data) => stdout += data.toString());
+            child.stderr?.on("data", (data) => stderr += data.toString());
+
+            const exitCode = await new Promise((resolve) => {
+                child.on("close", resolve);
+            });
+
+            if (exitCode !== 0) {
+                throw new Error(`Skillfish failed to moor cargo:\nExit Code: ${exitCode}\nStdout: ${stdout}\nStderr: ${stderr}`);
             }
+
+            const out = stdout; // Compatibility with legacy code below
 
             // Extract the cargo from the downloaded directory
             const skillsDir = path.join(this.tempDir, ".claude", "skills");
@@ -108,17 +122,26 @@ export class Orchestrator {
             const outputPath = path.join(this.tempDir, "processed", targetAgent);
             await fs.mkdir(outputPath, { recursive: true });
 
-            const process = Bun.spawn(["bunx", "skill-porter", "convert", cargoPath, "-t", targetAgent, "-o", outputPath], {
-                stdout: "pipe",
-                stderr: "pipe"
-            });
-            
-            await process.exited;
-            const output = await new Response(process.stdout).text();
-            const stderr = await new Response(process.stderr).text();
+            const binPath = path.join(this.packageRoot, "node_modules", ".bin", "skill-porter");
+            const args = ["convert", cargoPath, "-t", targetAgent, "-o", outputPath];
 
-            if (process.exitCode !== 0) {
-                throw new Error(`Cargo processing failed: ${output || stderr}`);
+            const child = spawn(binPath, args, {
+                shell: true,
+                stdio: ["ignore", "pipe", "pipe"]
+            });
+
+            let stdout = "";
+            let stderr = "";
+
+            child.stdout?.on("data", (data) => stdout += data.toString());
+            child.stderr?.on("data", (data) => stderr += data.toString());
+
+            const exitCode = await new Promise((resolve) => {
+                child.on("close", resolve);
+            });
+
+            if (exitCode !== 0) {
+                throw new Error(`Cargo processing failed:\nExit Code: ${exitCode}\nStdout: ${stdout}\nStderr: ${stderr}`);
             }
 
             this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Cargo processed for ${targetAgent} berth.`) });
