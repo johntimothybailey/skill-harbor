@@ -163,8 +163,26 @@ export class Orchestrator {
 
         this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`) });
         try {
-            // Ensure target directory exists
-            await fs.mkdir(targetPath, { recursive: true });
+            // Ensure target directory and its parents exist
+            try {
+                await fs.mkdir(targetPath, { recursive: true });
+            } catch (err: any) {
+                if (err.code === 'ENOENT') {
+                    // This is unexpected for recursive: true, but can happen if a parent is a file or permissions are weird
+                    const parentDir = path.dirname(targetPath);
+                    const parentStats = await fs.stat(parentDir).catch(() => null);
+                    if (parentStats && !parentStats.isDirectory()) {
+                        throw new Error(`Cannot create directory ${targetPath} because its parent ${parentDir} is a file, not a directory.`);
+                    }
+                    throw new Error(`mkdir -p failed with ENOENT for ${targetPath}. Please ensure the parent path is accessible.`);
+                }
+                throw err;
+            }
+            
+            // Verify it was actually created (sanity check for some environments)
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to create directory at ${targetPath}. The path may be invalid or restricted.`);
+            }
 
             const files = await fs.readdir(cargoPath);
             for (const file of files) {
@@ -176,7 +194,8 @@ export class Orchestrator {
             this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Successfully berthed at ${label}.`) });
             return true;
         } catch (error: any) {
-            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Berthing incident at ${label}: ${error.message}`) });
+            const diagnosticMsg = error.code === 'ENOENT' ? `${error.message} (Path: ${targetPath})` : error.message;
+            this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Berthing incident at ${label}: ${diagnosticMsg}`) });
             throw error;
         }
     }
@@ -238,6 +257,9 @@ export class Orchestrator {
             
             // Re-create target for fresh berthing
             await fs.mkdir(targetPath, { recursive: true });
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to recreate target directory at ${targetPath}`);
+            }
         } catch (error: any) {
             this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Stowage failure at ${label}: ${error.message}`) });
             throw error;
@@ -259,7 +281,11 @@ export class Orchestrator {
 
             // Clear target if it exists (to avoid merge conflicts)
             await fs.rm(targetPath, { recursive: true, force: true });
-            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+            await fs.mkdir(targetPath, { recursive: true });
+            
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to recreate target dir at ${targetPath}`);
+            }
 
             // Restore from stowage
             await fs.rename(stowagePath, targetPath);
