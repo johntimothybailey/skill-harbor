@@ -174,7 +174,7 @@ We welcome contributions! To ensure a smooth release process, we use **[Changese
 Instead of reconstructioning releases from git diffs, we capture the **intent** of every change at the moment it is made.
 
 1.  **Make your changes**.
-2.  **Run `npx changeset`** (Human) or ask your agent to create a changeset.
+2.  **Run `bun x changeset`** (Human) or ask your agent to create a changeset.
 3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
 4.  **Commit the generated `.changeset/*.md` file** along with your code.
 
