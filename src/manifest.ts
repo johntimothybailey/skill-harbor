@@ -8,6 +8,8 @@ export interface SkillEntry {
     description?: string;
     source: string; // URL, git, or local path
     localPath: string; // Path within .harbor
+    lastSyncHash?: string; // Cache the source string to detect changes
+    lastSyncTargets?: string[]; // Cache the successful berthing targets
 }
 
 export interface HarborManifest {
