@@ -26,3 +26,35 @@ jobs:
 
       - name: Build check
         run: bun run build
+
+  smoke-test:
+    name: "Clean Room Smoke Test (Node ${{ matrix.node-version }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies (NPM)
+        run: npm install
+
+      - name: Setup Bun (For Build)
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Build JS Distribution
+        run: npm run build
+
+      - name: Package & Global Install Smoke Test
+        run: |
+          tarball=$(npm pack)
+          npm install -g "$tarball"
+          skill-harbor --help
+          skill-harbor list

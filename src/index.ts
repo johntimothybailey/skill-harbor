@@ -370,8 +370,10 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
 
             // --- Lighthouse: Automated Master Fleet Manifest ---
             console.log(kleur.yellow("\n  💡  Shining the Lighthouse..."));
+            const latestManifest = await manifestManager.read();
+            const latestSkills = Object.values(latestManifest.skills);
             const metadataList = [];
-            for (const skill of skills) {
+            for (const skill of latestSkills) {
                 const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
                 // REUSE spinnies from the main command context
                 const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });

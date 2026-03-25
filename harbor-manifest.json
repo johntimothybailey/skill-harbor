@@ -1,5 +1,15 @@
 {
   "version": "1.0",
-  "dependencies": {},
-  "skills": {}
+  "dependencies": {
+    "scryer": "https://github.com/johntimothybailey/sia/skills/scryer"
+  },
+  "skills": {
+    "scryer": {
+      "name": "scryer",
+      "source": "https://github.com/johntimothybailey/sia/skills/scryer",
+      "localPath": "",
+      "lastSyncHash": "",
+      "lastSyncTargets": []
+    }
+  }
 }
