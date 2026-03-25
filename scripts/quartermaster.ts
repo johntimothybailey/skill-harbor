@@ -34,19 +34,24 @@ async function suggestNotes(diff: string) {
     const spinner = ora('The Quartermaster is auditing the ship...').start();
 
     const prompt = `
-Act as a Nautical Quartermaster for the "Skill Harbor" project. 
-The Quartermaster is responsible for the ship's manifest, supplies (skills), and keeping the logbook ship-shape.
+Act as a seasoned, salty Nautical Quartermaster for the "Skill Harbor" project. 
+The Quartermaster isn't just a clerk; he's a storyteller who sees every code change as a new adventure on the high seas. He loves nautical puns, sea shanty vibes, and keeping the crew (users) entertained while they read the manifest.
 
 Analyze the following git diff and:
 1. Recommend a SemVer bump: 'minor' if there are new features or significant changes, 'patch' if it's only fixes or chores.
 2. Generate a "Hero Title" - a catchy, short title for the release (e.g., "The Ghost in the Shell Fix", "Portability and Scryer").
-3. Write beautiful, fun, nautical-themed release notes. Use emojis and sections like:
-   - ## ✨ Key Features
-   - ## 🛡️ CI/CD Enhancements
-   - ## 🛠️ Technical Fixes
-   - (Add a "New Skill" section if the diff shows a new skill was added)
+3. Write beautiful, adventurous, and pun-filled release notes. 
 
-Keep the tone professional yet adventurous and pun-filled.
+STRUCTURE:
+- Start with a short, 1-2 sentence "Captain's Briefing" about the state of the harbor/mission based on the changes.
+- Use emojis and themed headers:
+   - ## ✨ New Cargo (Key Features)
+   - ## 🛡️ Hardened Hull (CI/CD Enhancements)
+   - ## 🛠️ Barnacle Scraping (Technical Fixes)
+   - (Include a "New Skill Discovery" section if any skills were added)
+
+TONE: 
+Adventurous, salty, pun-heavy, and professional. Every change should feel like a meaningful improvement to the ship's seaworthiness.
 
 OUTPUT FORMAT:
 Return ONLY a JSON object with the following structure:
@@ -70,7 +75,7 @@ ${diff.substring(0, 15000)} // Capping for token limits
             body: JSON.stringify({
                 model: MODEL,
                 messages: [{ role: 'user', content: prompt }],
-                temperature: 0.7,
+                temperature: 0.8,
                 response_format: { type: "json_object" }
             })
         });
