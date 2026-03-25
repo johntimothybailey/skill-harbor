@@ -47,8 +47,9 @@ jobs:
       - name: Build JS Distribution
         run: npm run build
 
-      - name: Global Install Smoke Test
+      - name: Package & Global Install Smoke Test
         run: |
-          npm install -g .
+          tarball=$(npm pack)
+          npm install -g "$tarball"
           skill-harbor --help
           skill-harbor list
