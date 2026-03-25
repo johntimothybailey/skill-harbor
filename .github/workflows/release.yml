@@ -39,3 +39,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Update GitHub Release Title
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          # Get the published version
+          VERSION=$(node -p "require('./package.json').version")
+          
+          # Extract Hero Title from CHANGELOG.md (it's on the line starting with ## ⚓ under the version)
+          # We look for the block starting with our version and find the FIRST hero title.
+          HERO_TITLE=$(grep -A 10 "## $VERSION" CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
+          
+          if [ -z "$HERO_TITLE" ]; then
+            FINAL_TITLE="⚓ Skill Harbor v$VERSION"
+          else
+            FINAL_TITLE="⚓ Skill Harbor v$VERSION: $HERO_TITLE"
+          fi
+          
+          echo "Updating release v$VERSION to title: $FINAL_TITLE"
+          gh release edit "v$VERSION" --title "$FINAL_TITLE"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
