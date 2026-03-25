@@ -12,6 +12,7 @@ export interface SkillEntry {
 
 export interface HarborManifest {
     version: string;
+    targets?: string[]; // e.g. ["claude", "cursor", "antigravity", "rulesync"]
     dependencies: Record<string, string>; // "skill-name": "version/source"
     skills: Record<string, SkillEntry>;
 }

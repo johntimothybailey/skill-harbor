@@ -247,20 +247,23 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
             if (opts.lockdown) {
                 const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
                 const stowageBase = path.join(baseDir, opts.global ? ".harbor" : ".harbor", "stowage");
+                const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
                 
-                const targets = [
-                    { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
-                    { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
-                    { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
+                const targetConfigs = [
+                    { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
+                    { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor", key: "cursor" },
+                    { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
                 ];
                 
                 const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-                if (await exists(rulesyncBase)) {
-                    targets.push({ path: rulesyncBase, label: "Rulesync" });
-                }
+                targetConfigs.push({ path: rulesyncBase, label: "Rulesync", key: "rulesync" });
 
-                for (const target of targets) {
-                    if (opts.global || await exists(path.dirname(target.path))) {
+                for (const target of targetConfigs) {
+                    const shouldLockdown = hasExplicitTargets 
+                        ? manifest.targets!.includes(target.key)
+                        : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global || await exists(path.dirname(target.path))));
+
+                    if (shouldLockdown) {
                         const stowPath = path.join(stowageBase, target.label.toLowerCase());
                         await orchestrator.stowTarget(target.path, stowPath, target.label);
                     }
@@ -294,26 +297,27 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
 
                     // 3. Inject directly into configuration contexts
                     const targets = [];
+                    const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
                     
                     const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
-                    const claudeBase = path.join(baseDir, ".claude", "skills");
-                    if (options.global || await exists(path.join(baseDir, ".claude"))) {
+                    const shouldBerthClaude = hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")));
+                    if (shouldBerthClaude) {
                         const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
                         if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
                         targets.push("Claude");
                     }
 
                     const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
-                    const cursorBase = path.join(baseDir, ".cursor", "rules");
-                    if (options.global || await exists(path.join(baseDir, ".cursor"))) {
+                    const shouldBerthCursor = hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")));
+                    if (shouldBerthCursor) {
                         const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
                         if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
                         targets.push("Cursor");
                     }
 
                     const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
-                    const antigravityBase = path.join(baseDir, ".antigravity", "skills");
-                    if (options.global || await exists(path.join(baseDir, ".antigravity"))) {
+                    const shouldBerthAntigravity = hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")));
+                    if (shouldBerthAntigravity) {
                         const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
                         const success = await orchestrator.berth(geminiProcessed, antigravityDest, "Antigravity");
                         if (!success) await orchestrator.berth(cargoPath, antigravityDest, "Antigravity (Raw)");
@@ -322,7 +326,8 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
 
                     // --- Rulesync Integration ---
                     const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-                    if (await exists(rulesyncBase)) {
+                    const shouldBerthRulesync = hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(rulesyncBase));
+                    if (shouldBerthRulesync) {
                         const rulesyncDest = path.join(rulesyncBase, skill.name);
                         await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
                         targets.push("Rulesync");
@@ -364,16 +369,22 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                 const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agentic skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
                 
                 const fleetIntelligencePath = "000-fleet-intelligence.md";
-                const targets = [
-                    path.join(baseDir, ".claude", "skills", fleetIntelligencePath),
-                    path.join(baseDir, ".cursor", "rules", fleetIntelligencePath),
-                    path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath)
-                ];
+                const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
+                const targets = [];
+                
+                if (hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")))) {
+                    targets.push(path.join(baseDir, ".claude", "skills", fleetIntelligencePath));
+                }
+                if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")))) {
+                    targets.push(path.join(baseDir, ".cursor", "rules", fleetIntelligencePath));
+                }
+                if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")))) {
+                    targets.push(path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath));
+                }
 
                 for (const target of targets) {
-                    if (await exists(path.dirname(target))) {
-                        await fs.writeFile(target, manifestContent);
-                    }
+                    await fs.mkdir(path.dirname(target), { recursive: true });
+                    await fs.writeFile(target, manifestContent);
                 }
                 console.log(kleur.green("  ✓ [Lighthouse] Master Fleet Manifest berthed to all active agent folders.\n"));
             }
