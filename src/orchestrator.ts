@@ -289,7 +289,7 @@ export class Orchestrator {
             // Simple regex-based YAML parsing for name/description/triggers
             const nameMatch = yaml.match(/^name:\s*(.*)$/m);
             const descMatch = yaml.match(/^description:\s*(.*)$/m);
-            const triggersMatch = yaml.match(/^triggers:\s*(?:\[)?(.*)(?:\])?\s*$/m);
+            const triggersMatch = yaml.match(/^triggers:\s*(?:\[)?(.*?)(?:\])?\s*$/m);
 
             if (nameMatch) metadata.name = nameMatch[1].trim();
             if (descMatch) metadata.description = descMatch[1].trim();
