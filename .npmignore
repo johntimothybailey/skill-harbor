@@ -1,0 +1,15 @@
+src/
+tests/
+tsconfig.json
+bun.lockb
+.harbor/
+assets/
+brain/
+docs/
+.gitignore
+.github/
+README_V0.4.md
+release_notes_*.md
+walkthrough.md
+task.md
+dist/*.map
