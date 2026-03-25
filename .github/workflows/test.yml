@@ -44,6 +44,11 @@ jobs:
       - name: Install dependencies (NPM)
         run: npm install
 
+      - name: Setup Bun (For Build)
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       - name: Build JS Distribution
         run: npm run build
 
