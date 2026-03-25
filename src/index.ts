@@ -261,7 +261,7 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                 for (const target of targetConfigs) {
                     const shouldLockdown = hasExplicitTargets 
                         ? manifest.targets!.includes(target.key)
-                        : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global || await exists(path.dirname(target.path))));
+                        : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(target.path) : await exists(path.dirname(target.path))));
 
                     if (shouldLockdown) {
                         const stowPath = path.join(stowageBase, target.label.toLowerCase());
@@ -271,6 +271,7 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                 orchestrator.finalize("Lockdown complete. Workspace context stowed.");
             }
 
+            const failures: { skill: string; error: string }[] = [];
             const syncPromises = skills.map(async (skill) => {
                 const orchestrator = new Orchestrator({ 
                     skillName: skill.name, 
@@ -289,9 +290,9 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                     const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
                     const activeTargets: string[] = [];
                     
-                    if (hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")))) activeTargets.push("claude");
-                    if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")))) activeTargets.push("cursor");
-                    if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")))) activeTargets.push("antigravity");
+                    if (hasExplicitTargets ? manifest.targets!.includes("claude") : (opts.global ? await exists(path.join(os.homedir(), ".claude")) : await exists(path.join(baseDir, ".claude")))) activeTargets.push("claude");
+                    if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) activeTargets.push("cursor");
+                    if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) activeTargets.push("antigravity");
                     if (hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(path.join(os.homedir(), ".rulesync", "skills")))) activeTargets.push("rulesync");
 
                     const targetsChanged = JSON.stringify(activeTargets.sort()) !== JSON.stringify((skill.lastSyncTargets || []).sort());
@@ -360,7 +361,7 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
 
                     orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
                 } catch (err: any) {
-                    // Spinnies handled by orchestrator
+                    failures.push({ skill: skill.name, error: err.message });
                 } finally {
                     await orchestrator.cleanup();
                 }
@@ -390,13 +391,13 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                 const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
                 const targets = [];
                 
-                if (hasExplicitTargets ? manifest.targets!.includes("claude") : (options.global || await exists(path.join(baseDir, ".claude")))) {
+                if (hasExplicitTargets ? manifest.targets!.includes("claude") : (opts.global ? await exists(path.join(os.homedir(), ".claude")) : await exists(path.join(baseDir, ".claude")))) {
                     targets.push(path.join(baseDir, ".claude", "skills", fleetIntelligencePath));
                 }
-                if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (options.global || await exists(path.join(baseDir, ".cursor")))) {
+                if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) {
                     targets.push(path.join(baseDir, ".cursor", "rules", fleetIntelligencePath));
                 }
-                if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (options.global || await exists(path.join(baseDir, ".antigravity")))) {
+                if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) {
                     targets.push(path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath));
                 }
 
@@ -405,6 +406,15 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
                     await fs.writeFile(target, manifestContent);
                 }
                 console.log(kleur.green("  ✓ [Lighthouse] Master Fleet Manifest berthed to all active agent folders.\n"));
+            }
+
+            if (failures.length > 0) {
+                const failureMsg = `Workspace Sync completed with ${failures.length} incident(s).`;
+                printError(failureMsg);
+                failures.forEach(f => {
+                    console.log(kleur.red(`  ✖ [${f.skill}] ${f.error}`));
+                });
+                process.exit(1);
             }
 
             printSuccess(`Workspace Sync complete. The fleet is fully loaded with Agent skills.`);
