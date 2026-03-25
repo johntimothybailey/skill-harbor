@@ -5,4 +5,5 @@ dist
 .claude/
 .cursor/
 .harbor/
+package-lock.json
 *.log
