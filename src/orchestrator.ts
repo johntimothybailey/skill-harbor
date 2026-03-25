@@ -163,8 +163,13 @@ export class Orchestrator {
 
         this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`) });
         try {
-            // Ensure target directory exists
+            // Ensure target directory and its parents exist
             await fs.mkdir(targetPath, { recursive: true });
+            
+            // Verify it was actually created (sanity check for some environments)
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to create directory at ${targetPath}`);
+            }
 
             const files = await fs.readdir(cargoPath);
             for (const file of files) {
@@ -238,6 +243,9 @@ export class Orchestrator {
             
             // Re-create target for fresh berthing
             await fs.mkdir(targetPath, { recursive: true });
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to recreate target directory at ${targetPath}`);
+            }
         } catch (error: any) {
             this.spinnies.fail(this.spinnerId, { text: kleur.red(`[${this.skillName}] Stowage failure at ${label}: ${error.message}`) });
             throw error;
@@ -259,7 +267,11 @@ export class Orchestrator {
 
             // Clear target if it exists (to avoid merge conflicts)
             await fs.rm(targetPath, { recursive: true, force: true });
-            await fs.mkdir(path.dirname(targetPath), { recursive: true });
+            await fs.mkdir(targetPath, { recursive: true });
+            
+            if (!(await this.exists(targetPath))) {
+                throw new Error(`Failed to recreate target dir at ${targetPath}`);
+            }
 
             // Restore from stowage
             await fs.rename(stowagePath, targetPath);
