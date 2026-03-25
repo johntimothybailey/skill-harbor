@@ -21,7 +21,7 @@ async function getDiff() {
         // Use 'git diff baseBranch' to include committed + staged + unstaged changes
         return execSync(`git diff ${baseBranch}`, { encoding: 'utf-8' });
     } catch (error) {
-        console.error(kleur.red('Failed to get git diff. Are you on a branch with changes?'));
+        console.error(kleur.red('The Quartermaster is lost! Failed to get git diff.'));
         process.exit(1);
     }
 }
@@ -31,11 +31,11 @@ async function suggestNotes(diff: string) {
         throw new Error('GROQ_API_KEY environment variable is not set.');
     }
 
-    const spinner = ora('Lighthouse is scanning the horizon for changes...').start();
+    const spinner = ora('The Quartermaster is auditing the ship...').start();
 
     const prompt = `
-Act as a Nautical Release Engineer for the "Skill Harbor" project. 
-Skill Harbor is a workspace sync engine for AI agents (Claude, Cursor, etc.) that handles "skills" (rules/instructions).
+Act as a Nautical Quartermaster for the "Skill Harbor" project. 
+The Quartermaster is responsible for the ship's manifest, supplies (skills), and keeping the logbook ship-shape.
 
 Analyze the following git diff and:
 1. Recommend a SemVer bump: 'minor' if there are new features or significant changes, 'patch' if it's only fixes or chores.
@@ -89,16 +89,16 @@ ${diff.substring(0, 15000)} // Capping for token limits
 }
 
 async function run() {
-    console.log(kleur.bold().blue('\n⚓ Welcome to the Harbor Release Wizard\n'));
+    console.log(kleur.bold().blue('\n⚓ Welcome to the Quartermaster\'s Manifest Tool\n'));
 
     if (!GROQ_API_KEY) {
-        console.log(kleur.yellow('⚠️  GROQ_API_KEY is missing. Please set it to enable AI-powered notes.'));
+        console.log(kleur.yellow('⚠️  The Quartermaster cannot work without fuel! GROQ_API_KEY is missing.'));
         process.exit(1);
     }
 
     const diff = await getDiff();
     if (!diff.trim()) {
-        console.log(kleur.yellow('No changes detected since main. Nothing to release!'));
+        console.log(kleur.yellow('The manifest is clear. No changes detected since main!'));
         process.exit(0);
     }
 
@@ -107,7 +107,7 @@ async function run() {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
     while (!confirmed) {
-        console.log(kleur.cyan('\n--- Suggestion from the Navigator ---'));
+        console.log(kleur.cyan('\n--- Suggestion from the Quartermaster ---'));
         console.log(`${kleur.bold('Recommended Bump:')} ${suggestion.bump}`);
         console.log(`${kleur.bold('Hero Title:')} ⚓ ${suggestion.heroTitle}`);
         console.log(kleur.gray('\nProposed Notes:'));
@@ -128,13 +128,13 @@ async function run() {
             const proceed = await rl.question('Proceed to confirm? (y/n) ');
             if (proceed === 'y') confirmed = true;
         } else {
-            console.log('Aborting release wizard.');
+            console.log('The Quartermaster is heading below deck. Aborting.');
             process.exit(0);
         }
     }
 
     // Create the changeset file
-    const changesetName = `harbor-manifest-${Date.now().toString(36)}`;
+    const changesetName = `quartermaster-${Date.now().toString(36)}`;
     const changesetPath = path.join(process.cwd(), '.changeset', `${changesetName}.md`);
     
     const content = `---

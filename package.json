@@ -24,7 +24,7 @@
     "build": "mkdir -p dist && bun build ./src/index.ts --target node --outfile dist/index.js --external commander --external kleur --external spinnies --external ora --external fast-glob --external boxen",
     "version": "changeset version",
     "release": "npm run build && changeset publish",
-    "release-wizard": "bun ./scripts/harbor-wizard.ts"
+    "quartermaster": "bun ./scripts/quartermaster.ts"
   },
   "dependencies": {
     "boxen": "^8.0.1",
