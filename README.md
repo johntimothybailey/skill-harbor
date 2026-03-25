@@ -5,7 +5,7 @@
 <h1 align="center">⚓ Skill Harbor</h1>
 
 <p align="center">
-  <strong>The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team.</strong>
+  <strong>The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.</strong>
 </p>
 
 <p align="center">
@@ -18,11 +18,11 @@
 
 ## 🌊 Overview
 
-**Skill Harbor** is a lightweight "Package Manager for Agent Context"—a powerful **Workspace Sync Engine** built for AI agent developers.
+**Skill Harbor** is the **Declarative Workspace Orchestrator for AI Agents**. It is a powerful **Sync & Governance Engine** designed to standardize agent behavior, specialized skills, and project context across your entire team.
 
-Instead of installing skills globally on a single machine or forcing developers to configure MCP servers, Skill Harbor manages a project-level `harbor-manifest.json`. When a developer clones your repo, they simply run `skill-harbor up`, and your specifically chosen skills are instantly fetched, transpiled, and injected natively into their local agent's configuration folders.
+Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths.
 
-**It solves the massive problem of standardizing AI context across enterprise teams.**
+**It is the infrastructure layer for professional AI agent workflows.**
 
 ## 🛠️ The Architecture: How It Works
 
