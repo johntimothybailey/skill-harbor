@@ -1,5 +1,15 @@
 {
   "version": "1.0",
-  "dependencies": {},
-  "skills": {}
+  "dependencies": {
+    "sia-lighthouse": "https://github.com/johntimothybailey/sia/skills/sia-lighthouse"
+  },
+  "skills": {
+    "sia-lighthouse": {
+      "name": "sia-lighthouse",
+      "source": "https://github.com/johntimothybailey/sia/skills/sia-lighthouse",
+      "localPath": "",
+      "lastSyncHash": "",
+      "lastSyncTargets": []
+    }
+  }
 }
