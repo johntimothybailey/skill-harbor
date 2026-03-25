@@ -1,6 +1,6 @@
 {
   "name": "skill-harbor",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.",
   "author": "John Bailey",
   "license": "MIT",
