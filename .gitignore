@@ -2,4 +2,7 @@ node_modules
 dist
 .DS_Store
 .agent/skills/
+.claude/
+.cursor/
+.harbor/
 *.log
