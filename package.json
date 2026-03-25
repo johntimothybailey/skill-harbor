@@ -1,6 +1,6 @@
 {
   "name": "skill-harbor",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.",
   "author": "John Bailey",
   "license": "MIT",
@@ -13,15 +13,15 @@
     "url": "https://github.com/johntimothybailey/skill-harbor/issues"
   },
   "type": "module",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "bin": {
-    "skill-harbor": "src/index.ts"
+    "skill-harbor": "dist/index.js"
   },
   "scripts": {
-    "start": "bun src/index.ts",
+    "start": "node dist/index.js",
     "test": "vitest run",
-    "build": "bun build ./src/index.ts --target bun --outfile dist/skill-harbor"
+    "build": "mkdir -p dist && bun build ./src/index.ts --target node --outfile dist/index.js --external commander --external kleur --external spinnies --external ora --external fast-glob --external boxen"
   },
   "dependencies": {
     "boxen": "^8.0.1",
