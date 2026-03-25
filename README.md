@@ -166,6 +166,24 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 ---
 
 
+## 🤝 Contributing
+
+We welcome contributions! To ensure a smooth release process, we use **[Changesets](https://github.com/changesets/changesets)** for automated versioning and changelog generation.
+
+### The "Intent-Based" Workflow
+Instead of reconstructioning releases from git diffs, we capture the **intent** of every change at the moment it is made.
+
+1.  **Make your changes**.
+2.  **Run `npx changeset`** (Human) or ask your agent to create a changeset.
+3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
+4.  **Commit the generated `.changeset/*.md` file** along with your code.
+
+When your PR is merged to `main`, our GitHub Action will automatically:
+- Create (or update) a "Version Packages" Pull Request.
+- When that PR is merged, the new version will be built and published to NPM automatically.
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
