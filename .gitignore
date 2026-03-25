@@ -7,3 +7,4 @@ dist
 .harbor/
 package-lock.json
 *.log
+.env*

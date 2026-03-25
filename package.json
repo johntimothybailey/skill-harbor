@@ -23,7 +23,8 @@
     "test": "vitest run",
     "build": "mkdir -p dist && bun build ./src/index.ts --target node --outfile dist/index.js --external commander --external kleur --external spinnies --external ora --external fast-glob --external boxen",
     "version": "changeset version",
-    "release": "npm run build && changeset publish"
+    "release": "npm run build && changeset publish",
+    "quartermaster": "bun ./scripts/quartermaster.ts"
   },
   "dependencies": {
     "boxen": "^8.0.1",
@@ -37,8 +38,12 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
+    "@changesets/get-github-info": "^0.8.0",
+    "@changesets/types": "^6.1.0",
+    "@types/node": "^25.5.0",
     "@types/spinnies": "^0.5.3",
     "bun-types": "latest",
+    "dotenv": "^17.3.1",
     "typescript": "^5.3.3",
     "vitest": "^4.1.1"
   }

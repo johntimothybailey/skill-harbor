@@ -163,6 +163,21 @@ export class Orchestrator {
 
         this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`) });
         try {
+            // Fix: Proactively handle existing files or broken symlinks at targetPath
+            const stats = await fs.lstat(targetPath).catch(() => null);
+            if (stats) {
+                if (stats.isSymbolicLink()) {
+                    const targetStats = await fs.stat(targetPath).catch(() => null);
+                    if (!targetStats || !targetStats.isDirectory()) {
+                        // Broken symlink or symlink to file - remove it
+                        await fs.rm(targetPath, { force: true });
+                    }
+                } else if (!stats.isDirectory()) {
+                    // Plain file - remove it
+                    await fs.rm(targetPath, { force: true });
+                }
+            }
+
             // Ensure target directory and its parents exist
             try {
                 await fs.mkdir(targetPath, { recursive: true });
