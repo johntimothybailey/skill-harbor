@@ -47,25 +47,28 @@ export class Orchestrator {
                 return this.tempDir;
             }
 
+            // Handle full GitHub URLs by stripping protocol
+            let cleanUrl = url.replace(/^https?:\/\/(www\.)?github\.com\//, '');
+            
             // Format for skillfish: 'owner/repo skillname'
-            let repo = url;
+            let repo = cleanUrl;
             let skillName = "";
-            const parts = url.split(" ");
+            const parts = cleanUrl.split(" ");
             if (parts.length > 1) {
                 repo = parts[0];
                 skillName = parts[1];
             } else {
-                const slashParts = url.split("/");
-                if (slashParts.length >= 3) {
+                const slashParts = cleanUrl.split("/");
+                if (slashParts.length >= 2) {
                     repo = `${slashParts[0]}/${slashParts[1]}`;
-                    skillName = slashParts[slashParts.length - 1]; // e.g. 'hook-ascender'
+                    if (slashParts.length > 2) skillName = slashParts.slice(2).join("/");
                 }
             }
 
             const binPath = path.join(this.packageRoot, "node_modules", ".bin", "skillfish");
-            const args = [repo];
+            const args = ["add", repo];
             if (skillName) args.push(skillName);
-            args.push("--project", "--yes");
+            args.push("--project");
 
             const child = spawn(binPath, args, {
                 cwd: this.tempDir,
@@ -271,8 +274,8 @@ export class Orchestrator {
         if (!(await this.exists(skillPath))) return null;
 
         try {
-            const content = await fs.readFile(skillPath, "utf-8");
-            const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+            const content = (await fs.readFile(skillPath, "utf-8")).trim();
+            const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/m);
             
             if (!frontmatterMatch) return null;
 
@@ -286,7 +289,7 @@ export class Orchestrator {
             // Simple regex-based YAML parsing for name/description/triggers
             const nameMatch = yaml.match(/^name:\s*(.*)$/m);
             const descMatch = yaml.match(/^description:\s*(.*)$/m);
-            const triggersMatch = yaml.match(/^triggers:\s*\[(.*)\]$/m);
+            const triggersMatch = yaml.match(/^triggers:\s*(?:\[)?(.*)(?:\])?\s*$/m);
 
             if (nameMatch) metadata.name = nameMatch[1].trim();
             if (descMatch) metadata.description = descMatch[1].trim();

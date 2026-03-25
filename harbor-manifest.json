@@ -1,12 +1,12 @@
 {
   "version": "1.0",
   "dependencies": {
-    "sia-lighthouse": "https://github.com/johntimothybailey/sia/skills/sia-lighthouse"
+    "scryer": "https://github.com/johntimothybailey/sia/skills/scryer"
   },
   "skills": {
-    "sia-lighthouse": {
-      "name": "sia-lighthouse",
-      "source": "https://github.com/johntimothybailey/sia/skills/sia-lighthouse",
+    "scryer": {
+      "name": "scryer",
+      "source": "https://github.com/johntimothybailey/sia/skills/scryer",
       "localPath": "",
       "lastSyncHash": "",
       "lastSyncTargets": []
