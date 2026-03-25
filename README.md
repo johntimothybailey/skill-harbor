@@ -41,6 +41,23 @@ Here is exactly how the three tools relate to each other:
 
 ### Installation
 
+Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
+
+Using bun (Recommended)
+```bash
+bun add -g skill-harbor
+```
+
+Using npm
+```bash
+npm install -g skill-harbor
+```
+
+Using pnpm
+```bash
+pnpm add -g skill-harbor
+```
+
 ## ⚓ The Harbor Command Suite
 
 | Command | Why it exists | Typical Use Case |
