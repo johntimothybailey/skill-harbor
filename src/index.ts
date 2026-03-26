@@ -72,6 +72,7 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
     .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
     .option("-g, --global", "Sync the global manifest into user-level agent folders")
     .option("-l, --lockdown", "Clear target agent folders before berthing to ensure ONLY manifest skills exist")
+    .option("--force", "Force re-synchronization of all skills")
     .action(upAction);
 
 program

@@ -31,7 +31,7 @@ export async function upAction(options: any, command: any) {
             
             const targetConfigs = [
                 { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
-                { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor", key: "cursor" },
+                { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
                 { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
             ];
             
@@ -76,17 +76,32 @@ export async function upAction(options: any, command: any) {
                 if (hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(path.join(os.homedir(), ".rulesync", "skills")))) activeTargets.push("rulesync");
 
                 const targetsChanged = JSON.stringify(activeTargets.sort()) !== JSON.stringify((skill.lastSyncTargets || []).sort());
+                
+                // 3. Destination Integrity Check
+                let destinationsMissing = false;
+                for (const target of activeTargets) {
+                    let dest = "";
+                    if (target === "claude") dest = path.join(baseDir, ".claude", "skills", skill.name);
+                    else if (target === "cursor") dest = path.join(baseDir, ".cursor", "skills", skill.name);
+                    else if (target === "antigravity") dest = path.join(baseDir, ".antigravity", "skills", skill.name);
+                    else if (target === "rulesync") dest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
+                    
+                    if (dest && !(await exists(dest))) {
+                        destinationsMissing = true;
+                        break;
+                    }
+                }
 
-                // 3. Optimization Bypass
-                if (!sourceChanged && !targetsChanged && cacheExists) {
+                // 4. Optimization Bypass
+                if (!opts.force && !sourceChanged && !targetsChanged && !destinationsMissing && cacheExists) {
                     spinnies.add(`sync-${skill.name}`, { text: kleur.gray(`[${skill.name}] No changes detected. Skipping sync.`) });
                     spinnies.succeed(`sync-${skill.name}`);
                     return;
                 }
 
-                // 4. Moor (Only if source changed or cache missing)
+                // 5. Moor (Only if source changed or cache missing, unless forced)
                 let cargoPath = "";
-                if (!sourceChanged && cacheExists) {
+                if (!opts.force && !sourceChanged && cacheExists) {
                     cargoPath = cachedPath;
                     spinnies.add(`sync-${skill.name}`, { text: kleur.cyan(`[${skill.name}] Source unchanged. Reusing cached cargo.`) });
                 } else {
@@ -107,7 +122,7 @@ export async function upAction(options: any, command: any) {
 
                 // Cursor
                 if (activeTargets.includes("cursor")) {
-                    const cursorDest = path.join(baseDir, ".cursor", "rules", skill.name);
+                    const cursorDest = path.join(baseDir, ".cursor", "skills", skill.name);
                     const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
                     if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
                     berthedTargets.push("Cursor");
@@ -175,7 +190,7 @@ export async function upAction(options: any, command: any) {
                 targets.push(path.join(baseDir, ".claude", "skills", fleetIntelligencePath));
             }
             if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) {
-                targets.push(path.join(baseDir, ".cursor", "rules", fleetIntelligencePath));
+                targets.push(path.join(baseDir, ".cursor", "skills", fleetIntelligencePath));
             }
             if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) {
                 targets.push(path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath));

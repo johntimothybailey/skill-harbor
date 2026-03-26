@@ -19,7 +19,7 @@ export async function undockAction(options: any, command: any) {
         
         const targets = [
             { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
-            { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor" },
+            { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor" },
             { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
         ];
 

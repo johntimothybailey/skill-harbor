@@ -82,6 +82,57 @@ describe('upAction', () => {
         expect(mockOrchestrator.moor).not.toHaveBeenCalled();
     });
 
+    it('should perform sync when --force is provided even if no changes detected', async () => {
+        const options = { force: true };
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.read.mockResolvedValue({
+            skills: {
+                'skill1': { 
+                    name: 'skill1', 
+                    source: 'source1', 
+                    lastSyncHash: 'source1',
+                    lastSyncTargets: ['claude']
+                }
+            }
+        });
+        (exists as any).mockResolvedValue(true);
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.moor).toHaveBeenCalled();
+        expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete.'));
+    });
+
+    it('should perform sync if a skill is missing from an active target destination', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.read.mockResolvedValue({
+            skills: {
+                'skill1': { 
+                    name: 'skill1', 
+                    source: 'source1', 
+                    lastSyncHash: 'source1',
+                    lastSyncTargets: ['claude']
+                }
+            }
+        });
+        
+        // Mock exists to return true for agent folders but false for the specific skill in one of them
+        (exists as any).mockImplementation((p: string) => {
+            if (p.includes('.claude/skills/skill1')) return Promise.resolve(false);
+            return Promise.resolve(true);
+        });
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.berth).toHaveBeenCalled();
+        expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete.'));
+    });
+
     it('should handle lockdown mode', async () => {
         const options = { lockdown: true };
         const mockCommand = {
