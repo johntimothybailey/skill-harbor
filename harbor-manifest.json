@@ -10,6 +10,11 @@
       "localPath": "",
       "lastSyncHash": "",
       "lastSyncTargets": []
+    },
+    "test-skill": {
+      "name": "test-skill",
+      "source": "local",
+      "localPath": ".harbor/test-skill"
     }
   }
 }
