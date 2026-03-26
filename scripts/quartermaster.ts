@@ -185,7 +185,7 @@ ${suggestion.notes}
 
     await fs.writeFile(tmpFile, editableContent, 'utf-8');
 
-    const editor = process.env.EDITOR || process.env.VISUAL || 'vim';
+    const editor = process.env.QUARTERMASTER_EDITOR || process.env.VISUAL || process.env.EDITOR || 'vim';
     console.log(kleur.cyan(`\n📝 Opening ${editor}...`));
 
     const result = spawnSync(editor, [tmpFile], { stdio: 'inherit', shell: true });

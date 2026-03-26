@@ -177,6 +177,10 @@ Instead of reconstructioning releases from git diffs, we capture the **intent** 
 1.  **Make your changes**.
 2.  **Run `bun x changeset`** (Human) or ask your agent to create a changeset.
 3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
+    - *Tip: You can use the `[e]dit` option in the Quartermaster CLI to refine the notes. To use a specific editor (like Cursor), set the `QUARTERMASTER_EDITOR` environment variable (via `export` or in your `.env.local` file):*
+    ```bash
+    export QUARTERMASTER_EDITOR="cursor --wait"
+    ```
 4.  **Commit the generated `.changeset/*.md` file** along with your code.
 
 When your PR is merged to `main`, our GitHub Action will automatically:
