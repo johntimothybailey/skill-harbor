@@ -50,6 +50,12 @@ STRUCTURE:
    - ## 🛡️ Hardened Hull (CI/CD Enhancements)
    - ## 🛠️ Barnacle Scraping (Technical Fixes)
    - (Include a "New Skill Discovery" section if any skills were added)
+- Omit any section that has no relevant changes. Do NOT pad empty sections with generic filler.
+
+CRITICAL RULES:
+- NEVER use vague phrases like "various technical improvements", "code improvements", "updates to ensure smoother operation", or "better performance across different aspects". Every bullet MUST reference a specific file, function, module, or concrete behavior change from the diff.
+- The "Barnacle Scraping" section is for SPECIFIC bug fixes, refactors, or internal changes. Each bullet must name what was changed and why (e.g., "Fixed detectSkillType falsely classifying Markdown skills as API Tools due to package.json presence").
+- Do NOT repeat features already covered in "New Cargo" under a different section. Each change belongs in exactly one section.
 
 TONE: 
 Adventurous, salty, pun-heavy, and professional. Every change should feel like a meaningful improvement to the ship's seaworthiness.
