@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkAction } from './check';
 import { Orchestrator } from '../orchestrator';
 import { getManifestManager, exists } from '../utils';
-import { printHeader, printError, printInfo } from '../ui';
+import { printHeader, printInfo } from '../ui';
 import os from 'node:os';
 
 vi.mock('../orchestrator');

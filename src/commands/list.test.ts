@@ -49,7 +49,7 @@ describe('listAction', () => {
             opts: vi.fn().mockReturnValue(options),
         };
         mockManifestManager.read.mockResolvedValue({ skills: {} });
-        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        vi.spyOn(console, 'log').mockImplementation(() => {});
 
         await listAction(options, mockCommand);
 

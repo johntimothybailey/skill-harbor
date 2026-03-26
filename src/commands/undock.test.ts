@@ -4,7 +4,6 @@ import { Orchestrator } from '../orchestrator';
 import { exists } from '../utils';
 import { printHeader, printSuccess, printError } from '../ui';
 import os from 'node:os';
-import path from 'node:path';
 
 vi.mock('../orchestrator');
 vi.mock('../utils');

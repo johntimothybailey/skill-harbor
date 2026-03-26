@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { upAction } from './up';
 import { Orchestrator } from '../orchestrator';
 import { getManifestManager, exists } from '../utils';
-import { printHeader, printSuccess, printError, printInfo } from '../ui';
+import { printHeader, printSuccess, printError } from '../ui';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import os from 'node:os';
 
 vi.mock('../orchestrator');
