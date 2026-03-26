@@ -9,6 +9,7 @@ import { unstowAction } from "./commands/unstow";
 import { upAction } from "./commands/up";
 import { checkAction } from "./commands/check";
 import { lighthouseAction } from "./commands/lighthouse";
+import { fathomAction } from "./commands/fathom";
 
 const program = new Command();
 
@@ -92,5 +93,15 @@ Why: Gives you a concise block of text to 'prime' any AI agent with your fleet's
 Use Case: Copy the output of this command into a custom instructions field or a system prompt.`)
     .option("-g, --global", "Generate snippet for global manifest skills")
     .action(lighthouseAction);
+
+program
+    .command("fathom")
+    .description("Evaluate a skill's operational footprint (Displacement & Draft).")
+    .addHelpText("after", `
+Why: Helps you understand the token cost and trigger risk of your fleet.
+Use Case: Run this to identify 'Heavy' skills or those likely to be triggered accidentally.`)
+    .option("-g, --global", "Fathom skills in the global manifest")
+    .option("--details", "Show detailed breakdown of each heuristic and its scoring impact")
+    .action(fathomAction);
 
 await program.parseAsync(process.argv);
