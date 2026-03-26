@@ -43,15 +43,18 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Update GitHub Release Title
+      - name: Update GitHub Release Title and Body
         if: steps.changesets.outputs.published == 'true'
         run: |
           # Get the published version
           VERSION=$(node -p "require('./package.json').version")
           
-          # Extract Hero Title from CHANGELOG.md (it's on the line starting with ## ⚓ under the version)
-          # We look for the block starting with our version and find the FIRST hero title.
+          # Extract Hero Title from CHANGELOG.md (it's on the line starting with ## ⚓)
           HERO_TITLE=$(grep -A 10 "## $VERSION" CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
+          
+          # Extract the entire content block for this version from CHANGELOG.md
+          # It takes everything between this version and the next version header
+          sed -n "/## $VERSION/,/## [0-9]/p" CHANGELOG.md | sed '1d;$d' > release_notes.md
           
           if [ -z "$HERO_TITLE" ]; then
             FINAL_TITLE="⚓ Skill Harbor v$VERSION"
@@ -59,7 +62,7 @@ jobs:
             FINAL_TITLE="⚓ Skill Harbor v$VERSION: $HERO_TITLE"
           fi
           
-          echo "Updating release v$VERSION to title: $FINAL_TITLE"
-          gh release edit "v$VERSION" --title "$FINAL_TITLE"
+          echo "Updating release v$VERSION with rich notes"
+          gh release edit "v$VERSION" --title "$FINAL_TITLE" --notes-file release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
