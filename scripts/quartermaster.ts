@@ -188,7 +188,7 @@ ${suggestion.notes}
     const editor = process.env.EDITOR || process.env.VISUAL || 'vim';
     console.log(kleur.cyan(`\n📝 Opening ${editor}...`));
 
-    const result = spawnSync(editor, [tmpFile], { stdio: 'inherit' });
+    const result = spawnSync(editor, [tmpFile], { stdio: 'inherit', shell: true });
 
     if (result.status !== 0) {
         console.log(kleur.yellow('Editor exited with an error. Keeping original content.'));
