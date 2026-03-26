@@ -157,4 +157,44 @@ describe('upAction', () => {
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('incident(s)'));
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
+
+    it('should perform sync if a skill is missing from an active target destination without self-copying cache', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+
+        // Mock manifest with one skill already synced
+        (getManifestManager as any).mockReturnValue({
+            read: vi.fn().mockResolvedValue({
+                skills: {
+                    skill1: { name: 'skill1', source: 'src1', lastSyncHash: 'src1' }
+                }
+            }),
+            getHarborDir: vi.fn().mockReturnValue('/harbor'),
+            addSkill: vi.fn().mockResolvedValue(undefined),
+        });
+
+        // Mock exists: cache exists, but destination is missing
+        (exists as any).mockImplementation((p: string) => {
+            if (p.includes('.claude/skills/skill1')) return Promise.resolve(false); // missing
+            if (p.includes('/harbor/skill1')) return Promise.resolve(true); // cache exists
+            return Promise.resolve(true); // others exist
+        });
+
+        await upAction(options, mockCommand);
+
+        const mockOrchestrator = (Orchestrator as any).mock.results[0].value;
+
+        // Verify it reused the cache (didn't call moor)
+        expect(mockOrchestrator.moor).not.toHaveBeenCalled();
+        
+        // Verify it berthed to the target
+        expect(mockOrchestrator.berth).toHaveBeenCalledWith('/tmp/processed', expect.stringContaining('.claude/skills/skill1'), 'Claude');
+        
+        // Verify it DID NOT try to berth to "Harbor Cache" (since cargoPath === cachedPath)
+        expect(mockOrchestrator.berth).not.toHaveBeenCalledWith(expect.any(String), expect.any(String), 'Harbor Cache');
+        
+        expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete'));
+    });
 });

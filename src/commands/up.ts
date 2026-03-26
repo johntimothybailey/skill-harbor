@@ -144,8 +144,10 @@ export async function upAction(options: any, command: any) {
                     berthedTargets.push("Rulesync");
                 }
 
-                // 6. Update Cache & State
-                await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
+                // 6. Update Cache & State (only if cargo was freshly moored)
+                if (cargoPath !== cachedPath) {
+                    await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
+                }
 
                 await manifestManager.addSkill({
                     ...skill,
