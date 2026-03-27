@@ -31,9 +31,10 @@ triggers: []
         await fs.writeFile(path.join(tempDir, 'SKILL.md'), skillContent);
         
         const draft = await profiler.calculateDraft(tempDir);
-        // Base 5 + 2 (short) + 2 (search, find) + 2 (no triggers) + 1 (no strictness) = 12 -> clamped to 10
-        expect(draft.score).toBe(10);
-        expect(draft.condition).toBe('Storm Surge');
+        // Base 5 + 3 (short description) = 8
+        // Inverted: 11 - 8 = 3
+        expect(draft.score).toBe(3);
+        expect(draft.condition).toBe('Rough Seas');
         
         await fs.rm(tempDir, { recursive: true });
     });
@@ -49,9 +50,10 @@ triggers: ["exactMatch"]
         await fs.writeFile(path.join(tempDir, 'SKILL.md'), skillContent);
         
         const draft = await profiler.calculateDraft(tempDir);
-        // Base 5 + 1 ("do") - 2 (negative constraints) + 0 (triggers exist) - 2 (regex keyword) = 2
-        expect(draft.score).toBe(2);
-        expect(draft.condition).toBe('Glassy Water');
+        // Base 5 + 0 (long description) - 2 (negative constraints) = 3
+        // Inverted: 11 - 3 = 8
+        expect(draft.score).toBe(8);
+        expect(draft.condition).toBe('Calm Seas');
         
         await fs.rm(tempDir, { recursive: true });
     });
