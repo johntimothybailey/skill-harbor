@@ -1,7 +1,6 @@
-import { execSync, spawnSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 import readline from 'node:readline/promises';
 import kleur from 'kleur';
 import ora from 'ora';
@@ -125,15 +124,12 @@ async function run() {
         console.log(kleur.gray('\nProposed Notes:'));
         console.log(boxen(suggestion.notes, { padding: 1, borderColor: 'cyan' }));
 
-        const action = await rl.question('\n[c]onfirm, [r]egenerate, [e]dit, or [q]uit? ');
+        const action = await rl.question('\n[c]onfirm, [r]egenerate, or [q]uit? ');
 
         if (action === 'c') {
             confirmed = true;
         } else if (action === 'r') {
             suggestion = await suggestNotes(diff);
-        } else if (action === 'e') {
-            suggestion = await editInEditor(suggestion);
-            // Show the updated suggestion before looping back for confirmation
         } else {
             console.log('The Quartermaster is heading below deck. Aborting.');
             process.exit(0);
@@ -166,60 +162,4 @@ run().catch(err => {
     process.exit(1);
 });
 
-async function editInEditor(suggestion: { bump: string; heroTitle: string; notes: string }) {
-    const tmpFile = path.join(os.tmpdir(), `quartermaster-${Date.now()}.md`);
 
-    const editableContent = `# Quartermaster Edit
-# Lines starting with # are comments and will be ignored.
-# Edit the fields below, then save and close your editor.
-
-## Bump
-${suggestion.bump}
-
-## Hero Title
-${suggestion.heroTitle}
-
-## Notes
-${suggestion.notes}
-`;
-
-    await fs.writeFile(tmpFile, editableContent, 'utf-8');
-
-    const editor = process.env.QUARTERMASTER_EDITOR || process.env.VISUAL || process.env.EDITOR || 'vim';
-    console.log(kleur.cyan(`\n📝 Opening ${editor}...`));
-
-    const result = spawnSync(editor, [tmpFile], { stdio: 'inherit', shell: true });
-
-    if (result.status !== 0) {
-        console.log(kleur.yellow('Editor exited with an error. Keeping original content.'));
-        await fs.rm(tmpFile, { force: true });
-        return suggestion;
-    }
-
-    const edited = await fs.readFile(tmpFile, 'utf-8');
-    await fs.rm(tmpFile, { force: true });
-
-    // Parse sections back out
-    const sections = edited.split(/^## /m).filter(s => s.trim());
-    const parsed = { ...suggestion };
-
-    for (const section of sections) {
-        const lines = section.split('\n');
-        const header = lines[0].trim().toLowerCase();
-        const body = lines.slice(1)
-            .filter(l => !l.startsWith('#'))
-            .join('\n')
-            .trim();
-
-        if (header === 'bump') {
-            parsed.bump = body || suggestion.bump;
-        } else if (header.includes('hero') || header.includes('title')) {
-            parsed.heroTitle = body || suggestion.heroTitle;
-        } else if (header === 'notes') {
-            parsed.notes = body || suggestion.notes;
-        }
-    }
-
-    console.log(kleur.green('✅ Edits loaded from editor.'));
-    return parsed;
-}
