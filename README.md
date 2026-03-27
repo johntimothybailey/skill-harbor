@@ -37,23 +37,46 @@ Here is exactly how the three tools relate to each other:
 
 > **In summary**: Skill Harbor holds the blueprints. It uses `skillfish` to deliver the raw lumber, and `skill-porter` to cut that lumber so it perfectly fits your local `.claude` or `.cursor` directories.
 
+## 🗺️ Harbor Workflow
+
+```mermaid
+graph TD
+    Start((Start)) --> Dock[skill-harbor dock]
+    Dock --> Up[skill-harbor up]
+    Up --> Use[Agent Uses Skills]
+    
+    subgraph "Maintenance & Updates"
+    Use --> Fathom[skill-harbor fathom]
+    Use --> Check[skill-harbor check]
+    Use --> Freshen[skill-harbor freshen]
+    Freshen -- "Force Fresh Cargo" --> Up
+    end
+    
+    subgraph "Security & Governance"
+    Use --> Lockdown[skill-harbor up --lockdown]
+    Lockdown --> Unstow[skill-harbor unstow]
+    end
+    
+    subgraph "Agent Intelligence"
+    Use --> Light[skill-harbor lighthouse]
+    end
+```
+
 ## 🚀 Usage
 
 ### Installation
 
 Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
 
-Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
-
 ```bash
 # Using bun (Recommended)
-bun add -g skill-harbor
+ bun add -g skill-harbor
 
 # Using npm
-npm install -g skill-harbor
+ npm install -g skill-harbor
 
 # Using pnpm
-pnpm add -g skill-harbor
+ pnpm add -g skill-harbor
 ```
 ## ⚓ The Harbor Command Suite
 
@@ -61,6 +84,7 @@ pnpm add -g skill-harbor
 | :--- | :--- | :--- |
 | **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
+| **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |
 | **`up --lockdown`** | Enforces a strict, manifest-only environment. | Switching from a personal project to a client project with strict rules. |
 | **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
@@ -80,6 +104,14 @@ Enforce team-wide consistency by isolating your agent's context.
 *   **Unstow (Unlock)**: Restore your original environment.
     ```bash
     skill-harbor unstow
+    ```
+
+### 🚢 Fresh Cargo & Updates
+Harbor automatically detects changes in local dev skills, but sometimes you need to force a fresh pull from remote sources.
+
+*   **Freshen Command**: Bypasses all local hashing and cache to pull the latest repositories from GitHub or local paths.
+    ```bash
+    skill-harbor freshen
     ```
 
 ### 💡 Lighthouse & Intelligence
@@ -177,10 +209,6 @@ Instead of reconstructioning releases from git diffs, we capture the **intent** 
 1.  **Make your changes**.
 2.  **Run `bun x changeset`** (Human) or ask your agent to create a changeset.
 3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
-    - *Tip: You can use the `[e]dit` option in the Quartermaster CLI to refine the notes. To use a specific editor (like Cursor), set the `QUARTERMASTER_EDITOR` environment variable (via `export` or in your `.env.local` file):*
-    ```bash
-    export QUARTERMASTER_EDITOR="cursor --wait"
-    ```
 4.  **Commit the generated `.changeset/*.md` file** along with your code.
 
 When your PR is merged to `main`, our GitHub Action will automatically:
