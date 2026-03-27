@@ -10,6 +10,7 @@ import { upAction } from "./commands/up";
 import { checkAction } from "./commands/check";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
+import { freshenAction } from "./commands/freshen";
 
 const program = new Command();
 
@@ -75,6 +76,15 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
     .option("-l, --lockdown", "Clear target agent folders before berthing to ensure ONLY manifest skills exist")
     .option("--force", "Force re-synchronization of all skills")
     .action(upAction);
+
+program
+    .command("freshen")
+    .description("Pull fresh cargo by forcing a re-sync of all skills in the manifest.")
+    .addHelpText("after", `
+Why: Ensures you have the absolute latest version of every skill, bypassing the local cache.
+Use Case: Run this if a teammate has updated a remote skill and you want to pull the latest changes immediately.`)
+    .option("-g, --global", "Freshen skills from the global manifest")
+    .action(freshenAction);
 
 program
     .command("check")
