@@ -1,11 +1,90 @@
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { lstatSync } from "node:fs";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+import crypto from "node:crypto";
+import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, exists } from "../utils";
 import { printHeader, printSuccess, printError, printInfo } from "../ui";
+
+const execAsync = promisify(exec);
+
+/**
+ * Generates a hash for the skill source to detect changes.
+ * For remote URLs, it returns the URL itself.
+ * For local paths, it hashes file stats (size, mtime) to detect updates.
+ */
+async function getSourceHash(source: string): Promise<string> {
+    if (source.startsWith('http') || (source.includes('/') && !source.startsWith('.') && !source.startsWith('/') && !source.startsWith('file://'))) {
+        // Assume it's a remote repo/URL
+        try {
+            // Extract the repo URL (owner/repo) from the source string
+            let cleanUrl = source.replace(/^https?:\/\/(www\.)?github\.com\//, '');
+            let repo = "";
+            let ref = "HEAD"; // Default ref
+
+            const hashParts = cleanUrl.split("#");
+            if (hashParts.length > 1) {
+                cleanUrl = hashParts[0];
+                ref = hashParts[1];
+            }
+
+            const parts = cleanUrl.split(" ");
+            if (parts.length > 1) {
+                repo = parts[0];
+            } else {
+                const slashParts = cleanUrl.split("/");
+                if (slashParts.length >= 2) {
+                    repo = `${slashParts[0]}/${slashParts[1]}`;
+                }
+            }
+
+            if (repo) {
+                const repoUrl = `https://github.com/${repo}.git`;
+                // Use a short timeout to prevent hanging the sync
+                const { stdout } = await execAsync(`git ls-remote ${repoUrl} ${ref}`, { timeout: 5000 });
+                const remoteHash = stdout.split(/\s+/)[0];
+                if (remoteHash) return `${source}:${remoteHash}`;
+            }
+        } catch (err) {
+            // If git fails or network is down, fallback to the source string itself
+            // to avoid breaking the sync (it will just be conservative)
+        }
+        return source;
+    }
+
+    const localPath = source.replace('file://', '');
+    try {
+        const stats = await fs.stat(localPath);
+        if (stats.isFile()) {
+            return `${source}:${stats.size}:${stats.mtimeMs}`;
+        }
+
+        // It's a directory, hash the contents (stats only for speed)
+        const files = await glob("**/*", { cwd: localPath, absolute: true, ignore: ["**/node_modules/**", "**/.git/**"] });
+        const fileStats = files
+            .map(f => {
+                try {
+                    const s = lstatSync(f);
+                    return `${path.relative(localPath, f)}:${s.size}:${s.mtimeMs}`;
+                } catch {
+                    return "";
+                }
+            })
+            .sort()
+            .join("|");
+        
+        return crypto.createHash("md5").update(fileStats).digest("hex");
+    } catch {
+        // Fallback to source string if path doesn't exist
+        return source;
+    }
+}
 
 export async function upAction(options: any, command: any) {
     const opts = command.opts();
@@ -61,7 +140,8 @@ export async function upAction(options: any, command: any) {
             
             try {
                 // 1. Change Detection
-                const sourceChanged = skill.source !== skill.lastSyncHash;
+                const currentSourceHash = await getSourceHash(skill.source);
+                const sourceChanged = currentSourceHash !== skill.lastSyncHash;
                 const harborDir = manifestManager.getHarborDir();
                 const cachedPath = path.join(harborDir, skill.name);
                 const cacheExists = await exists(cachedPath);
@@ -150,7 +230,7 @@ export async function upAction(options: any, command: any) {
                 await manifestManager.addSkill({
                     ...skill,
                     localPath: cachedPath,
-                    lastSyncHash: skill.source,
+                    lastSyncHash: currentSourceHash,
                     lastSyncTargets: activeTargets
                 });
 
