@@ -37,23 +37,46 @@ Here is exactly how the three tools relate to each other:
 
 > **In summary**: Skill Harbor holds the blueprints. It uses `skillfish` to deliver the raw lumber, and `skill-porter` to cut that lumber so it perfectly fits your local `.claude` or `.cursor` directories.
 
+## 🗺️ Harbor Workflow
+
+```mermaid
+graph TD
+    Start((Start)) --> Dock[skill-harbor dock]
+    Dock --> Up[skill-harbor up]
+    Up --> Use[Agent Uses Skills]
+    
+    subgraph "Maintenance & Updates"
+    Use --> Fathom[skill-harbor fathom]
+    Use --> Check[skill-harbor check]
+    Use --> Freshen[skill-harbor freshen]
+    Freshen -- "Force Fresh Cargo" --> Up
+    end
+    
+    subgraph "Security & Governance"
+    Use --> Lockdown[skill-harbor up --lockdown]
+    Lockdown --> Unstow[skill-harbor unstow]
+    end
+    
+    subgraph "Agent Intelligence"
+    Use --> Light[skill-harbor lighthouse]
+    end
+```
+
 ## 🚀 Usage
 
 ### Installation
 
 Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
 
-Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
-
 ```bash
 # Using bun (Recommended)
-bun add -g skill-harbor
+ bun add -g skill-harbor
 
 # Using npm
-npm install -g skill-harbor
+ npm install -g skill-harbor
 
 # Using pnpm
-pnpm add -g skill-harbor
+ pnpm add -g skill-harbor
 ```
 ## ⚓ The Harbor Command Suite
 
@@ -61,11 +84,13 @@ pnpm add -g skill-harbor
 | :--- | :--- | :--- |
 | **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
+| **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |
 | **`up --lockdown`** | Enforces a strict, manifest-only environment. | Switching from a personal project to a client project with strict rules. |
 | **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
 | **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
 | **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
+| **`fathom`** | Heuristic profiler for skill operational footprint. | Evaluating if a skill is a "small boat" or a "massive cargo ship". |
 | **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
 
@@ -79,6 +104,14 @@ Enforce team-wide consistency by isolating your agent's context.
 *   **Unstow (Unlock)**: Restore your original environment.
     ```bash
     skill-harbor unstow
+    ```
+
+### 🚢 Fresh Cargo & Updates
+Harbor automatically detects changes in local dev skills, but sometimes you need to force a fresh pull from remote sources.
+
+*   **Freshen Command**: Bypasses all local hashing and cache to pull the latest repositories from GitHub or local paths.
+    ```bash
+    skill-harbor freshen
     ```
 
 ### 💡 Lighthouse & Intelligence

@@ -9,6 +9,8 @@ import { unstowAction } from "./commands/unstow";
 import { upAction } from "./commands/up";
 import { checkAction } from "./commands/check";
 import { lighthouseAction } from "./commands/lighthouse";
+import { fathomAction } from "./commands/fathom";
+import { freshenAction } from "./commands/freshen";
 
 const program = new Command();
 
@@ -76,6 +78,15 @@ Use Case: Run this after cloning a repo or when a teammate adds new skills to th
     .action(upAction);
 
 program
+    .command("freshen")
+    .description("Pull fresh cargo by forcing a re-sync of all skills in the manifest.")
+    .addHelpText("after", `
+Why: Ensures you have the absolute latest version of every skill, bypassing the local cache.
+Use Case: Run this if a teammate has updated a remote skill and you want to pull the latest changes immediately.`)
+    .option("-g, --global", "Freshen skills from the global manifest")
+    .action(freshenAction);
+
+program
     .command("check")
     .description("Verify that all berthed skills have valid SKILL.md metadata (Lighthouse Health).")
     .addHelpText("after", `
@@ -92,5 +103,15 @@ Why: Gives you a concise block of text to 'prime' any AI agent with your fleet's
 Use Case: Copy the output of this command into a custom instructions field or a system prompt.`)
     .option("-g, --global", "Generate snippet for global manifest skills")
     .action(lighthouseAction);
+
+program
+    .command("fathom")
+    .description("Evaluate a skill's operational footprint (Displacement & Draft).")
+    .addHelpText("after", `
+Why: Helps you understand the token cost and trigger risk of your fleet.
+Use Case: Run this to identify 'Heavy' skills or those likely to be triggered accidentally.`)
+    .option("-g, --global", "Fathom skills in the global manifest")
+    .option("--details", "Show detailed breakdown of each heuristic and its scoring impact")
+    .action(fathomAction);
 
 await program.parseAsync(process.argv);

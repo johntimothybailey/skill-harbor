@@ -10,8 +10,17 @@ vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
 vi.mock('node:fs/promises');
+vi.mock('node:fs');
 vi.mock('node:os');
 vi.mock('spinnies');
+vi.mock('fast-glob');
+vi.mock('node:child_process', () => ({
+    exec: vi.fn()
+}));
+
+import { lstatSync } from 'node:fs';
+import glob from 'fast-glob';
+import { exec } from 'node:child_process';
 
 describe('upAction', () => {
     let mockOrchestrator: any;
@@ -43,6 +52,7 @@ describe('upAction', () => {
         (exists as any).mockResolvedValue(true);
         (fs.mkdir as any).mockResolvedValue(undefined);
         (fs.writeFile as any).mockResolvedValue(undefined);
+        (lstatSync as any).mockReturnValue({ size: 100, mtimeMs: 123456789 });
     });
 
     it('should perform a full sync when changes are detected', async () => {
@@ -142,6 +152,55 @@ describe('upAction', () => {
         await upAction(options, mockCommand);
 
         expect(mockOrchestrator.stowTarget).toHaveBeenCalled();
+    });
+
+    it('should detect changes in local skills using hashing', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.read.mockResolvedValue({
+            skills: {
+                'local-skill': { 
+                    name: 'local-skill', 
+                    source: './local-skill', 
+                    lastSyncHash: 'old-hash' 
+                }
+            }
+        });
+        
+        (glob as any).mockResolvedValue(['/absolute/path/to/local-skill/file.txt']);
+        // stats are handled by lstatSync which we can mock if needed, 
+        // but by default currentSourceHash will be different from 'old-hash'
+        
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.moor).toHaveBeenCalledWith('./local-skill');
+    });
+
+    it('should detect changes in remote skills using git ls-remote', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.read.mockResolvedValue({
+            skills: {
+                'remote-skill': { 
+                    name: 'remote-skill', 
+                    source: 'owner/repo', 
+                    lastSyncHash: 'owner/repo:old-hash' 
+                }
+            }
+        });
+        
+        const mockExec = exec as any;
+        mockExec.mockImplementation((cmd: string, opts: any, cb: any) => {
+            cb(null, { stdout: 'new-hash\tHEAD' });
+        });
+        
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.moor).toHaveBeenCalledWith('owner/repo');
     });
 
     it('should report failures and exit 1', async () => {
