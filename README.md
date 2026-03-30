@@ -165,17 +165,43 @@ Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or q
 - **`--format json`**: Output machine-parsable data for programmatic consumption.
 
 #### 📡 Sonar: Probabilistic Confidence
-Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI or local Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
+Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
 
 - **`--query <text>`**: Run a Sonar audit against all skills for a specific query.
 - **`--model <name>`**: Override the model configured in `profiler.yaml`.
 
-```bash
-# Test how confident GPT-4o is about triggering your rules
-skill-harbor fathom --query "Refactor this React component" --model gpt-4o
+##### ⚙️ Provider Configuration
+Sonar uses an OpenAI-compatible interface. You can configure your provider in `profiler.yaml`:
 
-# Block a PR if context bloat exceeds 20%
-skill-harbor fathom --report --max-bloat 20.0
+```yaml
+# profiler.yaml
+sonar:
+  provider: "openai"
+  model: "llama-3.3-70b-versatile"        # e.g., gpt-4o, gemini-1.5-flash
+  baseUrl: "https://api.groq.com/openai/v1" # e.g., https://api.openai.com/v1
+```
+
+##### 🔑 Environment Secrets
+Regardless of the provider, Sonar uses a unified environment variable in your `.env` file:
+
+```bash
+# .env
+HARBOR_PROFILER_API_KEY=your_secret_key_here
+```
+
+| Provider | Base URL | Model Suggestion |
+| :--- | :--- | :--- |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o`, `gpt-4o-mini` |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| **Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-1.5-flash`, `gemini-1.5-pro` |
+| **Ollama** | `http://localhost:11434/v1` | `llama3.1`, `mistral` |
+
+> [!IMPORTANT]
+> **Logprobs Support**: Not all models or providers support the `logprobs` parameter. If your chosen model does not return logprobs, Fathom will display **[Offline]** or assume a default confidence based on the presence of tool-calling signals. For high-fidelity and performance, **Groq Llama** and **OpenAI GPT-4o** are recommended.
+
+```bash
+# Cross-provider test override (e.g., using Gemini)
+skill-harbor fathom --query "example" --baseUrl https://generativelanguage.googleapis.com/v1beta/openai/ --model gemini-1.5-flash
 ```
 
 #### ⚓ Why Use Fathom?

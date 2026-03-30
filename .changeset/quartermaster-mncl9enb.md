@@ -2,10 +2,14 @@
 "skill-harbor": minor
 ---
 
-<!-- hero: Fathom: Fleet-Scale Profiling -->
+<!-- hero: Sonar Intelligence: Probabilistic Auditing -->
 
-Captain's Briefing: The Skill Harbor has upgraded its navigation tools with the new `fathom` command, a rigorous mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
+Captain's Briefing: Skill Harbor has deployed the **Sonar Intelligence Engine**, a two-fold Confidence auditing system for agentic skills. Move beyond raw token counts with **Confidence (Heuristic)** for instant local analysis and **Confidence (Sonar)** for high-fidelity, probabilistic model verification via logprobs in the actual model provided. With Sonar, it's not guessing; it's testing.
 
 ## ✨ New Cargo (Key Features)
-* Enhanced `fathom` command to provide a fleet-scale profiler for context bloat & API costs of skills, evaluating the cumulative cognitive load of your entire skill ecosystem.
-* Added `--max-tokens`, `--max-bloat`, `--min-score`, and `--format json` options to the `fathom` command for customizable threshold checks and output formats allowing it to be used for CI/CD gates.
+* **Confidence (Heuristic)**: Implemented a proprietary scoring algorithm (1-10) that evaluates semantic vagueness, trigger clarity, and collision risk across your entire fleet.
+* **Confidence (Sonar)**: Introduced a high-fidelity audit layer that extracts mathematical trigger likelihood (logprobs) from real model responses (OpenAI/Ollama) using a specific user query.
+* **Sonar Configuration Layer**: Added `profiler.yaml` and `.env` support for flexible routing between LLM providers and secure API management.
+* **Health Reporting**: Enhanced harbor-wide reports now include cumulative context bloat, token consumption, and fleet-wide confidence averages.
+* **CI/CD Governance**: Integrated `--max-tokens`, `--max-bloat`, `--min-score`, and `--format json` for automated PR gating and fleet quality enforcement.
+* **Maritime UI**: Refined nautical-themed reporting with interactive confidence bars and detailed heuristic breakdowns.
