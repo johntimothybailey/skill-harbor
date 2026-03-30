@@ -1,10 +1,11 @@
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { getManifestManager, exists } from "../utils";
+import { getManifestManager, exists, getAgentBerths, AgentBerth } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
 import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
+import os from "node:os";
 
 export async function fathomAction(options: any, command: any) {
     const opts = command.opts();
@@ -30,15 +31,41 @@ export async function fathomAction(options: any, command: any) {
             baseUrl: baseUrlOverride
         });
 
-        // 2. Layered Manifest Loading
         const manifest = opts.global 
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
-        const skills = Object.values(manifest.skills);
+        let skills: any[] = Object.values(manifest.skills);
+        const manifestSkillNames = new Set(skills.map(s => s.name));
+        const ghostSkillPaths: string[] = [];
 
-        if (skills.length === 0) {
-            printInfo("Empty Harbor", "No skills found in the manifest stack to fathom.");
+        // 2.5 Ghost Skill Discovery
+        if (opts.ghosts) {
+            const baseDir = opts.global ? os.homedir() : process.cwd();
+            const berths = await getAgentBerths(baseDir, manifest.targets);
+            
+            for (const berth of berths) {
+                const foundPaths = await profiler.findSkills(berth.path);
+                for (const skillPath of foundPaths) {
+                    const name = path.basename(skillPath);
+                    if (!manifestSkillNames.has(name)) {
+                        ghostSkillPaths.push(skillPath);
+                        // Add to individual skills list if not doing a report
+                        if (!showReport) {
+                            skills.push({
+                                name,
+                                layer: "ghost" as any,
+                                isGhost: true,
+                                path: skillPath
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        if (skills.length === 0 && ghostSkillPaths.length === 0) {
+            printInfo("Empty Harbor", "No skills found in the manifest or agent berths to fathom.");
             return;
         }
 
@@ -58,12 +85,18 @@ export async function fathomAction(options: any, command: any) {
                 spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
             }
             
-            const skillPaths = await profiler.findSkills(harborDir);
+            let skillPaths = await profiler.findSkills(harborDir);
+            
+            // Include ghosts in the report paths
+            if (opts.ghosts) {
+                skillPaths = [...new Set([...skillPaths, ...ghostSkillPaths])];
+            }
+
             if (skillPaths.length === 0) {
                 if (format === 'pretty') {
-                    spinnies.fail("harbor-scan", { text: "No berthed skills found in harbor. Run 'up' first." });
+                    spinnies.fail("harbor-scan", { text: "No vessels found to fathom. Check manifest or berths." });
                 } else {
-                    console.error(JSON.stringify({ error: "No berthed skills found" }));
+                    console.error(JSON.stringify({ error: "No vessels found" }));
                 }
                 return;
             }
@@ -96,11 +129,14 @@ export async function fathomAction(options: any, command: any) {
 
         // 4. Individual Skill Analysis (Default)
         for (const skill of skills) {
-            const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
+            const cachedPath = skill.isGhost 
+                ? skill.path 
+                : path.join(manifestManager.getHarborDir(), skill.name);
             
             let layerLabel = "";
             if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
             else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
+            else if (skill.layer === "ghost") layerLabel = kleur.magenta(" [Ghost]");
 
             if (!(await exists(cachedPath))) {
                 spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)}${layerLabel} Skill cargo not found in harbor. Run 'up' first.` });
