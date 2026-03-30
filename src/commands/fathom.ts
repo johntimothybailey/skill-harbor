@@ -14,7 +14,9 @@ export async function fathomAction(options: any, command: any) {
     const showReport = opts.report ?? false;
 
     try {
-        printHeader("Fathom: Skill Profiler");
+        if (!opts.format || opts.format === "pretty") {
+            printHeader("Fathom: Skill Profiler");
+        }
         
         // 1. Layered Manifest Loading
         const manifest = opts.global 
@@ -29,7 +31,7 @@ export async function fathomAction(options: any, command: any) {
         }
 
         // 2. Override Warnings
-        if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
+        if (!opts.global && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
             console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
@@ -38,22 +40,45 @@ export async function fathomAction(options: any, command: any) {
         // --- Harbor Health Report ---
         if (showReport) {
             const harborDir = manifestManager.getHarborDir();
-            spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
+            const format = opts.format ?? 'pretty';
+            
+            if (format === 'pretty') {
+                spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
+            }
             
             const skillPaths = await profiler.findSkills(harborDir);
             if (skillPaths.length === 0) {
-                spinnies.fail("harbor-scan", { text: "No berthed skills found in harbor. Run 'up' first." });
+                if (format === 'pretty') {
+                    spinnies.fail("harbor-scan", { text: "No berthed skills found in harbor. Run 'up' first." });
+                } else {
+                    console.error(JSON.stringify({ error: "No berthed skills found" }));
+                }
                 return;
             }
 
-            spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
-            const report = await profiler.generateHealthReport(skillPaths);
-            spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
+            if (format === 'pretty') spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
             
-            printHarborHealthReport(report);
+            const thresholds = {
+                maxTokens: opts.maxTokens ? parseInt(opts.maxTokens) : undefined,
+                maxBloat: opts.maxBloat ? parseFloat(opts.maxBloat) : undefined,
+                minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
+            };
+
+            const report = await profiler.generateHealthReport(skillPaths, thresholds);
+            
+            if (format === 'pretty') {
+                spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
+            }
+            
+            printHarborHealthReport(report, format);
+
+            if (!report.status.isHealthy) {
+                process.exit(1);
+            }
             return; // Exit after report if requested
         }
 
+        // 3. Individual Skill Analysis (Default)
         for (const skill of skills) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
             
@@ -92,7 +117,7 @@ export async function fathomAction(options: any, command: any) {
 
             let heuristicSubtext = "";
             if (draft.skillType === "API Tool") {
-                heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Schema: ${fmt(draft.heuristics.schemaStrictness)})`)}`;
+                heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Schema: ${fmt(draft.heuristics.schemaStrictness || 0)})`)}`;
             } else {
                 heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Tags: ${fmt(draft.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(draft.heuristics.triggerClarity ?? 0)})`)}`;
             }
@@ -122,7 +147,7 @@ export async function fathomAction(options: any, command: any) {
                         "Measures description clarity. Short (<50 chars) or generic verb-heavy descriptions reduce the score.");
                     printDetailRow("Constraints", fmt(h.negativeConstraints),
                         "Boundary phrases like 'only use this when' or 'do not use' help the LLM know when NOT to trigger.");
-                    printDetailRow("Schema", fmt(h.schemaStrictness),
+                    printDetailRow("Schema", fmt(h.schemaStrictness || 0),
                         "Presence of triggers, enums, regex patterns, or strict parameter schemas tighten invocation rules.");
                 } else {
                     printDetailRow("Vagueness", fmt(h.semanticVagueness),
@@ -143,9 +168,11 @@ export async function fathomAction(options: any, command: any) {
             console.log("");
         }
 
-        console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
-        if (!showDetails) {
-            console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+        if (!showReport) {
+            console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
+            if (!showDetails) {
+                console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+            }
         }
     } catch (error: any) {
         printError(`Fathom failed: ${error.message}`);

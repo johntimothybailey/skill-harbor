@@ -38,9 +38,14 @@ export const printLighthouseSnippet = (snippet: string) => {
     }));
 };
 
-export const printHarborHealthReport = (report: any) => {
-    const { totalSkills, totalTokens, totalCost, averageDraft, composition, shipDistribution, contextBloat } = report;
+export const printHarborHealthReport = (report: any, format: string = 'pretty') => {
+    const { totalSkills, totalTokens, totalCost, averageDraft, composition, shipDistribution, contextBloat, status } = report;
     
+    if (format === 'json') {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+
     let content = `${kleur.bold().blue('⚓  Harbor Health Report: Fleet Intelligence Status')}\n`;
     content += `${kleur.gray('─────────────────────────────────────────────────')}\n\n`;
     
@@ -74,12 +79,19 @@ export const printHarborHealthReport = (report: any) => {
         content += `${model.model.padEnd(18)} [${bar}] ${labelColor(percent + '%')}\n`;
     }
 
+    if (!status.isHealthy) {
+        content += `\n${kleur.bold().red('🚫 CI/CD GATE VIOLATIONS:')}\n`;
+        for (const violation of status.violations) {
+            content += `${kleur.red(`   - ${violation}`)}\n`;
+        }
+    }
+
     console.log(boxen(content, {
         padding: 1,
         margin: { top: 1, bottom: 1, left: 0, right: 0 },
         borderStyle: 'double',
-        borderColor: 'blue',
-        title: kleur.bold().blue(' HARBOR HEALTH REPORT '),
+        borderColor: status.isHealthy ? 'blue' : 'red',
+        title: kleur.bold()[status.isHealthy ? 'blue' : 'red'](' HARBOR HEALTH REPORT '),
         titleAlignment: 'center'
     }));
 };

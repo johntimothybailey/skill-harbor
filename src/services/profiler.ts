@@ -3,7 +3,7 @@ import path from "node:path";
 import matter from "gray-matter";
 import glob from "fast-glob";
 import { getEncoding } from "js-tiktoken";
-import { FathomMetrics, ShipClass, WaterCondition, SkillType, HarborHealthReport } from "../types/profiler";
+import { FathomMetrics, ShipClass, WaterCondition, SkillType, HarborHealthReport, FathomThresholds } from "../types/profiler";
 
 export class ProfilerService {
     private readonly encoding = getEncoding("cl100k_base");
@@ -86,7 +86,7 @@ export class ProfilerService {
     /**
      * Generates a comprehensive health report by aggregating metrics from all discovered skills.
      */
-    async generateHealthReport(skillPaths: string[]): Promise<HarborHealthReport> {
+    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds): Promise<HarborHealthReport> {
         let totalTokens = 0;
         let totalScoreSum = 0;
         let scoreCount = 0;
@@ -124,6 +124,21 @@ export class ProfilerService {
             { model: "GPT-4o-mini", limit: 128000, percentage: (totalTokens / 128000) * 100 }
         ];
 
+        // --- Threshold Validation ---
+        const violations: string[] = [];
+        if (thresholds) {
+            if (thresholds.maxTokens && totalTokens > thresholds.maxTokens) {
+                violations.push(`Total tokens (${totalTokens.toLocaleString()}) exceed threshold of ${thresholds.maxTokens.toLocaleString()}.`);
+            }
+            const gpt4oBloat = contextBloat.find(b => b.model === "GPT-4o")?.percentage ?? 0;
+            if (thresholds.maxBloat && gpt4oBloat > thresholds.maxBloat) {
+                violations.push(`Context bloat (${gpt4oBloat.toFixed(1)}%) exceeds threshold of ${thresholds.maxBloat}%.`);
+            }
+            if (thresholds.minScore && averageDraft < thresholds.minScore) {
+                violations.push(`Average fleet wake score (${averageDraft.toFixed(1)}) is below threshold of ${thresholds.minScore}.`);
+            }
+        }
+
         return {
             totalSkills: skillPaths.length,
             totalTokens,
@@ -134,7 +149,11 @@ export class ProfilerService {
                 tools: toolCount
             },
             shipDistribution,
-            contextBloat
+            contextBloat,
+            status: {
+                isHealthy: violations.length === 0,
+                violations
+            }
         };
     }
 

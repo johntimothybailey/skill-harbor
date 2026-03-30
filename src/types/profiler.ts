@@ -63,4 +63,14 @@ export interface HarborHealthReport {
         limit: number;
         percentage: number;
     }[];
+    status: {
+        isHealthy: boolean;
+        violations: string[];
+    };
+}
+
+export interface FathomThresholds {
+    maxTokens?: number;
+    maxBloat?: number;
+    minScore?: number;
 }

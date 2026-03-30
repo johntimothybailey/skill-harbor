@@ -1,120 +1,87 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import kleur from "kleur";
 import { dockAction } from "./commands/dock";
+import { upAction } from "./commands/up";
+import { freshenAction } from "./commands/freshen";
+import { checkAction } from "./commands/check";
 import { listAction } from "./commands/list";
 import { undockAction } from "./commands/undock";
 import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
-import { upAction } from "./commands/up";
-import { checkAction } from "./commands/check";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
-import { freshenAction } from "./commands/freshen";
 
 const program = new Command();
 
 program
     .name("skill-harbor")
-    .version("0.11.0")
-    .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
+    .description("⚓ Skill Harbor: The Declarative Workspace Orchestrator for AI Agents")
+    .version("1.0.0");
 
 program
-    .command("dock")
-    .argument("<url>", "Skill URL to fetch (URL or git repository)")
-    .description("Dock a new skill into the harbor manifest.")
-    .addHelpText("after", `
-Why: Registers a skill's source so all teammates can sync it.
-Use Case: Run this when you find a new specialized skill (like 'react-query-rules') that you want the whole team to use.`)
-    .option("-g, --global", "Dock into the global manifest at ~/.harbor/")
-    .option("-l, --local", "Dock into the local override manifest (harbor-manifest.local.json)")
+    .command("dock <url>")
+    .description("Register a skill's source in the manifest.")
+    .option("-g, --global", "Register the skill in the global manifest (~/.harbor)")
+    .option("-l, --local <path>", "Register a local project-specific skill from a file path")
     .action(dockAction);
 
 program
-    .command("list")
-    .description("List all skills currently tracked in the harbor manifest.")
-    .addHelpText("after", `
-Why: Provides a quick overview of what's currently in your project's 'Fleet'.
-Use Case: Check this to see if a specific skill is already tracked before trying to dock it.`)
-    .option("-g, --global", "List ONLY skills from the global manifest at ~/.harbor/")
-    .option("-a, --all", "List merged skills from all layers (Global, Shared, Local)")
-    .action(listAction);
-
-program
-    .command("undock")
-    .description("Clear agent skill folders to remove project or global context.")
-    .addHelpText("after", `
-Why: Forcefully removes agent context to prevent 'skill leakage' between projects.
-Use Case: Use this if an agent is getting confused by old skills that are no longer in the manifest.`)
-    .option("-g, --global", "Target user-level agent folders (e.g. ~/.claude)")
-    .action(undockAction);
-
-program
-    .command("stow")
-    .description("Temporarily move existing skills from agent berths to the harbor stowage area.")
-    .addHelpText("after", `
-Why: Safely clears the deck without deleting files.
-Use Case: You want to work on a clean branch without your personal global skills, but you want to restore them later.`)
-    .option("-g, --global", "Stow user-level agent skills (e.g. ~/.claude)")
-    .action(stowAction);
-
-program
-    .command("unstow")
-    .description("Restore stowed skills from the harbor stowage area back to active agent berths.")
-    .addHelpText("after", `
-Why: Restores your environment to its original state (Unlocks the Harbor).
-Use Case: Run this after finishing a 'Lockdown' session to get your personal skills back.`)
-    .option("-g, --global", "Restore user-level agent skills")
-    .action(unstowAction);
-
-program
     .command("up")
-    .description("Sync the workspace by fetching and transpiling all skills from the manifest stack into agent folders.")
-    .addHelpText("after", `
-Why: Standardizes your team's AI agent behavior across the entire project.
-Use Case: Run this after cloning a repo or when a teammate adds new skills to the harbor-manifest.json.`)
-    .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
-    .option("-g, --global", "Sync ONLY the global manifest")
-    .option("-l, --lockdown", "Clear target agent folders before berthing to ensure ONLY manifest skills exist")
-    .option("--force", "Force re-synchronization of all skills")
+    .description("⚓ The Core Engine. Syncs, transpiles, and berths skills.")
+    .option("-g, --global", "Include global manifest skills in the sync")
+    .option("-l, --lockdown", "Enforces a strict, manifest-only environment. Stows existing rules first.")
     .action(upAction);
 
 program
     .command("freshen")
-    .description("Pull fresh cargo by forcing a re-sync of all skills in the manifest stack.")
-    .addHelpText("after", `
-Why: Ensures you have the absolute latest version of every skill, bypassing the local cache.
-Use Case: Run this if a teammate has updated a remote skill and you want to pull the latest changes immediately.`)
-    .option("-g, --global", "Freshen ONLY skills from the global manifest")
+    .description("Force-syncs fresh cargo by bypassing all local hashes and cache.")
+    .option("-g, --global", "Freshen global manifest skills as well")
     .action(freshenAction);
 
 program
     .command("check")
-    .description("Verify that all berthed skills have valid SKILL.md metadata (Lighthouse Health).")
-    .addHelpText("after", `
-Why: Ensures your skills are actually 'discoverable' by AI agents.
-Use Case: Run this if an agent isn't 'seeing' a skill you think is berthed.`)
-    .option("-g, --global", "Check ONLY skills in the global manifest")
+    .description("Verifies that berthed skills have valid metadata and integrity.")
+    .option("-g, --global", "Check global manifest skills")
     .action(checkAction);
 
 program
+    .command("list")
+    .description("Shows all skills currently tracked in the harbor.")
+    .option("-g, --global", "List global manifest skills")
+    .action(listAction);
+
+program
+    .command("undock")
+    .description("Destructive purge of agent skill folders.")
+    .option("-g, --global", "Undock global manifest skills")
+    .action(undockAction);
+
+program
+    .command("stow")
+    .description("Safely backs up current agent context without deleting.")
+    .action(stowAction);
+
+program
+    .command("unstow")
+    .description("Restores previously stowed context (The 'Unlock').")
+    .action(unstowAction);
+
+program
     .command("lighthouse")
-    .description("Generate a System Prompt Snippet representing your fleet's intelligence.")
-    .addHelpText("after", `
-Why: Gives you a concise block of text to 'prime' any AI agent with your fleet's capabilities.
-Use Case: Copy the output of this command into a custom instructions field or a system prompt.`)
-    .option("-g, --global", "Generate snippet for ONLY global manifest skills")
+    .description("Generates a fleet intelligence prompt snippet.")
+    .option("-g, --global", "Include global manifest skills in the master manifest")
     .action(lighthouseAction);
 
 program
     .command("fathom")
-    .description("Evaluate a skill's operational footprint (Displacement & Draft).")
-    .addHelpText("after", `
-Why: Helps you understand the token cost and trigger risk of your fleet.
-Use Case: Run this to identify 'Heavy' skills or those likely to be triggered accidentally.`)
-    .option("-g, --global", "Fathom ONLY skills in the global manifest")
-    .option("--details", "Show detailed breakdown of each heuristic and its scoring impact")
-    .option("--report", "Generate a comprehensive Harbor Health Report showing total context bloat and fleet cost")
+    .description("Fleet-scale profiler for context bloat & API costs.")
+    .option("-d, --details", "Show granular heuristic analysis for each skill.")
+    .option("-r, --report", "Generate a harbor-wide health report.")
+    .option("-f, --format <type>", "Output format ('pretty' | 'json'). Default: 'pretty'.")
+    .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
+    .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
+    .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")
+    .option("-g, --global", "Target the global manifest (~/.harbor).")
     .action(fathomAction);
 
 await program.parseAsync(process.argv);
