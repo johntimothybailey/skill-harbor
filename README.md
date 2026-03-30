@@ -128,10 +128,21 @@ As your ecosystem of AI agent tools grows, injecting too many skills causes **"c
 
 The `fathom` command provides a rigorous, mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
 
--   **Deterministic Token Math**: Uses `js-tiktoken` (`cl100k_base`) to calculate the exact token footprint of every skill file. No more "guessing" at context window usage.
--   **API Cost Estimation**: Projects high-fidelity input costs for **GPT-4o** and **GPT-4o-mini**, allowing teams to forecast the operational overhead of their fleet.
--   **Heuristic Drafting (The "Wake" Model)**: Evaluates a skill's likelihood of being triggered (Draft) using logarithmic probabilities. It audits for "Semantic Vagueness" and "Negative Constraints" to ensure agents only invoke tools when appropriate.
--   **Harbor Health Report**: Scales analysis to the entire harbor. It calculates the **Cumulative Context Bloat**—showing exactly what percentage of a target context window (128k, 200k) is "eaten" by your combined tool set.
+#### 🧮 The Science of Fathom
+While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the core "Intelligence Audit" is powered by proprietary heuristic formulas:
+
+*   **Deterministic Token Math**: Uses `js-tiktoken` (`cl100k_base`) to calculate the exact token footprint of every skill file.
+*   **The "Wake" Scoring Algorithm**: A multi-dimensional evaluation of a skill's trigger risk. It calculates a composite score based on:
+    *   **Semantic Vagueness**: Penalizes shallow descriptions (<50 chars) and generic verb density.
+    *   **Trigger Clarity**: High-weight bonuses for explicit `## Trigger`, `## Purpose`, and `## Exceptions` markdown headers.
+    *   **Negative Constraints**: Deducts "wake" for boundary phrases like *"only use this when"* or *"do not use"*.
+    *   **Schema Strictness**: Evaluates the presence of `enums`, `regex patterns`, and parameter constraints in API tools.
+*   **Normalization Formula**: Raw heuristic scores are normalized to a 10-point scale:
+    $$Score_{normalized} = 11 - \max(1, \min(10, Score_{composite}))$$
+    *(Where 10 = **Glassy Water** (Optimal) and 1 = **Storm Surge** (Catastrophic Collision Risk))*
+*   **Context Saturation Math**: Calculates cumulative fleet weight against fixed model limits:
+    $$Saturation = \left( \frac{\sum Tokens_{fleet}}{ContextLimit_{model}} \right) \times 100$$
+*   **API Cost Estimation**: Projects high-fidelity input costs for **GPT-4o** ($5.00/1M) and **GPT-4o-mini** ($0.15/1M).
 
 ```bash
 # Get a high-level overview of your harbor displacement
