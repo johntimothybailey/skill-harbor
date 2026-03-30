@@ -1,39 +1,44 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import matter from "gray-matter";
+import { getEncoding } from "js-tiktoken";
 import { FathomMetrics, ShipClass, WaterCondition, SkillType } from "../types/profiler";
 
 export class ProfilerService {
-    private readonly CHAR_TO_TOKEN_RATIO = 4;
+    private readonly encoding = getEncoding("cl100k_base");
+    private readonly GPT4O_COST_PER_1M = 5.00;
+    private readonly GPT4O_MINI_COST_PER_1M = 0.15;
 
     /**
-     * Displacement: Calculates token weight based on char-to-token ratio.
+     * Displacement: Calculates exact token weight and API cost.
      */
     async calculateDisplacement(skillPath: string): Promise<FathomMetrics["displacement"]> {
-        let totalChars = 0;
+        let totalTokens = 0;
         try {
             const files = await this.getAllFiles(skillPath);
             for (const file of files) {
                 const content = await fs.readFile(file, "utf-8");
-                totalChars += content.length;
+                totalTokens += this.countTokens(content);
             }
         } catch {
             // If we can't read files, return default
         }
 
-        const tokens = Math.ceil(totalChars / this.CHAR_TO_TOKEN_RATIO);
+        const tokens = totalTokens;
         const { shipClass, icon } = this.getShipClass(tokens);
+        const cost = this.calculateApiCost(tokens);
 
-        return { tokens, shipClass, icon };
+        return { tokens, shipClass, icon, cost };
     }
 
     /**
      * Draft: Calculates trigger likelihood (1-10) based on heuristics.
      */
-    async calculateDraft(skillPath: string): Promise<FathomMetrics["draft"] & { heuristics: FathomMetrics["heuristics"] }> {
+    async calculateDraft(skillPath: string): Promise<FathomMetrics["draft"] & { heuristics: FathomMetrics["heuristics"], validation: FathomMetrics["validation"] }> {
         const { metadata, content } = await this.readSkillMetadata(skillPath);
+        const validation = this.validateMetadata(metadata);
         const skillType = await this.detectSkillType(skillPath, metadata);
 
-        let score = 5; // Base score
         let result: { 
             score: number; 
             heuristics: FathomMetrics["heuristics"] 
@@ -45,7 +50,7 @@ export class ProfilerService {
             result = this.evaluateAgenticSkillWake(metadata, content);
         }
 
-        score = result.score;
+        let score = result.score;
         
         // Clamp score between 1 and 10, then invert so 10 = best
         score = Math.max(1, Math.min(10, score));
@@ -58,7 +63,39 @@ export class ProfilerService {
             condition,
             wakeSize,
             skillType,
+            validation,
             heuristics: result.heuristics
+        };
+    }
+
+    private countTokens(text: string): number {
+        return this.encoding.encode(text).length;
+    }
+
+    private calculateApiCost(tokens: number): FathomMetrics["displacement"]["cost"] {
+        return {
+            gpt4o: (tokens / 1_000_000) * this.GPT4O_COST_PER_1M,
+            gpt4oMini: (tokens / 1_000_000) * this.GPT4O_MINI_COST_PER_1M
+        };
+    }
+
+    private validateMetadata(metadata: any): FathomMetrics["validation"] {
+        const errors: string[] = [];
+        const namePresent = !!metadata.name && typeof metadata.name === "string" && metadata.name.length > 0;
+        const descriptionPresent = !!metadata.description && typeof metadata.description === "string" && metadata.description.length > 0;
+
+        if (!namePresent) errors.push("Missing or empty 'name' in frontmatter.");
+        if (!descriptionPresent) errors.push("Missing or empty 'description' in frontmatter.");
+        
+        if (descriptionPresent && metadata.description.length < 50) {
+            errors.push("Description is too shallow (under 50 characters).");
+        }
+
+        return {
+            namePresent,
+            descriptionPresent,
+            isProperlyFormatted: errors.length === 0,
+            errors
         };
     }
 
@@ -230,30 +267,9 @@ export class ProfilerService {
     private async readSkillMetadata(skillPath: string): Promise<{ metadata: any, content: string }> {
         const skillFile = path.join(skillPath, "SKILL.md");
         try {
-            const content = await fs.readFile(skillFile, "utf-8");
-            const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/m);
-            if (!frontmatterMatch) return { metadata: {}, content };
-
-            const yaml = frontmatterMatch[1];
-            const metadata: any = { triggers: [], tags: [] };
-            
-            const nameMatch = yaml.match(/^name:\s*(.*)$/m);
-            if (nameMatch) metadata.name = nameMatch[1].trim();
-
-            const descMatch = yaml.match(/^description:\s*(.*)$/m);
-            if (descMatch) metadata.description = descMatch[1].trim();
-
-            const triggersMatch = yaml.match(/^triggers:\s*(?:\[)?(.*?)(?:\])?\s*$/m);
-            if (triggersMatch) {
-                metadata.triggers = triggersMatch[1].split(",").map(t => t.trim().replace(/^['"](.*)['"]$/, "$1")).filter(Boolean);
-            }
-
-            const tagsMatch = yaml.match(/^tags:\s*(?:\[)?(.*?)(?:\])?\s*$/m);
-            if (tagsMatch) {
-                metadata.tags = tagsMatch[1].split(",").map(t => t.trim().replace(/^['"](.*)['"]$/, "$1")).filter(Boolean);
-            }
-
-            return { metadata, content };
+            const rawContent = await fs.readFile(skillFile, "utf-8");
+            const { data, content } = matter(rawContent);
+            return { metadata: data, content };
         } catch {
             return { metadata: {}, content: "" };
         }

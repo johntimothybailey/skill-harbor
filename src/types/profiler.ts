@@ -14,12 +14,22 @@ export interface FathomMetrics {
         tokens: number;
         shipClass: ShipClass;
         icon: string;
+        cost: {
+            gpt4o: number;     // $/1M tokens baseline ($5.00/1M)
+            gpt4oMini: number; // $/1M tokens baseline ($0.15/1M)
+        };
     };
     draft: {
         score: number; // 1-10
         condition: WaterCondition;
         wakeSize: "Minimal" | "Small" | "Moderate" | "Large" | "Massive";
         skillType: SkillType;
+    };
+    validation: {
+        namePresent: boolean;
+        descriptionPresent: boolean;
+        isProperlyFormatted: boolean;
+        errors: string[];
     };
     heuristics: {
         semanticVagueness: number;
