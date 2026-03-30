@@ -14,29 +14,47 @@ export async function fathomAction(options: any, command: any) {
 
     try {
         printHeader("Fathom: Skill Profiler");
-        const manifest = await manifestManager.read();
+        
+        // 1. Layered Manifest Loading
+        const manifest = opts.global 
+            ? await manifestManager.read("global") 
+            : await manifestManager.readMerged();
+
         const skills = Object.values(manifest.skills);
 
         if (skills.length === 0) {
-            printInfo("Empty Harbor", "No skills found in the manifest to fathom.");
+            printInfo("Empty Harbor", "No skills found in the manifest stack to fathom.");
             return;
+        }
+
+        // 2. Override Warnings
+        if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
+            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
+            console.log("");
         }
 
         for (const skill of skills) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
             
+            let layerLabel = "";
+            if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
+            else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
+
             if (!(await exists(cachedPath))) {
-                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)} Skill cargo not found in harbor. Run 'up' first.` });
+                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)}${layerLabel} Skill cargo not found in harbor. Run 'up' first.` });
                 spinnies.fail(`fathom-${skill.name}`);
                 continue;
             }
 
-            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}...` });
+            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}${layerLabel}...` });
 
             const displacement = await profiler.calculateDisplacement(cachedPath);
             const draft = await profiler.calculateDraft(cachedPath);
 
-            const displacementText = `${displacement.icon} ${kleur.bold(displacement.shipClass)} (${displacement.tokens} tokens)`;
+            const costGpt4 = displacement.cost.gpt4o.toFixed(4);
+            const costMini = displacement.cost.gpt4oMini.toFixed(6);
+            const displacementText = `${displacement.icon} ${kleur.bold(displacement.shipClass)} (${displacement.tokens} tokens) | GPT-4o: $${costGpt4}, Mini: $${costMini}`;
             
             let draftColor = kleur.red;
             let draftEmoji = "🔴";
@@ -48,8 +66,8 @@ export async function fathomAction(options: any, command: any) {
             const draftText = `${draftEmoji} ${draftColor(draft.condition)} (Score: ${draft.score}/10, Wake: ${draft.wakeSize})`;
 
             const typeEmoji = draft.skillType === "API Tool" ? "🔧" : "🧠";
+            const validationEmoji = draft.validation.isProperlyFormatted ? "✅" : "⚠️";
 
-            // Invert signs for display: positive = helped score, negative = hurt score
             const fmt = (v: number) => { const inv = -v; return inv > 0 ? `+${inv}` : `${inv}`; };
 
             let heuristicSubtext = "";
@@ -59,7 +77,7 @@ export async function fathomAction(options: any, command: any) {
                 heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Tags: ${fmt(draft.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(draft.heuristics.triggerClarity ?? 0)})`)}`;
             }
 
-            const statusText = `[${kleur.bold(skill.name)}] ${typeEmoji} ${kleur.blue(`<${draft.skillType}>`)}
+            const statusText = `[${kleur.bold(skill.name)}]${layerLabel} ${typeEmoji} ${kleur.blue(`<${draft.skillType}>`)} ${validationEmoji}
     ${kleur.cyan("Displacement:")} ${displacementText}
     ${kleur.cyan("Draft/Wake:")}   ${draftText}
     ${heuristicSubtext}`;
@@ -67,6 +85,13 @@ export async function fathomAction(options: any, command: any) {
             spinnies.succeed(`fathom-${skill.name}`, { text: statusText });
 
             if (showDetails) {
+                if (!draft.validation.isProperlyFormatted) {
+                    console.log(kleur.yellow(`\n    ⚠️  Manifest Validation Warnings:`));
+                    for (const err of draft.validation.errors) {
+                        console.log(kleur.red(`       - ${err}`));
+                    }
+                }
+
                 const h = draft.heuristics;
                 console.log("");
                 console.log(kleur.bold().cyan(`    📋 Heuristic Breakdown for ${skill.name}`));
@@ -95,7 +120,7 @@ export async function fathomAction(options: any, command: any) {
                 console.log(`    ${draftEmoji} ${kleur.bold("Rating:")} ${draftColor(ratingLabel)} — ${getRatingAdvice(draft.score)}`);
             }
 
-            console.log(""); // Spacing between skills
+            console.log("");
         }
 
         console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
