@@ -144,6 +144,32 @@ While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the co
     $$Saturation = \left( \frac{\sum Tokens_{fleet}}{ContextLimit_{model}} \right) \times 100$$
 *   **API Cost Estimation**: Projects high-fidelity input costs for **GPT-4o** ($5.00/1M) and **GPT-4o-mini** ($0.15/1M).
 
+#### 🛡️ Governance & CI/CD Gates
+Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or quality degradation. When thresholds are breached, Fathom will **exit with process code 1**, effectively blocking CI/CD pipelines.
+
+- **`--max-tokens <n>`**: Fail if total fleet tokens exceed limit.
+- **`--max-bloat <p>`**: Fail if GPT-4o context saturation exceeds percentage.
+- **`--min-score <s>`**: Fail if average fleet quality score falls below threshold.
+- **`--format json`**: Output machine-parsable data for programmatic consumption.
+
+```bash
+# Block a PR if it pushes total tokens over 50k
+skill-harbor fathom --report --max-tokens 50000
+
+# Block a PR if context bloat exceeds 20%
+skill-harbor fathom --report --max-bloat 20.0
+
+# CI/CD integration using JSON output
+skill-harbor fathom --report --format json > report.json
+```
+
+#### ⚓ Why Use Fathom?
+Manually inspecting skill files for token bloat is impossible at scale. Fathom acts as your **Intelligence Auditor**.
+
+1.  **Manual Auditing**: Use `fathom --details` during development to see if your prompt is too "verbose" or "vague." If your **Avg Fleet Wake** is low (1.0-4.0), your agent is likely to start hallucinating or triggering tools incorrectly.
+2.  **Collaborative Governance**: In a team repo, one developer adding a 10,000-token skill can ruin the token economy for everyone. Use Fathom in your CI/CD (GitHub Actions, etc.) to enforce strict limits before merging.
+3.  **Cost Forecasting**: Before deploying a new set of agent rules, run `fathom --report` to see exactly how much every agent turn will cost in API fees.
+
 ```bash
 # Get a high-level overview of your harbor displacement
 skill-harbor fathom
