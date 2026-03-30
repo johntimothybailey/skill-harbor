@@ -90,7 +90,7 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
 | **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
 | **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
-| **`fathom`** | Heuristic profiler for skill operational footprint. | Evaluating if a skill is a "small boat" or a "massive cargo ship". |
+| **`fathom`** | Fleet-scale profiler for context bloat & API costs. | Evaluating the cumulative cognitive load of your entire tool ecosystem. |
 | **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
 
@@ -123,19 +123,25 @@ Coordinate Skill Harbor with the agent's internal routing logic.
     skill-harbor lighthouse
     ```
 
-### 📏 Fathom: Heuristic Profiling
-Protect your agent's attention mechanism by profiling skills before they are berthed. The `fathom` command uses deterministic token math and semantic auditing to evaluate the "displacement" of your intelligence.
+### 📏 Fathom: Fleet-Scale Profiling
+As your ecosystem of AI agent tools grows, injecting too many skills causes **"context bloat,"** which degrades model reasoning, increases latency, and raises API costs. Furthermore, overlapping tool definitions cause catastrophic semantic collisions and unpredictable agent behavior.
 
-*   **Deterministic Token Math**: Uses `js-tiktoken` (cl100k_base) to calculate exact context window footprint.
-*   **Cost Estimation**: High-fidelity API input cost projections for **GPT-4o** and **GPT-4o-mini**.
-*   **Semantic Validation**: Audits frontmatter for missing fields or "shallow" descriptions that cause agentic hallucinations.
+The `fathom` command provides a rigorous, mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
+
+-   **Deterministic Token Math**: Uses `js-tiktoken` (`cl100k_base`) to calculate the exact token footprint of every skill file. No more "guessing" at context window usage.
+-   **API Cost Estimation**: Projects high-fidelity input costs for **GPT-4o** and **GPT-4o-mini**, allowing teams to forecast the operational overhead of their fleet.
+-   **Heuristic Drafting (The "Wake" Model)**: Evaluates a skill's likelihood of being triggered (Draft) using logarithmic probabilities. It audits for "Semantic Vagueness" and "Negative Constraints" to ensure agents only invoke tools when appropriate.
+-   **Harbor Health Report**: Scales analysis to the entire harbor. It calculates the **Cumulative Context Bloat**—showing exactly what percentage of a target context window (128k, 200k) is "eaten" by your combined tool set.
 
 ```bash
 # Get a high-level overview of your harbor displacement
 skill-harbor fathom
 
-# Get a deep heuristic breakdown and validation report
+# Get a deep heuristic breakdown and validation report for every skill
 skill-harbor fathom --details
+
+# Generate a Harbor Health Report (Recursive Fleet Audit)
+skill-harbor fathom --report
 ```
 
 **The Fleet Scale (Displacement):**
