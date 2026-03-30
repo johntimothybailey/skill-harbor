@@ -16,7 +16,7 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .version("0.4.0")
+    .version("0.11.0")
     .description(kleur.blue("The Workspace Sync Engine for AI Agents — Standardize skills and context across your entire team."));
 
 program
@@ -27,6 +27,7 @@ program
 Why: Registers a skill's source so all teammates can sync it.
 Use Case: Run this when you find a new specialized skill (like 'react-query-rules') that you want the whole team to use.`)
     .option("-g, --global", "Dock into the global manifest at ~/.harbor/")
+    .option("-l, --local", "Dock into the local override manifest (harbor-manifest.local.json)")
     .action(dockAction);
 
 program
@@ -35,7 +36,8 @@ program
     .addHelpText("after", `
 Why: Provides a quick overview of what's currently in your project's 'Fleet'.
 Use Case: Check this to see if a specific skill is already tracked before trying to dock it.`)
-    .option("-g, --global", "List skills from the global manifest at ~/.harbor/")
+    .option("-g, --global", "List ONLY skills from the global manifest at ~/.harbor/")
+    .option("-a, --all", "List merged skills from all layers (Global, Shared, Local)")
     .action(listAction);
 
 program
@@ -67,23 +69,23 @@ Use Case: Run this after finishing a 'Lockdown' session to get your personal ski
 
 program
     .command("up")
-    .description("Sync the workspace by fetching and transpiling all skills from harbor-manifest.json into agent folders.")
+    .description("Sync the workspace by fetching and transpiling all skills from the manifest stack into agent folders.")
     .addHelpText("after", `
 Why: Standardizes your team's AI agent behavior across the entire project.
 Use Case: Run this after cloning a repo or when a teammate adds new skills to the harbor-manifest.json.`)
     .option("-d, --debug", "Enable debug mode to preserve temporary directories and output verbose logs")
-    .option("-g, --global", "Sync the global manifest into user-level agent folders")
+    .option("-g, --global", "Sync ONLY the global manifest")
     .option("-l, --lockdown", "Clear target agent folders before berthing to ensure ONLY manifest skills exist")
     .option("--force", "Force re-synchronization of all skills")
     .action(upAction);
 
 program
     .command("freshen")
-    .description("Pull fresh cargo by forcing a re-sync of all skills in the manifest.")
+    .description("Pull fresh cargo by forcing a re-sync of all skills in the manifest stack.")
     .addHelpText("after", `
 Why: Ensures you have the absolute latest version of every skill, bypassing the local cache.
 Use Case: Run this if a teammate has updated a remote skill and you want to pull the latest changes immediately.`)
-    .option("-g, --global", "Freshen skills from the global manifest")
+    .option("-g, --global", "Freshen ONLY skills from the global manifest")
     .action(freshenAction);
 
 program
@@ -92,7 +94,7 @@ program
     .addHelpText("after", `
 Why: Ensures your skills are actually 'discoverable' by AI agents.
 Use Case: Run this if an agent isn't 'seeing' a skill you think is berthed.`)
-    .option("-g, --global", "Check skills in the global manifest")
+    .option("-g, --global", "Check ONLY skills in the global manifest")
     .action(checkAction);
 
 program
@@ -101,7 +103,7 @@ program
     .addHelpText("after", `
 Why: Gives you a concise block of text to 'prime' any AI agent with your fleet's capabilities.
 Use Case: Copy the output of this command into a custom instructions field or a system prompt.`)
-    .option("-g, --global", "Generate snippet for global manifest skills")
+    .option("-g, --global", "Generate snippet for ONLY global manifest skills")
     .action(lighthouseAction);
 
 program
@@ -110,7 +112,7 @@ program
     .addHelpText("after", `
 Why: Helps you understand the token cost and trigger risk of your fleet.
 Use Case: Run this to identify 'Heavy' skills or those likely to be triggered accidentally.`)
-    .option("-g, --global", "Fathom skills in the global manifest")
+    .option("-g, --global", "Fathom ONLY skills in the global manifest")
     .option("--details", "Show detailed breakdown of each heuristic and its scoring impact")
     .action(fathomAction);
 

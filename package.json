@@ -31,6 +31,8 @@
     "boxen": "^8.0.1",
     "commander": "^11.1.0",
     "fast-glob": "^3.3.2",
+    "gray-matter": "^4.0.3",
+    "js-tiktoken": "^1.0.21",
     "kleur": "^4.1.5",
     "ora": "^7.0.1",
     "skill-porter": "github:jduncan-rva/skill-porter",
