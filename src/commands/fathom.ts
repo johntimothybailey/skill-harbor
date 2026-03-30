@@ -1,7 +1,7 @@
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { getManifestManager, exists, getAgentBerths, AgentBerth } from "../utils";
+import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
 import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
@@ -39,25 +39,35 @@ export async function fathomAction(options: any, command: any) {
         const manifestSkillNames = new Set(skills.map(s => s.name));
         const ghostSkillPaths: string[] = [];
 
-        // 2.5 Ghost Skill Discovery
+        // 2.5 Active Berths Discovery
+        const baseDir = opts.global ? os.homedir() : process.cwd();
+        const activeBerths = await getAgentBerths(baseDir, manifest.targets);
+        const stowageBerths = await getStowageBerths(baseDir, manifest.targets);
+
+        // 2.6 Ghost Skill Discovery (Active Berths)
         if (opts.ghosts) {
-            const baseDir = opts.global ? os.homedir() : process.cwd();
-            const berths = await getAgentBerths(baseDir, manifest.targets);
-            
-            for (const berth of berths) {
+            for (const berth of activeBerths) {
                 const foundPaths = await profiler.findSkills(berth.path);
                 for (const skillPath of foundPaths) {
                     const name = path.basename(skillPath);
                     if (!manifestSkillNames.has(name)) {
                         ghostSkillPaths.push(skillPath);
-                        // Add to individual skills list if not doing a report
                         if (!showReport) {
-                            skills.push({
-                                name,
-                                layer: "ghost" as any,
-                                isGhost: true,
-                                path: skillPath
-                            });
+                            skills.push({ name, layer: "ghost" as any, isGhost: true, path: skillPath });
+                        }
+                    }
+                }
+            }
+            
+            // 2.7 Ghost Skill Discovery (Stowage Berths)
+            for (const berth of stowageBerths) {
+                const foundPaths = await profiler.findSkills(berth.path);
+                for (const skillPath of foundPaths) {
+                    const name = path.basename(skillPath);
+                    if (!manifestSkillNames.has(name) && !ghostSkillPaths.includes(skillPath)) {
+                        ghostSkillPaths.push(skillPath);
+                        if (!showReport) {
+                            skills.push({ name, layer: "ghost" as any, isGhost: true, path: skillPath });
                         }
                     }
                 }
@@ -111,6 +121,18 @@ export async function fathomAction(options: any, command: any) {
 
             const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar);
             
+            // Calculate Fleet Status for the report
+            const fleetStatus = { berthed: 0, stowed: 0, dryDock: 0 };
+            const allPossibleVessels = [...new Set([...skills.map(s => s.name), ...skillPaths.map(p => path.basename(p))])];
+            
+            for (const name of allPossibleVessels) {
+                const status = await getVesselStatus(name, activeBerths, stowageBerths);
+                if (status.berthed.length > 0) fleetStatus.berthed++;
+                else if (status.stowed.length > 0) fleetStatus.stowed++;
+                else fleetStatus.dryDock++;
+            }
+            report.fleetStatus = fleetStatus;
+
             if (format === 'pretty') {
                 spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
             }
@@ -133,18 +155,33 @@ export async function fathomAction(options: any, command: any) {
                 ? skill.path 
                 : path.join(manifestManager.getHarborDir(), skill.name);
             
+            const vStatus = await getVesselStatus(skill.name, activeBerths, stowageBerths);
+            let statusLabel = "";
+            let statusColor = kleur.gray;
+
+            if (vStatus.berthed.length > 0) {
+                statusLabel = ` [Berthed: ${vStatus.berthed.join(", ")}]`;
+                statusColor = kleur.cyan;
+            } else if (vStatus.stowed.length > 0) {
+                statusLabel = ` [Stowed: ${vStatus.stowed.join(", ")}]`;
+                statusColor = kleur.yellow;
+            } else {
+                statusLabel = " [Dry Dock]";
+                statusColor = kleur.gray;
+            }
+
             let layerLabel = "";
             if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
             else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
             else if (skill.layer === "ghost") layerLabel = kleur.magenta(" [Ghost]");
 
             if (!(await exists(cachedPath))) {
-                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)}${layerLabel} Skill cargo not found in harbor. Run 'up' first.` });
+                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)}${layerLabel}${statusColor(statusLabel)} Skill cargo not found in harbor. Run 'up' first.` });
                 spinnies.fail(`fathom-${skill.name}`);
                 continue;
             }
 
-            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}${layerLabel}...` });
+            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}${layerLabel}${statusColor(statusLabel)}...` });
 
             try {
                 const displacement = await profiler.calculateDisplacement(cachedPath);
@@ -196,7 +233,7 @@ export async function fathomAction(options: any, command: any) {
                     heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(heuristic.heuristics.semanticVagueness)}, Constraints: ${fmt(heuristic.heuristics.negativeConstraints)}, Tags: ${fmt(heuristic.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(heuristic.heuristics.triggerClarity ?? 0)})`)}`;
                 }
 
-                console.log(`${kleur.green("✓")} [${kleur.bold(skill.name)}]${layerLabel} ${typeEmoji} ${kleur.blue(`<${heuristic.skillType}>`)} ${validationEmoji}`);
+                console.log(`${kleur.green("✓")} [${kleur.bold(skill.name)}]${layerLabel}${statusColor(statusLabel)} ${typeEmoji} ${kleur.blue(`<${heuristic.skillType}>`)} ${validationEmoji}`);
                 console.log(`    ${kleur.cyan("Displacement:")} ${displacementText}`);
                 console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
                 console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
@@ -265,4 +302,23 @@ function getRatingAdvice(score: number): string {
     if (score >= 5) return "Adequate, but could benefit from a more specific description, more tags, or explicit trigger sections.";
     if (score >= 3) return "At risk of accidental triggering. Add boundary phrases, tags, and ## Trigger / ## Purpose sections.";
     return "High false-positive risk. The LLM may invoke this skill incorrectly. Needs significant metadata improvements.";
+}
+
+async function getVesselStatus(name: string, activeBerths: AgentBerth[], stowageBerths: AgentBerth[]): Promise<{ berthed: string[], stowed: string[] }> {
+    const berthed: string[] = [];
+    const stowed: string[] = [];
+    
+    for (const berth of activeBerths) {
+        if (await exists(path.join(berth.path, name))) {
+            berthed.push(berth.label);
+        }
+    }
+    
+    for (const berth of stowageBerths) {
+        if (await exists(path.join(berth.path, name))) {
+            stowed.push(berth.label);
+        }
+    }
+    
+    return { berthed, stowed };
 }

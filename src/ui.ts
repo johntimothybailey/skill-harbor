@@ -75,6 +75,11 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     content += `🛶 Dinghies: ${shipDistribution.Dinghy} | ⛵ Schooners: ${shipDistribution.Schooner} | 🚤 Brigantines: ${shipDistribution.Brigantine}\n`;
     content += `🛳️  Frigates: ${shipDistribution.Frigate} | 🚢 Galleons: ${shipDistribution.Galleon}\n\n`;
 
+    if (report.fleetStatus) {
+        content += `${kleur.bold().yellow('📊 Fleet Status Distribution')}\n`;
+        content += `⚓ Berthed: ${report.fleetStatus.berthed} | 📦 Stowed: ${report.fleetStatus.stowed} | 🚜 Dry Dock: ${report.fleetStatus.dryDock}\n\n`;
+    }
+
     content += `${kleur.bold().magenta('🧠 Context Window Saturation (Cumulative Bloat)')}\n`;
     for (const model of contextBloat) {
         const percent = model.percentage.toFixed(1);

@@ -21,7 +21,7 @@ export function getManifestManager(options: any) {
     return new ManifestManager();
 }
 
-/**
+    /**
  * Returns a list of active agent skill directories.
  */
 export async function getAgentBerths(baseDir: string, targets?: string[]): Promise<AgentBerth[]> {
@@ -57,4 +57,36 @@ export async function getAgentBerths(baseDir: string, targets?: string[]): Promi
     }
     
     return activeTargets;
+}
+
+/**
+ * Returns a list of agent stowage directories.
+ */
+export async function getStowageBerths(baseDir: string, targets?: string[]): Promise<AgentBerth[]> {
+    const hasExplicitTargets = Array.isArray(targets) && targets.length > 0;
+    const stowageBase = path.join(baseDir, ".harbor", "stowage");
+    
+    const targetConfigs = [
+        { path: path.join(stowageBase, "claude"), label: "Claude", key: "claude" },
+        { path: path.join(stowageBase, "cursor"), label: "Cursor", key: "cursor" },
+        { path: path.join(stowageBase, "antigravity"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(stowageBase, "rulesync"), label: "Rulesync", key: "rulesync" }
+    ];
+    
+    const activeStowage: AgentBerth[] = [];
+    for (const target of targetConfigs) {
+        let isActive = false;
+        
+        if (hasExplicitTargets) {
+            isActive = targets!.includes(target.key);
+        } else {
+            isActive = await exists(target.path);
+        }
+        
+        if (isActive) {
+            activeStowage.push(target);
+        }
+    }
+    
+    return activeStowage;
 }
