@@ -308,15 +308,15 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 
 ## 🤝 Contributing
 
-We welcome contributions! To ensure a smooth release process, we use **[Changesets](https://github.com/changesets/changesets)** for automated versioning and changelog generation.
+We welcome contributions! To ensure a smooth release process, we use **Quartermaster** (our nautical-themed wrapper for **[Changesets](https://github.com/changesets/changesets)**) for automated versioning and meaningful changelog generation.
 
 ### The "Intent-Based" Workflow
 Instead of reconstructioning releases from git diffs, we capture the **intent** of every change at the moment it is made.
 
-1.  **Make your changes**.
-2.  **Run `bun x changeset`** (Human) or ask your agent to create a changeset.
-3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
-4.  **Commit the generated `.changeset/*.md` file** along with your code.
+1. **Make your changes**.
+2. **Run `bun run quartermaster`**. This interactive CLI will help you document your contribution with the correct maritime flair.
+3. **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
+4. **Commit the generated `.changeset/*.md` file** along with your code.
 
 When your PR is merged to `main`, our GitHub Action will automatically:
 - Create (or update) a "Version Packages" Pull Request.
