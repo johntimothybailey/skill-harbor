@@ -10,13 +10,21 @@ import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
+import { readFileSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkgPath = join(__dirname, "../package.json");
+const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
 
 const program = new Command();
 
 program
     .name("skill-harbor")
     .description("⚓ Skill Harbor: The Declarative Workspace Orchestrator for AI Agents")
-    .version("1.0.0");
+    .version(pkg.version);
+
 
 program
     .command("dock <url>")
