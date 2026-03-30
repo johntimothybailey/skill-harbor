@@ -15,18 +15,43 @@ import { printHeader, printSuccess, printError, printInfo } from "../ui";
 const execAsync = promisify(exec);
 
 /**
+ * Automates adding the local project manifest to .gitignore.
+ */
+async function ensureLocalManifestIgnored(cwd: string) {
+    const gitignorePath = path.join(cwd, ".gitignore");
+    const localManifestName = "harbor-manifest.local.json";
+    
+    try {
+        let content = "";
+        try {
+            content = await fs.readFile(gitignorePath, "utf-8");
+        } catch (e) {
+            // .gitignore doesn't exist, create it
+            await fs.writeFile(gitignorePath, `${localManifestName}\n`, "utf-8");
+            return;
+        }
+
+        if (!content.includes(localManifestName)) {
+            const separator = content.endsWith("\n") ? "" : "\n";
+            await fs.appendFile(gitignorePath, `${separator}${localManifestName}\n`, "utf-8");
+        }
+    } catch (e) {
+        // Silently fail if we can't write to .gitignore (e.g. permission issues)
+    }
+}
+
+/**
  * Generates a hash for the skill source to detect changes.
- * For remote URLs, it returns the URL itself.
- * For local paths, it hashes file stats (size, mtime) to detect updates.
  */
 async function getSourceHash(source: string): Promise<string> {
-    if (source.startsWith('http') || (source.includes('/') && !source.startsWith('.') && !source.startsWith('/') && !source.startsWith('file://'))) {
-        // Assume it's a remote repo/URL
+    const isRemote = source.startsWith('http') || 
+                   (source.includes('/') && !source.startsWith('.') && !source.startsWith('/') && !source.startsWith('file://'));
+    
+    if (isRemote) {
         try {
-            // Extract the repo URL (owner/repo) from the source string
             let cleanUrl = source.replace(/^https?:\/\/(www\.)?github\.com\//, '');
             let repo = "";
-            let ref = "HEAD"; // Default ref
+            let ref = "HEAD";
 
             const hashParts = cleanUrl.split("#");
             if (hashParts.length > 1) {
@@ -46,14 +71,12 @@ async function getSourceHash(source: string): Promise<string> {
 
             if (repo) {
                 const repoUrl = `https://github.com/${repo}.git`;
-                // Use a short timeout to prevent hanging the sync
                 const { stdout } = await execAsync(`git ls-remote ${repoUrl} ${ref}`, { timeout: 5000 });
                 const remoteHash = stdout.split(/\s+/)[0];
                 if (remoteHash) return `${source}:${remoteHash}`;
             }
         } catch (err) {
-            // If git fails or network is down, fallback to the source string itself
-            // to avoid breaking the sync (it will just be conservative)
+            // Fallback
         }
         return source;
     }
@@ -65,7 +88,6 @@ async function getSourceHash(source: string): Promise<string> {
             return `${source}:${stats.size}:${stats.mtimeMs}`;
         }
 
-        // It's a directory, hash the contents (stats only for speed)
         const files = await glob("**/*", { cwd: localPath, absolute: true, ignore: ["**/node_modules/**", "**/.git/**"] });
         const fileStats = files
             .map(f => {
@@ -81,7 +103,6 @@ async function getSourceHash(source: string): Promise<string> {
         
         return crypto.createHash("md5").update(fileStats).digest("hex");
     } catch {
-        // Fallback to source string if path doesn't exist
         return source;
     }
 }
@@ -94,18 +115,35 @@ export async function upAction(options: any, command: any) {
 
     try {
         printHeader("Workspace Synchronization Initiated");
-        const manifest = await manifestManager.read();
+        
+        // 1. Layered Manifest Loading
+        const manifest = opts.global 
+            ? await manifestManager.read("global") 
+            : await manifestManager.readMerged();
+
         const skills = Object.values(manifest.skills);
 
         if (skills.length === 0) {
-            printInfo("Empty Manifest", "No skills found in harbor-manifest.json. Run 'dock' to add some.");
+            printInfo("Empty Manifest", "No skills found in harbor manifest stack. Run 'dock' to add some.");
             return;
         }
 
-        // --- Lockdown Operation (Non-Destructive Stow) ---
+        // 2. Override Warnings
+        if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
+            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
+            console.log("");
+        }
+
+        // 3. Gitignore Automation (Project Level only)
+        if (!opts.global) {
+            await ensureLocalManifestIgnored(process.cwd());
+        }
+
+        // --- Lockdown Operation ---
         if (opts.lockdown) {
             const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
-            const stowageBase = path.join(baseDir, opts.global ? ".harbor" : ".harbor", "stowage");
+            const stowageBase = path.join(baseDir, ".harbor", "stowage");
             const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
             
             const targetConfigs = [
@@ -172,14 +210,12 @@ export async function upAction(options: any, command: any) {
                     }
                 }
 
-                // 4. Optimization Bypass
                 if (!opts.force && !sourceChanged && !targetsChanged && !destinationsMissing && cacheExists) {
                     spinnies.add(`sync-${skill.name}`, { text: kleur.gray(`[${skill.name}] No changes detected. Skipping sync.`) });
                     spinnies.succeed(`sync-${skill.name}`);
                     return;
                 }
 
-                // 5. Moor (Only if source changed or cache missing, unless forced)
                 let cargoPath = "";
                 if (!opts.force && !sourceChanged && cacheExists) {
                     cargoPath = cachedPath;
@@ -192,7 +228,6 @@ export async function upAction(options: any, command: any) {
                 const berthedTargets: string[] = [];
                 const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
 
-                // Claude
                 if (activeTargets.includes("claude")) {
                     const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
                     const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
@@ -200,7 +235,6 @@ export async function upAction(options: any, command: any) {
                     berthedTargets.push("Claude");
                 }
 
-                // Cursor
                 if (activeTargets.includes("cursor")) {
                     const cursorDest = path.join(baseDir, ".cursor", "skills", skill.name);
                     const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
@@ -208,7 +242,6 @@ export async function upAction(options: any, command: any) {
                     berthedTargets.push("Cursor");
                 }
 
-                // Antigravity
                 if (activeTargets.includes("antigravity")) {
                     const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
                     const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
@@ -217,22 +250,23 @@ export async function upAction(options: any, command: any) {
                     berthedTargets.push("Antigravity");
                 }
 
-                // Rulesync
                 if (activeTargets.includes("rulesync")) {
                     const rulesyncDest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
                     await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
                     berthedTargets.push("Rulesync");
                 }
 
-                // 6. Update Cache & State
-                await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
+                // 6. Update Cache & State (Only if we fetched fresh cargo)
+                if (cargoPath !== cachedPath) {
+                    await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
+                }
 
                 await manifestManager.addSkill({
                     ...skill,
                     localPath: cachedPath,
                     lastSyncHash: currentSourceHash,
                     lastSyncTargets: activeTargets
-                });
+                }, skill.layer || "shared");
 
                 orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
             } catch (err: any) {
@@ -246,21 +280,20 @@ export async function upAction(options: any, command: any) {
 
         // --- Lighthouse: Automated Master Fleet Manifest ---
         console.log(kleur.yellow("\n  💡  Shining the Lighthouse..."));
-        const latestManifest = await manifestManager.read();
+        const latestManifest = opts.global ? await manifestManager.read("global") : await manifestManager.readMerged();
         const latestSkills = Object.values(latestManifest.skills);
         const metadataList = [];
         for (const skill of latestSkills) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
-            // REUSE spinnies from the main command context
             const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
             const meta = await orchestrator.getMetadata(cachedPath);
             if (meta) {
-                metadataList.push(meta);
+                metadataList.push({ ...meta, layer: skill.layer });
             }
         }
 
         if (metadataList.length > 0) {
-            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agentic skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
+            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agentic skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Local Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";
             const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
@@ -287,7 +320,7 @@ export async function upAction(options: any, command: any) {
             const failureMsg = `Workspace Sync completed with ${failures.length} incident(s).`;
             printError(failureMsg);
             failures.forEach(f => {
-                console.log(kleur.red(`  ✖ [${f.skill}] ${f.error}`));
+                printError(`[${f.skill}] ${f.error}`);
             });
             process.exit(1);
         }

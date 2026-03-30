@@ -46,7 +46,6 @@ graph TD
     Up --> Use[Agent Uses Skills]
     
     subgraph "Maintenance & Updates"
-    Use --> Fathom[skill-harbor fathom]
     Use --> Check[skill-harbor check]
     Use --> Freshen[skill-harbor freshen]
     Freshen -- "Force Fresh Cargo" --> Up
@@ -59,6 +58,9 @@ graph TD
     
     subgraph "Agent Intelligence"
     Use --> Light[skill-harbor lighthouse]
+    Use --> Fathom[skill-harbor fathom]
+    Fathom --> Heuristic[Confidence: Heuristic]
+    Fathom -- "--query" --> Sonar[Confidence: Sonar]
     end
 ```
 
@@ -90,7 +92,7 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
 | **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
 | **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
-| **`fathom`** | Heuristic profiler for skill operational footprint. | Evaluating if a skill is a "small boat" or a "massive cargo ship". |
+| **`fathom`** | Fleet-scale profiler for context bloat & API costs. | Evaluating the cumulative cognitive load of your entire tool ecosystem. |
 | **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
 
@@ -122,6 +124,111 @@ Coordinate Skill Harbor with the agent's internal routing logic.
     ```bash
     skill-harbor lighthouse
     ```
+
+### 📏 Fathom: Fleet-Scale Profiling
+As your ecosystem of AI agent tools grows, injecting too many skills causes **"context bloat,"** which degrades model reasoning, increases latency, and raises API costs. Furthermore, overlapping tool definitions cause catastrophic semantic collisions and unpredictable agent behavior.
+
+The `fathom` command provides a rigorous, mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
+
+#### ⚓ Fathom TL;DR
+```bash
+# Basic Heuristic Audit (Offline, Instant)
+skill-harbor fathom
+
+# Probabilistic Sonar Audit (Online, High-Fidelity)
+skill-harbor fathom --query "Can you help me refactor this React code?" --model gpt-4o
+```
+
+#### 🧮 The Science of Fathom
+While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the core "Intelligence Audit" is powered by proprietary heuristic formulas:
+
+*   **Deterministic Token Math**: Uses `js-tiktoken` (`cl100k_base`) to calculate the exact token footprint of every skill file.
+*   **The "Wake" Scoring Algorithm**: A multi-dimensional evaluation of a skill's trigger risk. It calculates a composite score based on:
+    *   **Semantic Vagueness**: Penalizes shallow descriptions (<50 chars) and generic verb density.
+    *   **Trigger Clarity**: High-weight bonuses for explicit `## Trigger`, `## Purpose`, and `## Exceptions` markdown headers.
+    *   **Negative Constraints**: Deducts "wake" for boundary phrases like *"only use this when"* or *"do not use"*.
+    *   **Schema Strictness**: Evaluates the presence of `enums`, `regex patterns`, and parameter constraints in API tools.
+*   **Normalization Formula**: Raw heuristic scores are normalized to a 10-point scale:
+    $$Confidence_{Heuristic} = 11 - \max(1, \min(10, Score_{composite}))$$
+    *(Where 10 = **Glassy Water** (Optimal) and 1 = **Storm Surge** (Catastrophic Collision Risk))*
+*   **Context Saturation Math**: Calculates cumulative fleet weight against fixed model limits:
+    $$Saturation = \left( \frac{\sum Tokens_{fleet}}{ContextLimit_{model}} \right) \times 100$$
+*   **API Cost Estimation**: Projects high-fidelity input costs for **GPT-4o** ($5.00/1M) and **GPT-4o-mini** ($0.15/1M).
+
+#### 🛡️ Governance & CI/CD Gates
+Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or quality degradation. When thresholds are breached, Fathom will **exit with process code 1**, effectively blocking CI/CD pipelines.
+
+- **`--max-tokens <n>`**: Fail if total fleet tokens exceed limit.
+- **`--max-bloat <p>`**: Fail if GPT-4o context saturation exceeds percentage.
+- **`--min-score <s>`**: Fail if average fleet quality score falls below threshold.
+- **`--format json`**: Output machine-parsable data for programmatic consumption.
+
+#### 📡 Sonar: Probabilistic Confidence
+Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
+
+- **`--query <text>`**: Run a Sonar audit against all skills for a specific query.
+- **`--model <name>`**: Override the model configured in `profiler.yaml`.
+
+##### ⚙️ Provider Configuration
+Sonar uses an OpenAI-compatible interface. You can configure your provider in `profiler.yaml`:
+
+```yaml
+# profiler.yaml
+sonar:
+  provider: "openai"
+  model: "llama-3.3-70b-versatile"        # e.g., gpt-4o, gemini-1.5-flash
+  baseUrl: "https://api.groq.com/openai/v1" # e.g., https://api.openai.com/v1
+```
+
+##### 🔑 Environment Secrets
+Regardless of the provider, Sonar uses a unified environment variable in your `.env` file:
+
+```bash
+# .env
+HARBOR_PROFILER_API_KEY=your_secret_key_here
+```
+
+| Provider | Base URL | Model Suggestion |
+| :--- | :--- | :--- |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o`, `gpt-4o-mini` |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| **Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-1.5-flash`, `gemini-1.5-pro` |
+| **Ollama** | `http://localhost:11434/v1` | `llama3.1`, `mistral` |
+
+> [!IMPORTANT]
+> **Logprobs Support**: Not all models or providers support the `logprobs` parameter. If your chosen model does not return logprobs, Fathom will display **[Offline]** or assume a default confidence based on the presence of tool-calling signals. For high-fidelity and performance, **Groq Llama** and **OpenAI GPT-4o** are recommended.
+
+```bash
+# Cross-provider test override (e.g., using Gemini)
+skill-harbor fathom --query "example" --baseUrl https://generativelanguage.googleapis.com/v1beta/openai/ --model gemini-1.5-flash
+```
+
+#### ⚓ Why Use Fathom?
+Manually inspecting skill files for token bloat is impossible at scale. Fathom acts as your **Intelligence Auditor**.
+
+1.  **Confidence Check (Heuristic)**: Use `fathom --details` during development to see if your prompt is too "verbose" or "vague." If your **Heuristic Confidence** is low (1.0-4.0), your agent is likely to start hallucinating.
+2.  **Confidence Check (Sonar)**: Use `fathom --query` to see if a model *actually* triggered your skill for a specific input. Perfect for finding "rogue skills" that trigger when they shouldn't.
+3.  **Collaborative Governance**: In a team repo, one developer adding a 10,000-token skill can ruin the token economy for everyone. Use Fathom in your CI/CD to enforce strict limits.
+
+```bash
+# Get a high-level overview of your harbor displacement
+skill-harbor fathom
+
+# Get a deep heuristic breakdown and validation report for every skill
+skill-harbor fathom --details
+
+# Generate a Harbor Health Report (Recursive Fleet Audit)
+skill-harbor fathom --report
+```
+
+**The Fleet Scale (Displacement):**
+| Class | Token Range | Payload Description |
+| :--- | :--- | :--- |
+| 🛶 **Dinghy** | < 500 | Lightweight utility or single-purpose prompt. |
+| ⛵ **Schooner** | < 1,500 | Standard tool definition with clear boundaries. |
+| 🚤 **Brigantine** | < 3,500 | Complex skill with multiple auxiliary sections. |
+| 🛳️ **Frigate** | < 7,000 | Heavyweight context; requires strict triggers to avoid bloat. |
+| 🚢 **Galleon** | 7,000+ | Massive cargo; use with caution in multi-tool environments. |
 
 ### 🌍 Global Fleet: Personal Skills, Everywhere
 Managing skills shouldn't be limited to a single repo. Skill Harbor allows you to maintain a **Global Manifest** to synchronize your personal utilities across every project you touch.
@@ -201,15 +308,15 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 
 ## 🤝 Contributing
 
-We welcome contributions! To ensure a smooth release process, we use **[Changesets](https://github.com/changesets/changesets)** for automated versioning and changelog generation.
+We welcome contributions! To ensure a smooth release process, we use **Quartermaster** (our nautical-themed wrapper for **[Changesets](https://github.com/changesets/changesets)**) for automated versioning and meaningful changelog generation.
 
 ### The "Intent-Based" Workflow
 Instead of reconstructioning releases from git diffs, we capture the **intent** of every change at the moment it is made.
 
-1.  **Make your changes**.
-2.  **Run `bun x changeset`** (Human) or ask your agent to create a changeset.
-3.  **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
-4.  **Commit the generated `.changeset/*.md` file** along with your code.
+1. **Make your changes**.
+2. **Run `bun run quartermaster`**. This interactive CLI will help you document your contribution with the correct maritime flair.
+3. **Choose the bump type** (patch, minor, major) and write a short, meaningful summary of what changed.
+4. **Commit the generated `.changeset/*.md` file** along with your code.
 
 When your PR is merged to `main`, our GitHub Action will automatically:
 - Create (or update) a "Version Packages" Pull Request.

@@ -2,105 +2,216 @@ import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { getManifestManager, exists } from "../utils";
-import { printHeader, printError, printInfo } from "../ui";
 import { ProfilerService } from "../services/profiler";
+import { ConfigManager } from "../services/config";
+import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
 
 export async function fathomAction(options: any, command: any) {
     const opts = command.opts();
     const manifestManager = getManifestManager(opts);
     const spinnies = new Spinnies();
     const profiler = new ProfilerService();
+    const configManager = ConfigManager.getInstance();
+    
     const showDetails = opts.details ?? false;
+    const showReport = opts.report ?? false;
+    const query = opts.query;
+    const modelOverride = opts.model;
+    const baseUrlOverride = opts.baseUrl;
 
     try {
-        printHeader("Fathom: Skill Profiler");
-        const manifest = await manifestManager.read();
+        if (!opts.format || opts.format === "pretty") {
+            printHeader("Fathom: Skill Profiler");
+        }
+        
+        // 1. Load Configuration
+        const config = await configManager.loadConfig({
+            model: modelOverride,
+            baseUrl: baseUrlOverride
+        });
+
+        // 2. Layered Manifest Loading
+        const manifest = opts.global 
+            ? await manifestManager.read("global") 
+            : await manifestManager.readMerged();
+
         const skills = Object.values(manifest.skills);
 
         if (skills.length === 0) {
-            printInfo("Empty Harbor", "No skills found in the manifest to fathom.");
+            printInfo("Empty Harbor", "No skills found in the manifest stack to fathom.");
             return;
         }
 
+        // 3. Override Warnings
+        if (!opts.global && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
+            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
+            console.log("");
+        }
+
+        // --- Harbor Health Report ---
+        if (showReport) {
+            const harborDir = manifestManager.getHarborDir();
+            const format = opts.format ?? 'pretty';
+            
+            if (format === 'pretty') {
+                spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
+            }
+            
+            const skillPaths = await profiler.findSkills(harborDir);
+            if (skillPaths.length === 0) {
+                if (format === 'pretty') {
+                    spinnies.fail("harbor-scan", { text: "No berthed skills found in harbor. Run 'up' first." });
+                } else {
+                    console.error(JSON.stringify({ error: "No berthed skills found" }));
+                }
+                return;
+            }
+
+            if (format === 'pretty') spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
+            
+            const thresholds = {
+                maxTokens: opts.maxTokens ? parseInt(opts.maxTokens) : undefined,
+                maxBloat: opts.maxBloat ? parseFloat(opts.maxBloat) : undefined,
+                minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
+            };
+
+            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar);
+            
+            if (format === 'pretty') {
+                spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
+            }
+            
+            printHarborHealthReport(report, format);
+
+            if (!report.status.isHealthy) {
+                process.exit(1);
+            }
+            
+            // Only exit here if details are NOT requested, allowing individual results to follow
+            if (!showDetails || format === 'json') {
+                return;
+            }
+        }
+
+        // 4. Individual Skill Analysis (Default)
         for (const skill of skills) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
             
+            let layerLabel = "";
+            if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
+            else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
+
             if (!(await exists(cachedPath))) {
-                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)} Skill cargo not found in harbor. Run 'up' first.` });
+                spinnies.add(`fathom-${skill.name}`, { text: `${kleur.yellow(`[${skill.name}]`)}${layerLabel} Skill cargo not found in harbor. Run 'up' first.` });
                 spinnies.fail(`fathom-${skill.name}`);
                 continue;
             }
 
-            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}...` });
+            spinnies.add(`fathom-${skill.name}`, { text: `Fathoming ${kleur.bold(skill.name)}${layerLabel}...` });
 
-            const displacement = await profiler.calculateDisplacement(cachedPath);
-            const draft = await profiler.calculateDraft(cachedPath);
-
-            const displacementText = `${displacement.icon} ${kleur.bold(displacement.shipClass)} (${displacement.tokens} tokens)`;
-            
-            let draftColor = kleur.red;
-            let draftEmoji = "🔴";
-            if (draft.score > 3) { draftColor = kleur.yellow; draftEmoji = "🟠"; }
-            if (draft.score > 5) { draftColor = kleur.yellow; draftEmoji = "🟡"; }
-            if (draft.score > 6) { draftColor = kleur.green; draftEmoji = "🟢"; }
-            if (draft.score > 8) { draftColor = kleur.green; draftEmoji = "✨"; }
-
-            const draftText = `${draftEmoji} ${draftColor(draft.condition)} (Score: ${draft.score}/10, Wake: ${draft.wakeSize})`;
-
-            const typeEmoji = draft.skillType === "API Tool" ? "🔧" : "🧠";
-
-            // Invert signs for display: positive = helped score, negative = hurt score
-            const fmt = (v: number) => { const inv = -v; return inv > 0 ? `+${inv}` : `${inv}`; };
-
-            let heuristicSubtext = "";
-            if (draft.skillType === "API Tool") {
-                heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Schema: ${fmt(draft.heuristics.schemaStrictness)})`)}`;
-            } else {
-                heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(draft.heuristics.semanticVagueness)}, Constraints: ${fmt(draft.heuristics.negativeConstraints)}, Tags: ${fmt(draft.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(draft.heuristics.triggerClarity ?? 0)})`)}`;
-            }
-
-            const statusText = `[${kleur.bold(skill.name)}] ${typeEmoji} ${kleur.blue(`<${draft.skillType}>`)}
-    ${kleur.cyan("Displacement:")} ${displacementText}
-    ${kleur.cyan("Draft/Wake:")}   ${draftText}
-    ${heuristicSubtext}`;
-
-            spinnies.succeed(`fathom-${skill.name}`, { text: statusText });
-
-            if (showDetails) {
-                const h = draft.heuristics;
-                console.log("");
-                console.log(kleur.bold().cyan(`    📋 Heuristic Breakdown for ${skill.name}`));
-                console.log(kleur.gray("    ─────────────────────────────────────"));
-
-                if (draft.skillType === "API Tool") {
-                    printDetailRow("Vagueness", fmt(h.semanticVagueness),
-                        "Measures description clarity. Short (<50 chars) or generic verb-heavy descriptions reduce the score.");
-                    printDetailRow("Constraints", fmt(h.negativeConstraints),
-                        "Boundary phrases like 'only use this when' or 'do not use' help the LLM know when NOT to trigger.");
-                    printDetailRow("Schema", fmt(h.schemaStrictness),
-                        "Presence of triggers, enums, regex patterns, or strict parameter schemas tighten invocation rules.");
-                } else {
-                    printDetailRow("Vagueness", fmt(h.semanticVagueness),
-                        "Evaluates the frontmatter description. Long, specific descriptions (>200 chars) boost the score. Short ones (<50 chars) penalize it.");
-                    printDetailRow("Constraints", fmt(h.negativeConstraints),
-                        "Boundary phrases like 'only use this when' or 'do not use' help the router know when NOT to dock the skill.");
-                    printDetailRow("Tags", fmt(h.tagDensity ?? 0),
-                        "Tag count in YAML frontmatter. 3+ tags give a strong routing anchor (+2). 1-2 tags give a smaller boost (+1).");
-                    printDetailRow("Triggers", fmt(h.triggerClarity ?? 0),
-                        "Looks for ## Trigger, ## Purpose, or ## Exceptions headers. 2+ sections give a massive boost (+3). These tell the router exactly when to invoke the skill.");
+            try {
+                const displacement = await profiler.calculateDisplacement(cachedPath);
+                const heuristic = await profiler.calculateHeuristicConfidence(cachedPath);
+                
+                let sonarResult = null;
+                if (query) {
+                    spinnies.update(`fathom-${skill.name}`, { text: `Conducting Sonar Audit for ${kleur.bold(skill.name)}...` });
+                    try {
+                        sonarResult = await profiler.conductSonarAudit(skill.name, cachedPath, query, config.sonar);
+                    } catch (err: any) {
+                        // Sonar failed but we continue with heuristic
+                    }
                 }
 
-                console.log(kleur.gray("    ─────────────────────────────────────"));
-                const ratingLabel = draft.score >= 9 ? "Excellent" : draft.score >= 7 ? "Good" : draft.score >= 5 ? "Fair" : draft.score >= 3 ? "Poor" : "Critical";
-                console.log(`    ${draftEmoji} ${kleur.bold("Rating:")} ${draftColor(ratingLabel)} — ${getRatingAdvice(draft.score)}`);
-            }
+                spinnies.remove(`fathom-${skill.name}`);
 
-            console.log(""); // Spacing between skills
+                const costGpt4 = displacement.cost.gpt4o.toFixed(4);
+                const costMini = displacement.cost.gpt4oMini.toFixed(6);
+                const displacementText = `${displacement.icon} ${kleur.bold(displacement.shipClass)} (${displacement.tokens} tokens) | GPT-4o: $${costGpt4}, Mini: $${costMini}`;
+                
+                let heuristicColor = kleur.red;
+                let heuristicEmoji = "🔴";
+                if (heuristic.score > 3) { heuristicColor = kleur.yellow; heuristicEmoji = "🟠"; }
+                if (heuristic.score > 5) { heuristicColor = kleur.yellow; heuristicEmoji = "🟡"; }
+                if (heuristic.score > 6) { heuristicColor = kleur.green; heuristicEmoji = "🟢"; }
+                if (heuristic.score > 8) { heuristicColor = kleur.green; heuristicEmoji = "✨"; }
+
+                const heuristicText = `${heuristicEmoji} ${heuristicColor(heuristic.condition)} (${heuristic.score}/10)`;
+
+                let sonarText = kleur.gray("[Offline - Provide --query]");
+                if (sonarResult) {
+                    const sonarColor = sonarResult.score > 80 ? kleur.green : sonarResult.score > 50 ? kleur.yellow : kleur.red;
+                    const barLength = 10;
+                    const filledLength = Math.round((sonarResult.score / 100) * barLength);
+                    const bar = sonarColor("█".repeat(filledLength)) + kleur.gray("░".repeat(barLength - filledLength));
+                    sonarText = `[${bar}] ${sonarColor(sonarResult.score + "%")} (via ${sonarResult.model})`;
+                }
+
+                const typeEmoji = heuristic.skillType === "API Tool" ? "🔧" : "🧠";
+                const validationEmoji = heuristic.validation.isProperlyFormatted ? "✅" : "⚠️";
+
+                const fmt = (v: number) => { const inv = -v; return inv > 0 ? `+${inv}` : `${inv}`; };
+
+                let heuristicSubtext = "";
+                if (heuristic.skillType === "API Tool") {
+                    heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(heuristic.heuristics.semanticVagueness)}, Constraints: ${fmt(heuristic.heuristics.negativeConstraints)}, Schema: ${fmt(heuristic.heuristics.schemaStrictness || 0)})`)}`;
+                } else {
+                    heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(heuristic.heuristics.semanticVagueness)}, Constraints: ${fmt(heuristic.heuristics.negativeConstraints)}, Tags: ${fmt(heuristic.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(heuristic.heuristics.triggerClarity ?? 0)})`)}`;
+                }
+
+                console.log(`${kleur.green("✓")} [${kleur.bold(skill.name)}]${layerLabel} ${typeEmoji} ${kleur.blue(`<${heuristic.skillType}>`)} ${validationEmoji}`);
+                console.log(`    ${kleur.cyan("Displacement:")} ${displacementText}`);
+                console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
+                console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
+
+                if (showDetails) {
+                    if (!heuristic.validation.isProperlyFormatted) {
+                        console.log(kleur.yellow(`\n    ⚠️  Manifest Validation Warnings:`));
+                        for (const err of heuristic.validation.errors) {
+                            console.log(kleur.red(`       - ${err}`));
+                        }
+                    }
+
+                    const h = heuristic.heuristics;
+                    console.log("");
+                    console.log(kleur.bold().cyan(`    📋 Heuristic Breakdown for ${skill.name}`));
+                    console.log(kleur.gray("    ─────────────────────────────────────"));
+
+                    if (heuristic.skillType === "API Tool") {
+                        printDetailRow("Vagueness", fmt(h.semanticVagueness),
+                            "Measures description clarity. Short (<50 chars) or generic verb-heavy descriptions reduce the score.");
+                        printDetailRow("Constraints", fmt(h.negativeConstraints),
+                            "Boundary phrases like 'only use this when' or 'do not use' help the LLM know when NOT to trigger.");
+                        printDetailRow("Schema", fmt(h.schemaStrictness || 0),
+                            "Presence of triggers, enums, regex patterns, or strict parameter schemas tighten invocation rules.");
+                    } else {
+                        printDetailRow("Vagueness", fmt(h.semanticVagueness),
+                            "Evaluates the frontmatter description. Long, specific descriptions (>200 chars) boost the score. Short ones (<50 chars) penalize it.");
+                        printDetailRow("Constraints", fmt(h.negativeConstraints),
+                            "Boundary phrases like 'only use this when' or 'do not use' help the router know when NOT to dock the skill.");
+                        printDetailRow("Tags", fmt(h.tagDensity ?? 0),
+                            "Tag count in YAML frontmatter. 3+ tags give a strong routing anchor (+2). 1-2 tags give a smaller boost (+1).");
+                        printDetailRow("Triggers", fmt(h.triggerClarity ?? 0),
+                            "Looks for ## Trigger, ## Purpose, or ## Exceptions headers. 2+ sections give a massive boost (+3). These tell the router exactly when to invoke the skill.");
+                    }
+
+                    console.log(kleur.gray("    ─────────────────────────────────────"));
+                    const ratingLabel = heuristic.score >= 9 ? "Excellent" : heuristic.score >= 7 ? "Good" : heuristic.score >= 5 ? "Fair" : heuristic.score >= 3 ? "Poor" : "Critical";
+                    console.log(`    ${heuristicEmoji} ${kleur.bold("Rating:")} ${heuristicColor(ratingLabel)} — ${getRatingAdvice(heuristic.score)}`);
+                }
+
+                console.log("");
+            } catch (err: any) {
+                spinnies.fail(`fathom-${skill.name}`, { text: `Failed to fathom ${skill.name}: ${err.message}` });
+            }
         }
 
-        console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
-        if (!showDetails) {
-            console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+        if (!showReport) {
+            console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
+            if (!showDetails) {
+                console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+            }
         }
     } catch (error: any) {
         printError(`Fathom failed: ${error.message}`);

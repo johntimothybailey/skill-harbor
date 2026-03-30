@@ -1,0 +1,15 @@
+# Skill Harbor Profiler Configuration
+# Used for the 'Sonar' Probabilistic Confidence engine.
+
+sonar:
+  # The LLM provider (currently supports OpenAI-compatible APIs)
+  provider: "openai"
+  
+  # The model to use for trigger confidence testing
+  model: "gpt-4o"
+  
+  # Custom base URL (e.g., http://localhost:11434/v1 for Ollama)
+  baseUrl: "https://api.openai.com/v1"
+
+  # Optional: Default query for Sonar if none provided via CLI
+  # defaultQuery: "Help me write a React component using these tools."

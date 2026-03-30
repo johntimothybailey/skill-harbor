@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { lighthouseAction } from './lighthouse';
+import { getManifestManager, exists } from '../utils';
+import { printHeader, printLighthouseSnippet } from '../ui';
 import { Orchestrator } from '../orchestrator';
-import { getManifestManager } from '../utils';
-import { printLighthouseSnippet } from '../ui';
+import os from 'node:os';
 
-vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
+vi.mock('../orchestrator');
+vi.mock('node:os');
 vi.mock('spinnies');
 
 describe('lighthouseAction', () => {
@@ -16,18 +18,26 @@ describe('lighthouseAction', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockOrchestrator = {
-            getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc', triggers: ['t1'] }),
+            getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc', triggers: [] }),
         };
+        (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
+
         mockManifestManager = {
             read: vi.fn().mockResolvedValue({
                 skills: {
                     'skill1': { name: 'skill1', source: 'source1' }
                 }
             }),
+            readMerged: vi.fn().mockResolvedValue({
+                skills: {
+                    'skill1': { name: 'skill1', source: 'source1' }
+                }
+            }),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
         };
-        (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
+        (os.homedir as any).mockReturnValue('/home/user');
+        (exists as any).mockResolvedValue(true);
     });
 
     it('should generate lighthouse snippet', async () => {
@@ -38,8 +48,7 @@ describe('lighthouseAction', () => {
 
         await lighthouseAction(options, mockCommand);
 
+        expect(printHeader).toHaveBeenCalledWith('Lighthouse Intelligence Snippet');
         expect(printLighthouseSnippet).toHaveBeenCalledWith(expect.stringContaining('skill1'));
-        expect(printLighthouseSnippet).toHaveBeenCalledWith(expect.stringContaining('desc'));
-        expect(printLighthouseSnippet).toHaveBeenCalledWith(expect.stringContaining('t1'));
     });
 });

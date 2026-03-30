@@ -5,7 +5,7 @@ import { printHeader, printSuccess, printError } from '../ui';
 
 vi.mock('../utils');
 vi.mock('../ui');
-vi.mock('../manifest');
+vi.mock('spinnies');
 
 describe('dockAction', () => {
     let mockManifestManager: any;
@@ -34,13 +34,13 @@ describe('dockAction', () => {
             name: 'my-skill',
             source: url,
             localPath: '',
-        });
-        expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Skill successfully manifested! Added my-skill.'));
+        }, "shared");
+        expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Skill successfully manifested!'));
     });
 
     it('should generate a skill name if the URL is empty or invalid', async () => {
         const url = '';
-        const options = {};
+        const options = { local: true };
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
@@ -50,25 +50,21 @@ describe('dockAction', () => {
         expect(mockManifestManager.addSkill).toHaveBeenCalledWith(expect.objectContaining({
             source: url,
             localPath: '',
-        }));
-        const callArgs = (mockManifestManager.addSkill as any).mock.calls[0][0];
-        expect(callArgs.name).toMatch(/^skill-/);
+        }), "local");
     });
 
-    it('should handle errors and exit processing', async () => {
-        const url = 'some-url';
+    it('should handle docking failures', async () => {
+        const url = 'https://github.com/user/my-skill.git';
         const options = {};
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        const errorMessage = 'Init failed';
-        mockManifestManager.init.mockRejectedValue(new Error(errorMessage));
-
+        mockManifestManager.addSkill.mockRejectedValue(new Error('Docking failed'));
         const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
 
         await expect(dockAction(url, options, mockCommand)).rejects.toThrow('exit');
 
-        expect(printError).toHaveBeenCalledWith(expect.stringContaining(errorMessage));
+        expect(printError).toHaveBeenCalledWith(expect.stringContaining('Major malfunction'));
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 });

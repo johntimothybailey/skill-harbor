@@ -14,12 +14,28 @@ export interface FathomMetrics {
         tokens: number;
         shipClass: ShipClass;
         icon: string;
+        cost: {
+            gpt4o: number;     // $/1M tokens baseline ($5.00/1M)
+            gpt4oMini: number; // $/1M tokens baseline ($0.15/1M)
+        };
     };
-    draft: {
+    heuristicConfidence: {
         score: number; // 1-10
         condition: WaterCondition;
         wakeSize: "Minimal" | "Small" | "Moderate" | "Large" | "Massive";
         skillType: SkillType;
+    };
+    sonarConfidence?: {
+        score: number;       // 0-100%
+        model: string;
+        query: string;
+        timestamp: string;
+    };
+    validation: {
+        namePresent: boolean;
+        descriptionPresent: boolean;
+        isProperlyFormatted: boolean;
+        errors: string[];
     };
     heuristics: {
         semanticVagueness: number;
@@ -33,4 +49,35 @@ export interface FathomMetrics {
 export interface SkillProfile {
     name: string;
     metrics: FathomMetrics;
+}
+
+export interface HarborHealthReport {
+    totalSkills: number;
+    totalTokens: number;
+    totalCost: {
+        gpt4o: number;
+        gpt4oMini: number;
+    };
+    averageHeuristicConfidence: number;
+    averageSonarConfidence?: number; // Optional Sonar average if query provided
+    composition: {
+        agentic: number;
+        tools: number;
+    };
+    shipDistribution: Record<ShipClass, number>;
+    contextBloat: {
+        model: string;
+        limit: number;
+        percentage: number;
+    }[];
+    status: {
+        isHealthy: boolean;
+        violations: string[];
+    };
+}
+
+export interface FathomThresholds {
+    maxTokens?: number;
+    maxBloat?: number;
+    minScore?: number;
 }

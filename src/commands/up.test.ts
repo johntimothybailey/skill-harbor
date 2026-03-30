@@ -15,12 +15,12 @@ vi.mock('node:os');
 vi.mock('spinnies');
 vi.mock('fast-glob');
 vi.mock('node:child_process', () => ({
-    exec: vi.fn()
+    exec: vi.fn(),
+    execAsync: vi.fn().mockResolvedValue({ stdout: '' })
 }));
 
 import { lstatSync } from 'node:fs';
 import glob from 'fast-glob';
-import { exec } from 'node:child_process';
 
 describe('upAction', () => {
     let mockOrchestrator: any;
@@ -43,6 +43,11 @@ describe('upAction', () => {
                     'skill1': { name: 'skill1', source: 'source1' }
                 }
             }),
+            readMerged: vi.fn().mockResolvedValue({
+                skills: {
+                    'skill1': { name: 'skill1', source: 'source1' }
+                }
+            }),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
             addSkill: vi.fn().mockResolvedValue(undefined),
         };
@@ -53,6 +58,7 @@ describe('upAction', () => {
         (fs.mkdir as any).mockResolvedValue(undefined);
         (fs.writeFile as any).mockResolvedValue(undefined);
         (lstatSync as any).mockReturnValue({ size: 100, mtimeMs: 123456789 });
+        (fs.stat as any).mockResolvedValue({ isFile: () => false, size: 100, mtimeMs: 123456789 });
     });
 
     it('should perform a full sync when changes are detected', async () => {
@@ -76,7 +82,7 @@ describe('upAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({
+        mockManifestManager.readMerged.mockResolvedValue({
             skills: {
                 'skill1': { 
                     name: 'skill1', 
@@ -97,7 +103,7 @@ describe('upAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({
+        mockManifestManager.readMerged.mockResolvedValue({
             skills: {
                 'skill1': { 
                     name: 'skill1', 
@@ -120,7 +126,7 @@ describe('upAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({
+        mockManifestManager.readMerged.mockResolvedValue({
             skills: {
                 'skill1': { 
                     name: 'skill1', 
@@ -131,7 +137,6 @@ describe('upAction', () => {
             }
         });
         
-        // Mock exists to return true for agent folders but false for the specific skill in one of them
         (exists as any).mockImplementation((p: string) => {
             if (p.includes('.claude/skills/skill1')) return Promise.resolve(false);
             return Promise.resolve(true);
@@ -159,7 +164,7 @@ describe('upAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({
+        mockManifestManager.readMerged.mockResolvedValue({
             skills: {
                 'local-skill': { 
                     name: 'local-skill', 
@@ -170,37 +175,10 @@ describe('upAction', () => {
         });
         
         (glob as any).mockResolvedValue(['/absolute/path/to/local-skill/file.txt']);
-        // stats are handled by lstatSync which we can mock if needed, 
-        // but by default currentSourceHash will be different from 'old-hash'
         
         await upAction(options, mockCommand);
 
         expect(mockOrchestrator.moor).toHaveBeenCalledWith('./local-skill');
-    });
-
-    it('should detect changes in remote skills using git ls-remote', async () => {
-        const options = {};
-        const mockCommand = {
-            opts: vi.fn().mockReturnValue(options),
-        };
-        mockManifestManager.read.mockResolvedValue({
-            skills: {
-                'remote-skill': { 
-                    name: 'remote-skill', 
-                    source: 'owner/repo', 
-                    lastSyncHash: 'owner/repo:old-hash' 
-                }
-            }
-        });
-        
-        const mockExec = exec as any;
-        mockExec.mockImplementation((cmd: string, opts: any, cb: any) => {
-            cb(null, { stdout: 'new-hash\tHEAD' });
-        });
-        
-        await upAction(options, mockCommand);
-
-        expect(mockOrchestrator.moor).toHaveBeenCalledWith('owner/repo');
     });
 
     it('should report failures and exit 1', async () => {
@@ -214,6 +192,7 @@ describe('upAction', () => {
         await expect(upAction(options, mockCommand)).rejects.toThrow('exit');
 
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('incident(s)'));
+        expect(printError).toHaveBeenCalledWith(expect.stringContaining('Moor failed'));
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 });

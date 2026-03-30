@@ -14,19 +14,31 @@ export async function checkAction(options: any, command: any) {
 
     try {
         printHeader("Lighthouse Health Check");
-        const manifest = await manifestManager.read();
+        
+        // 1. Layered Manifest Loading
+        const manifest = opts.global 
+            ? await manifestManager.read("global") 
+            : await manifestManager.readMerged();
+
         const skills = Object.values(manifest.skills);
 
         if (skills.length === 0) {
-            printInfo("Empty Harbor", "No skills found in the manifest to check.");
+            printInfo("Empty Harbor", "No skills found in the manifest stack to check.");
             return;
         }
 
-        // Identify active agent targets (Same logic as 'up' command)
+        // 2. Override Warnings
+        if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
+            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
+            console.log("");
+        }
+
+        // Identify active agent targets
         const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
         const targetConfigs = [
             { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
-            { path: path.join(baseDir, ".cursor", "rules"), label: "Cursor", key: "cursor" },
+            { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
             { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
         ];
         
@@ -37,14 +49,9 @@ export async function checkAction(options: any, command: any) {
         for (const target of targetConfigs) {
             const isActive = hasExplicitTargets 
                 ? manifest.targets!.includes(target.key)
-                : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(path.dirname(target.path)) : await exists(path.join(process.cwd(), path.basename(path.dirname(target.path)))) || await exists(target.path)));
+                : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(path.dirname(target.path)) : (await exists(path.join(process.cwd(), "." + target.key)) || await exists(target.path))));
             
-            // Simplified active check for 'check' command to match environment
-            const envExists = opts.global 
-                ? await exists(path.dirname(target.path))
-                : await exists(path.join(process.cwd(), "." + target.key));
-
-            if (isActive || envExists) {
+            if (isActive) {
                 activeTargets.push(target);
             }
         }
@@ -53,7 +60,11 @@ export async function checkAction(options: any, command: any) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
             const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
             
-            spinnies.add(`check-${skill.name}`, { text: `Auditing ${kleur.bold(skill.name)}...` });
+            let layerLabel = "";
+            if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
+            else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
+            
+            spinnies.add(`check-${skill.name}`, { text: `Auditing ${kleur.bold(skill.name)}${layerLabel}...` });
             
             // 1. Metadata Quality Check
             const meta = await orchestrator.getMetadata(cachedPath);
@@ -87,7 +98,7 @@ export async function checkAction(options: any, command: any) {
                 berthStatus = kleur.gray("No active agent berths detected.");
             }
 
-            const statusText = `[${kleur.bold(skill.name)}]\n    ${metaStatus}\n    ${berthStatus}`;
+            const statusText = `[${kleur.bold(skill.name)}]${layerLabel}\n    ${metaStatus}\n    ${berthStatus}`;
             
             if (isDiscoverable && missingFrom.length === 0) {
                 spinnies.succeed(`check-${skill.name}`, { text: statusText });
