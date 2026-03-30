@@ -3,6 +3,12 @@ on:
   push:
     branches:
       - main
+  # Trigger on Version PR merge — needed because changesets adds [skip ci]
+  # to the commit message, which prevents push-triggered workflows from running
+  pull_request:
+    types: [closed]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -13,10 +19,20 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # For pull_request trigger: only run when the PR was actually merged
+    # and came from the changeset-release branch
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'changeset-release/'))
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
+          # For pull_request events, explicitly checkout main to get the merged state
+          ref: ${{ github.event_name == 'pull_request' && 'main' || '' }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -33,37 +49,70 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
-      - name: Create Release Pull Request or Publish to NPM
-        id: changesets
+      - name: Check for changesets
+        id: check
+        run: |
+          # If .changeset has any md files other than README.md, there are pending changesets
+          CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" | head -1)
+          if [ -n "$CHANGESETS" ]; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
+          fi
+
+      # --- Mode 1: Pending changesets exist → create/update the Version PR ---
+      # Only runs on push (not on pull_request:closed which is for publishing)
+      - name: Create Release Pull Request
+        if: steps.check.outputs.has_changesets == 'true' && github.event_name != 'pull_request'
         uses: changesets/action@v1
         with:
-          publish: npm run release
-          createGithubReleases: true
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Mode 2: No changesets → Version PR was merged, publish! ---
+      - name: Build
+        if: steps.check.outputs.has_changesets == 'false'
+        run: npm run build
+
+      - name: Publish to NPM
+        if: steps.check.outputs.has_changesets == 'false'
+        run: npx changeset publish
+        env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Update GitHub Release Title and Body
-        if: steps.changesets.outputs.published == 'true'
+      - name: Create GitHub Release
+        if: steps.check.outputs.has_changesets == 'false'
         run: |
-          # Get the published version
           VERSION=$(node -p "require('./package.json').version")
-          
-          # Extract Hero Title from CHANGELOG.md (it's on the line starting with ## ⚓)
+          TAG="v$VERSION"
+
+          # Check if the tag already exists (changeset publish may have created it)
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+          # Extract Hero Title from CHANGELOG.md
           HERO_TITLE=$(grep -A 10 "## $VERSION" CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
-          
-          # Extract the entire content block for this version from CHANGELOG.md
-          # It takes everything between this version and the next version header
+
+          # Extract release notes for this version from CHANGELOG.md
           sed -n "/## $VERSION/,/## [0-9]/p" CHANGELOG.md | sed '1d;$d' > release_notes.md
-          
+
           if [ -z "$HERO_TITLE" ]; then
             FINAL_TITLE="⚓ Skill Harbor v$VERSION"
           else
             FINAL_TITLE="⚓ Skill Harbor v$VERSION: $HERO_TITLE"
           fi
-          
-          echo "Updating release v$VERSION with rich notes"
-          gh release edit "v$VERSION" --title "$FINAL_TITLE" --notes-file release_notes.md
+
+          # Create or update the GitHub release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Updating existing release $TAG"
+            gh release edit "$TAG" --title "$FINAL_TITLE" --notes-file release_notes.md
+          else
+            echo "Creating new release $TAG"
+            gh release create "$TAG" --title "$FINAL_TITLE" --notes-file release_notes.md
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
