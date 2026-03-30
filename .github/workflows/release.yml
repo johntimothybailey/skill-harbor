@@ -3,12 +3,6 @@ on:
   push:
     branches:
       - main
-  # Trigger on Version PR merge — needed because changesets adds [skip ci]
-  # to the commit message, which prevents push-triggered workflows from running
-  pull_request:
-    types: [closed]
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -19,20 +13,13 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    # For pull_request trigger: only run when the PR was actually merged
-    # and came from the changeset-release branch
     if: |
       github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.merged == true &&
-       startsWith(github.event.pull_request.head.ref, 'changeset-release/'))
+      github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          # For pull_request events, explicitly checkout main to get the merged state
-          ref: ${{ github.event_name == 'pull_request' && 'main' || '' }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -61,12 +48,13 @@ jobs:
           fi
 
       # --- Mode 1: Pending changesets exist → create/update the Version PR ---
-      # Only runs on push (not on pull_request:closed which is for publishing)
       - name: Create Release Pull Request
-        if: steps.check.outputs.has_changesets == 'true' && github.event_name != 'pull_request'
+        if: steps.check.outputs.has_changesets == 'true'
         uses: changesets/action@v1
         with:
           createGithubReleases: false
+          commit: "chore(release): version packages"
+          title: "chore(release): version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
