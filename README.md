@@ -46,10 +46,6 @@ graph TD
     Up --> Use[Agent Uses Skills]
     
     subgraph "Maintenance & Updates"
-    Use --> Fathom[skill-harbor fathom]
-    Fathom --> Heuristic[Confidence: Heuristic]
-    Fathom -- "--query" --> Sonar[Confidence: Sonar]
-    
     Use --> Check[skill-harbor check]
     Use --> Freshen[skill-harbor freshen]
     Freshen -- "Force Fresh Cargo" --> Up
@@ -62,6 +58,9 @@ graph TD
     
     subgraph "Agent Intelligence"
     Use --> Light[skill-harbor lighthouse]
+    Use --> Fathom[skill-harbor fathom]
+    Fathom --> Heuristic[Confidence: Heuristic]
+    Fathom -- "--query" --> Sonar[Confidence: Sonar]
     end
 ```
 
