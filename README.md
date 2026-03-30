@@ -123,6 +123,30 @@ Coordinate Skill Harbor with the agent's internal routing logic.
     skill-harbor lighthouse
     ```
 
+### 📏 Fathom: Heuristic Profiling
+Protect your agent's attention mechanism by profiling skills before they are berthed. The `fathom` command uses deterministic token math and semantic auditing to evaluate the "displacement" of your intelligence.
+
+*   **Deterministic Token Math**: Uses `js-tiktoken` (cl100k_base) to calculate exact context window footprint.
+*   **Cost Estimation**: High-fidelity API input cost projections for **GPT-4o** and **GPT-4o-mini**.
+*   **Semantic Validation**: Audits frontmatter for missing fields or "shallow" descriptions that cause agentic hallucinations.
+
+```bash
+# Get a high-level overview of your harbor displacement
+skill-harbor fathom
+
+# Get a deep heuristic breakdown and validation report
+skill-harbor fathom --details
+```
+
+**The Fleet Scale (Displacement):**
+| Class | Token Range | Payload Description |
+| :--- | :--- | :--- |
+| 🛶 **Dinghy** | < 500 | Lightweight utility or single-purpose prompt. |
+| ⛵ **Schooner** | < 1,500 | Standard tool definition with clear boundaries. |
+| 🚤 **Brigantine** | < 3,500 | Complex skill with multiple auxiliary sections. |
+| 🛳️ **Frigate** | < 7,000 | Heavyweight context; requires strict triggers to avoid bloat. |
+| 🚢 **Galleon** | 7,000+ | Massive cargo; use with caution in multi-tool environments. |
+
 ### 🌍 Global Fleet: Personal Skills, Everywhere
 Managing skills shouldn't be limited to a single repo. Skill Harbor allows you to maintain a **Global Manifest** to synchronize your personal utilities across every project you touch.
 
