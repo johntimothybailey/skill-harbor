@@ -33,11 +33,6 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
-      - name: Authenticate with NPM
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Create Release Pull Request or Publish to NPM
         id: changesets
         uses: changesets/action@v1
