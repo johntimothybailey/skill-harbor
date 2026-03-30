@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
+import glob from "fast-glob";
 import { getEncoding } from "js-tiktoken";
-import { FathomMetrics, ShipClass, WaterCondition, SkillType } from "../types/profiler";
+import { FathomMetrics, ShipClass, WaterCondition, SkillType, HarborHealthReport } from "../types/profiler";
 
 export class ProfilerService {
     private readonly encoding = getEncoding("cl100k_base");
@@ -65,6 +66,75 @@ export class ProfilerService {
             skillType,
             validation,
             heuristics: result.heuristics
+        };
+    }
+
+    /**
+     * Finds all skill directories (those containing a SKILL.md file) recursively.
+     */
+    async findSkills(dirPath: string): Promise<string[]> {
+        const skillsPaths = await glob("**/SKILL.md", { 
+            cwd: dirPath, 
+            absolute: true,
+            ignore: ["**/node_modules/**", "**/.git/**", "**/stowage/**"]
+        });
+        
+        // Return parent directories (the skill root)
+        return skillsPaths.map(p => path.dirname(p));
+    }
+
+    /**
+     * Generates a comprehensive health report by aggregating metrics from all discovered skills.
+     */
+    async generateHealthReport(skillPaths: string[]): Promise<HarborHealthReport> {
+        let totalTokens = 0;
+        let totalScoreSum = 0;
+        let scoreCount = 0;
+        let agenticCount = 0;
+        let toolCount = 0;
+        
+        const shipDistribution: Record<ShipClass, number> = {
+            "Dinghy": 0,
+            "Schooner": 0,
+            "Brigantine": 0,
+            "Frigate": 0,
+            "Galleon": 0
+        };
+
+        for (const skillPath of skillPaths) {
+            const disp = await this.calculateDisplacement(skillPath);
+            const draft = await this.calculateDraft(skillPath);
+
+            totalTokens += disp.tokens;
+            totalScoreSum += draft.score;
+            scoreCount++;
+
+            if (draft.skillType === "Agentic Skill") agenticCount++;
+            else toolCount++;
+
+            shipDistribution[disp.shipClass]++;
+        }
+
+        const averageDraft = scoreCount > 0 ? totalScoreSum / scoreCount : 0;
+        const totalCost = this.calculateApiCost(totalTokens);
+
+        const contextBloat = [
+            { model: "GPT-4o", limit: 128000, percentage: (totalTokens / 128000) * 100 },
+            { model: "Claude 3.5 Sonnet", limit: 200000, percentage: (totalTokens / 200000) * 100 },
+            { model: "GPT-4o-mini", limit: 128000, percentage: (totalTokens / 128000) * 100 }
+        ];
+
+        return {
+            totalSkills: skillPaths.length,
+            totalTokens,
+            totalCost,
+            averageDraft,
+            composition: {
+                agentic: agenticCount,
+                tools: toolCount
+            },
+            shipDistribution,
+            contextBloat
         };
     }
 
