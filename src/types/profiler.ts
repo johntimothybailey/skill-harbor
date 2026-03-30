@@ -44,3 +44,23 @@ export interface SkillProfile {
     name: string;
     metrics: FathomMetrics;
 }
+
+export interface HarborHealthReport {
+    totalSkills: number;
+    totalTokens: number;
+    totalCost: {
+        gpt4o: number;
+        gpt4oMini: number;
+    };
+    averageDraft: number;
+    composition: {
+        agentic: number;
+        tools: number;
+    };
+    shipDistribution: Record<ShipClass, number>;
+    contextBloat: {
+        model: string;
+        limit: number;
+        percentage: number;
+    }[];
+}
