@@ -81,6 +81,7 @@ program
     .option("-q, --query <text>", "Run a 'Sonar' audit using a specific user query to test trigger confidence.")
     .option("-m, --model <name>", "Override the default LLM model for Sonar auditing.")
     .option("-b, --baseUrl <url>", "Override the default API base URL for Sonar auditing (e.g., local Ollama).")
+    .option("-u, --ghosts", "Scan agent berths for unregistered 'ghost' skills.")
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")

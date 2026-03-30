@@ -74,6 +74,11 @@ export interface HarborHealthReport {
         isHealthy: boolean;
         violations: string[];
     };
+    fleetStatus?: {
+        berthed: number;
+        stowed: number;
+        dryDock: number;
+    };
 }
 
 export interface FathomThresholds {

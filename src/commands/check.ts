@@ -3,7 +3,7 @@ import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
-import { getManifestManager, exists } from "../utils";
+import { getManifestManager, exists, getAgentBerths } from "../utils";
 import { printHeader, printError, printInfo } from "../ui";
 
 export async function checkAction(options: any, command: any) {
@@ -34,27 +34,8 @@ export async function checkAction(options: any, command: any) {
             console.log("");
         }
 
-        // Identify active agent targets
-        const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
-        const targetConfigs = [
-            { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
-            { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
-            { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
-        ];
-        
-        const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-        targetConfigs.push({ path: rulesyncBase, label: "Rulesync", key: "rulesync" });
-
-        const activeTargets = [];
-        for (const target of targetConfigs) {
-            const isActive = hasExplicitTargets 
-                ? manifest.targets!.includes(target.key)
-                : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(path.dirname(target.path)) : (await exists(path.join(process.cwd(), "." + target.key)) || await exists(target.path))));
-            
-            if (isActive) {
-                activeTargets.push(target);
-            }
-        }
+        // Identify active agent targets using the utility
+        const activeTargets = await getAgentBerths(baseDir, manifest.targets);
 
         for (const skill of skills) {
             const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
