@@ -114,6 +114,7 @@ Why: Helps you understand the token cost and trigger risk of your fleet.
 Use Case: Run this to identify 'Heavy' skills or those likely to be triggered accidentally.`)
     .option("-g, --global", "Fathom ONLY skills in the global manifest")
     .option("--details", "Show detailed breakdown of each heuristic and its scoring impact")
+    .option("--report", "Generate a comprehensive Harbor Health Report showing total context bloat and fleet cost")
     .action(fathomAction);
 
 await program.parseAsync(process.argv);

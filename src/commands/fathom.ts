@@ -2,8 +2,8 @@ import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { getManifestManager, exists } from "../utils";
-import { printHeader, printError, printInfo } from "../ui";
 import { ProfilerService } from "../services/profiler";
+import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
 
 export async function fathomAction(options: any, command: any) {
     const opts = command.opts();
@@ -11,6 +11,7 @@ export async function fathomAction(options: any, command: any) {
     const spinnies = new Spinnies();
     const profiler = new ProfilerService();
     const showDetails = opts.details ?? false;
+    const showReport = opts.report ?? false;
 
     try {
         printHeader("Fathom: Skill Profiler");
@@ -32,6 +33,25 @@ export async function fathomAction(options: any, command: any) {
             console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
+        }
+
+        // --- Harbor Health Report ---
+        if (showReport) {
+            const harborDir = manifestManager.getHarborDir();
+            spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
+            
+            const skillPaths = await profiler.findSkills(harborDir);
+            if (skillPaths.length === 0) {
+                spinnies.fail("harbor-scan", { text: "No berthed skills found in harbor. Run 'up' first." });
+                return;
+            }
+
+            spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
+            const report = await profiler.generateHealthReport(skillPaths);
+            spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
+            
+            printHarborHealthReport(report);
+            return; // Exit after report if requested
         }
 
         for (const skill of skills) {
