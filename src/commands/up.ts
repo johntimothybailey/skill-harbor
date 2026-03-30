@@ -320,7 +320,7 @@ export async function upAction(options: any, command: any) {
             const failureMsg = `Workspace Sync completed with ${failures.length} incident(s).`;
             printError(failureMsg);
             failures.forEach(f => {
-                console.log(kleur.red(`  ✖ [${f.skill}] ${f.error}`));
+                printError(`[${f.skill}] ${f.error}`);
             });
             process.exit(1);
         }

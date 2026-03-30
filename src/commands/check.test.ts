@@ -8,8 +8,8 @@ import os from 'node:os';
 vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
-vi.mock('node:os');
 vi.mock('spinnies');
+vi.mock('node:os');
 
 describe('checkAction', () => {
     let mockOrchestrator: any;
@@ -18,12 +18,17 @@ describe('checkAction', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockOrchestrator = {
-            getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc' }),
+            getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc', triggers: [] }),
         };
         mockManifestManager = {
             read: vi.fn().mockResolvedValue({
                 skills: {
-                    'skill1': { name: 'skill1', source: 'source1' }
+                    'skill1': { name: 'skill1', source: 'source1', layer: 'shared' }
+                }
+            }),
+            readMerged: vi.fn().mockResolvedValue({
+                skills: {
+                    'skill1': { name: 'skill1', source: 'source1', layer: 'shared' }
                 }
             }),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
@@ -31,7 +36,7 @@ describe('checkAction', () => {
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
         (os.homedir as any).mockReturnValue('/home/user');
-        (exists as any).mockResolvedValue(true);
+        (exists as any).mockImplementation(() => Promise.resolve(true));
     });
 
     it('should perform health check on docked skills', async () => {
@@ -51,7 +56,9 @@ describe('checkAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({ skills: {} });
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {}
+        });
 
         await checkAction(options, mockCommand);
 

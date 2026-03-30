@@ -3,7 +3,7 @@ import kleur from "kleur";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager } from "../utils";
-import { printError, printLighthouseSnippet } from "../ui";
+import { printHeader, printError, printLighthouseSnippet } from "../ui";
 
 export async function lighthouseAction(options: any, command: any) {
     const opts = command.opts();
@@ -11,6 +11,8 @@ export async function lighthouseAction(options: any, command: any) {
     const spinnies = new Spinnies();
 
     try {
+        printHeader("Lighthouse Intelligence Snippet");
+        
         // 1. Layered Manifest Loading
         const manifest = opts.global 
             ? await manifestManager.read("global") 
