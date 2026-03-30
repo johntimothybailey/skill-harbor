@@ -4,7 +4,7 @@
 
 <!-- hero: Sonar Intelligence: Probabilistic Auditing -->
 
-Captain's Briefing: Skill Harbor has deployed the **Sonar Intelligence Engine**, a two-fold Confidence auditing system for agentic skills. Move beyond raw token counts with **Confidence (Heuristic)** for instant local analysis and **Confidence (Sonar)** for high-fidelity, probabilistic model verification via logprobs in the actual model provided. With Sonar, it's not guessing; it's testing.
+Captain's Briefing: Skill Harbor has commissioned the **Sonar Intelligence Engine**, a dual-layer "Confidence" auditor for your agentic fleet. Fathom now scans deeper than ever—moving beyond simple token displacement to measure real-world reliability. Use **Confidence (Heuristic)** for an instant, offline look at your prompt's "wake," or deploy **Confidence (Sonar)** to probe the actual LLM (OpenAI, Groq, Gemini) for the exact mathematical probability (logprobs) of a skill triggering. Stop guessing your way through the fog; start fathoming with probabilistic certainty.
 
 ## ✨ New Cargo (Key Features)
 * **Confidence (Heuristic)**: Implemented a proprietary scoring algorithm (1-10) that evaluates semantic vagueness, trigger clarity, and collision risk across your entire fleet.
