@@ -39,7 +39,7 @@ export const printLighthouseSnippet = (snippet: string) => {
 };
 
 export const printHarborHealthReport = (report: any, format: string = 'pretty') => {
-    const { totalSkills, totalTokens, totalCost, averageDraft, composition, shipDistribution, contextBloat, status } = report;
+    const { totalSkills, totalTokens, totalCost, averageHeuristicConfidence, composition, shipDistribution, contextBloat, status } = report;
     
     if (format === 'json') {
         console.log(JSON.stringify(report, null, 2));
@@ -54,12 +54,12 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     content += `${kleur.cyan('Daily Maintenance:')} GPT-4o: $${totalCost.gpt4o.toFixed(4)} | Mini: $${totalCost.gpt4oMini.toFixed(4)}\n`;
     
     let draftEmoji = "🔴";
-    if (averageDraft > 3) draftEmoji = "🟠";
-    if (averageDraft > 5) draftEmoji = "🟡";
-    if (averageDraft > 6) draftEmoji = "🟢";
-    if (averageDraft > 8) draftEmoji = "✨";
+    if (averageHeuristicConfidence > 3) draftEmoji = "🟠";
+    if (averageHeuristicConfidence > 5) draftEmoji = "🟡";
+    if (averageHeuristicConfidence > 6) draftEmoji = "🟢";
+    if (averageHeuristicConfidence > 8) draftEmoji = "✨";
     
-    content += `${kleur.cyan('Avg Fleet Wake:')} ${draftEmoji} ${averageDraft.toFixed(1)}/10\n\n`;
+    content += `${kleur.cyan('Avg Fleet Confidence:')} ${draftEmoji} ${averageHeuristicConfidence.toFixed(1)}/10 (Heuristic)\n\n`;
 
     content += `${kleur.bold().yellow('📦 Ship Class Distribution')}\n`;
     content += `🛶 Dinghies: ${shipDistribution.Dinghy} | ⛵ Schooners: ${shipDistribution.Schooner} | 🚤 Brigantines: ${shipDistribution.Brigantine}\n`;

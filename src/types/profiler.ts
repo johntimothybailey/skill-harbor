@@ -19,11 +19,17 @@ export interface FathomMetrics {
             gpt4oMini: number; // $/1M tokens baseline ($0.15/1M)
         };
     };
-    draft: {
+    heuristicConfidence: {
         score: number; // 1-10
         condition: WaterCondition;
         wakeSize: "Minimal" | "Small" | "Moderate" | "Large" | "Massive";
         skillType: SkillType;
+    };
+    sonarConfidence?: {
+        score: number;       // 0-100%
+        model: string;
+        query: string;
+        timestamp: string;
     };
     validation: {
         namePresent: boolean;
@@ -52,7 +58,7 @@ export interface HarborHealthReport {
         gpt4o: number;
         gpt4oMini: number;
     };
-    averageDraft: number;
+    averageHeuristicConfidence: number;
     composition: {
         agentic: number;
         tools: number;
