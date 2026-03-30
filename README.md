@@ -47,6 +47,9 @@ graph TD
     
     subgraph "Maintenance & Updates"
     Use --> Fathom[skill-harbor fathom]
+    Fathom --> Heuristic[Confidence: Heuristic]
+    Fathom -- "--query" --> Sonar[Confidence: Sonar]
+    
     Use --> Check[skill-harbor check]
     Use --> Freshen[skill-harbor freshen]
     Freshen -- "Force Fresh Cargo" --> Up
