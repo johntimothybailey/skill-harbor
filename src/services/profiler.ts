@@ -163,9 +163,11 @@ export class ProfilerService {
     /**
      * Generates a comprehensive health report by aggregating metrics from all discovered skills.
      */
-    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds): Promise<HarborHealthReport> {
+    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds, query?: string, sonarConfig?: SonarConfig): Promise<HarborHealthReport> {
         let totalTokens = 0;
         let totalScoreSum = 0;
+        let totalSonarSum = 0;
+        let sonarCount = 0;
         let scoreCount = 0;
         let agenticCount = 0;
         let toolCount = 0;
@@ -179,12 +181,25 @@ export class ProfilerService {
         };
 
         for (const skillPath of skillPaths) {
+            const skillName = path.basename(skillPath);
             const disp = await this.calculateDisplacement(skillPath);
             const heuristic = await this.calculateHeuristicConfidence(skillPath);
 
             totalTokens += disp.tokens;
             totalScoreSum += heuristic.score;
             scoreCount++;
+
+            if (query && sonarConfig) {
+                try {
+                    const sonar = await this.conductSonarAudit(skillName, skillPath, query, sonarConfig);
+                    if (sonar) {
+                        totalSonarSum += sonar.score;
+                        sonarCount++;
+                    }
+                } catch {
+                    // Fail silently, sonar just won't be included in average
+                }
+            }
 
             if (heuristic.skillType === "Agentic Skill") agenticCount++;
             else toolCount++;
@@ -193,6 +208,7 @@ export class ProfilerService {
         }
 
         const averageHeuristicConfidence = scoreCount > 0 ? totalScoreSum / scoreCount : 0;
+        const averageSonarConfidence = sonarCount > 0 ? totalSonarSum / sonarCount : undefined;
         const totalCost = this.calculateApiCost(totalTokens);
 
         const contextBloat = [
@@ -220,6 +236,7 @@ export class ProfilerService {
             totalTokens,
             totalCost,
             averageHeuristicConfidence,
+            averageSonarConfidence,
             composition: {
                 agentic: agenticCount,
                 tools: toolCount

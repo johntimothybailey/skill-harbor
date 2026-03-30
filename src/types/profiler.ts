@@ -59,6 +59,7 @@ export interface HarborHealthReport {
         gpt4oMini: number;
     };
     averageHeuristicConfidence: number;
+    averageSonarConfidence?: number; // Optional Sonar average if query provided
     composition: {
         agentic: number;
         tools: number;

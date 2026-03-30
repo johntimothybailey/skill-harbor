@@ -76,7 +76,7 @@ export async function fathomAction(options: any, command: any) {
                 minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
             };
 
-            const report = await profiler.generateHealthReport(skillPaths, thresholds);
+            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar);
             
             if (format === 'pretty') {
                 spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
@@ -87,7 +87,11 @@ export async function fathomAction(options: any, command: any) {
             if (!report.status.isHealthy) {
                 process.exit(1);
             }
-            return; 
+            
+            // Only exit here if details are NOT requested, allowing individual results to follow
+            if (!showDetails || format === 'json') {
+                return;
+            }
         }
 
         // 4. Individual Skill Analysis (Default)

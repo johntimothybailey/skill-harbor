@@ -51,7 +51,7 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     
     content += `${kleur.cyan('Fleet Size:')}    ${totalSkills} Skills (${composition.agentic} Agentic, ${composition.tools} Tools)\n`;
     content += `${kleur.cyan('Total Volume:')}  ${kleur.bold(totalTokens.toLocaleString())} Tokens\n`;
-    content += `${kleur.cyan('Daily Maintenance:')} GPT-4o: $${totalCost.gpt4o.toFixed(4)} | Mini: $${totalCost.gpt4oMini.toFixed(4)}\n`;
+    content += `${kleur.cyan('Daily Maintenance:')} GPT-4o: $${totalCost.gpt4o.toFixed(4)} | Mini: $${totalCost.gpt4oMini.toFixed(4)}\n\n`;
     
     let draftEmoji = "🔴";
     if (averageHeuristicConfidence > 3) draftEmoji = "🟠";
@@ -59,7 +59,17 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     if (averageHeuristicConfidence > 6) draftEmoji = "🟢";
     if (averageHeuristicConfidence > 8) draftEmoji = "✨";
     
-    content += `${kleur.cyan('Avg Fleet Confidence:')} ${draftEmoji} ${averageHeuristicConfidence.toFixed(1)}/10 (Heuristic)\n\n`;
+    content += `${kleur.cyan('Avg Confidence (Heuristic):')} ${draftEmoji} ${averageHeuristicConfidence.toFixed(1)}/10\n`;
+
+    if (report.averageSonarConfidence !== undefined) {
+        const sonar = report.averageSonarConfidence;
+        const color = sonar > 80 ? kleur.green : sonar > 50 ? kleur.yellow : kleur.red;
+        const barLength = 10;
+        const filled = Math.round((sonar / 100) * barLength);
+        const bar = color("█".repeat(filled)) + kleur.gray("░".repeat(barLength - filled));
+        content += `${kleur.cyan('Avg Confidence (Sonar):')}     [${bar}] ${color(sonar.toFixed(1) + "%")}\n`;
+    }
+    content += `\n`;
 
     content += `${kleur.bold().yellow('📦 Ship Class Distribution')}\n`;
     content += `🛶 Dinghies: ${shipDistribution.Dinghy} | ⛵ Schooners: ${shipDistribution.Schooner} | 🚤 Brigantines: ${shipDistribution.Brigantine}\n`;
