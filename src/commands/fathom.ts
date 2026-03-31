@@ -119,7 +119,7 @@ export async function fathomAction(options: any, command: any) {
                 minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
             };
 
-            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar);
+            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar, opts.contracts);
             
             // Calculate Fleet Status for the report
             const fleetStatus = { berthed: 0, stowed: 0, dryDock: 0 };
@@ -237,6 +237,20 @@ export async function fathomAction(options: any, command: any) {
                 console.log(`    ${kleur.cyan("Displacement:")} ${displacementText}`);
                 console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
                 console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
+
+                if (opts.contracts) {
+                    if (heuristic.contracts?.missingStandard) {
+                        console.log(`    ${kleur.yellow("Contracts:")}              ⚠️  Not explicitly configured for chaining. (See: https://github.com/johntimothybailey/skill-harbor/blob/main/docs/contracts.md)`);
+                    } else if (heuristic.contracts) {
+                        const reqStr = Object.keys(heuristic.contracts.requires).length > 0 
+                            ? Object.keys(heuristic.contracts.requires).join(", ") 
+                            : "none";
+                        const prodStr = Object.keys(heuristic.contracts.produces).length > 0 
+                            ? Object.keys(heuristic.contracts.produces).join(", ") 
+                            : "none";
+                        console.log(`    ${kleur.cyan("Contracts:")}              Requires: [${reqStr}] | Produces: [${prodStr}]`);
+                    }
+                }
 
                 if (showDetails) {
                     if (!heuristic.validation.isProperlyFormatted) {

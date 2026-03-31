@@ -93,6 +93,7 @@ program
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")
+    .option("-c, --contracts", "Run semantic contract validation between skills to ensure I/O schema compatibility.")
     .option("-g, --global", "Target the global manifest (~/.harbor).")
     .action(fathomAction);
 

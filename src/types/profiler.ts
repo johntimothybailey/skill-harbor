@@ -9,6 +9,12 @@ export type WaterCondition =
     | "Rough Seas" 
     | "Storm Surge";
 
+export interface ContractValidation {
+    missingStandard: boolean;
+    requires: Record<string, string>;
+    produces: Record<string, string>;
+}
+
 export interface FathomMetrics {
     displacement: {
         tokens: number;
@@ -44,6 +50,7 @@ export interface FathomMetrics {
         tagDensity?: number;
         triggerClarity?: number;
     };
+    contracts?: ContractValidation;
 }
 
 export interface SkillProfile {
@@ -74,6 +81,8 @@ export interface HarborHealthReport {
         isHealthy: boolean;
         violations: string[];
     };
+    contractMismatches?: string[];
+    contractWarnings?: string[];
     fleetStatus?: {
         berthed: number;
         stowed: number;

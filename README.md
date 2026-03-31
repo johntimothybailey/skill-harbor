@@ -161,7 +161,15 @@ Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or q
 - **`--max-tokens <n>`**: Fail if total fleet tokens exceed limit.
 - **`--max-bloat <p>`**: Fail if GPT-4o context saturation exceeds percentage.
 - **`--min-score <s>`**: Fail if average fleet quality score falls below threshold.
+- **`--contracts`**: Fail if explicit upstream outputs do not match downstream input requirements.
 - **`--format json`**: Output machine-parsable data for programmatic consumption.
+
+#### 🤝 Semantic Contracts (Chaining Validation)
+To prevent hallucinations when passing unstructured data between linked skills, Fathom includes a **Semantic Contract Validation** engine. By running `skill-harbor fathom --contracts`, Fathom globally inspects all your skills to ensure their input and output requirements align safely. 
+
+If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill B requires `string`), Fathom will aggressively reject the build (Exit Code 1).
+
+[Read the full documentation on implementing the Semantic Contracts Standard here!](docs/contracts.md)
 
 #### 📡 Sonar: Probabilistic Confidence
 Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
