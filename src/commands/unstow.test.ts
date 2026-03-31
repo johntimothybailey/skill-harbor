@@ -32,7 +32,7 @@ describe('unstowAction', () => {
         await unstowAction(options, mockCommand);
 
         expect(printHeader).toHaveBeenCalledWith('Restoring Agent Context (Unlock)');
-        expect(mockOrchestrator.unstowTarget).toHaveBeenCalledTimes(3);
+        expect(mockOrchestrator.unstowTarget).toHaveBeenCalledTimes(4);
         expect(mockOrchestrator.finalize).toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Unstow complete.'));
     });

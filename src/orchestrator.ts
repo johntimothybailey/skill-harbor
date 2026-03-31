@@ -42,9 +42,18 @@ export class Orchestrator {
             // Pass local paths directly if needed, otherwise parse skillfish owner/repo format
             if (url.startsWith('file://') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
                 const localPath = url.replace('file://', '');
-                await fs.cp(localPath, this.tempDir, { recursive: true });
+                const localStats = await fs.stat(localPath);
+                const localCargoPath = path.join(this.tempDir, path.basename(localPath));
+
+                if (localStats.isDirectory()) {
+                    await fs.cp(localPath, localCargoPath, { recursive: true });
+                } else {
+                    await fs.mkdir(localCargoPath, { recursive: true });
+                    await fs.cp(localPath, path.join(localCargoPath, path.basename(localPath)));
+                }
+
                 this.spinnies.update(this.spinnerId, { text: kleur.green(`[${this.skillName}] Local skill cargo successfully moored.`) });
-                return this.tempDir;
+                return localCargoPath;
             }
 
             // Handle full GitHub URLs by stripping protocol

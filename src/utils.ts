@@ -21,19 +21,28 @@ export function getManifestManager(options: any) {
     return new ManifestManager();
 }
 
-    /**
+export function getManagedAgentTargets(baseDir: string, includeRulesync = true): AgentBerth[] {
+    const targets: AgentBerth[] = [
+        { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
+        { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
+        { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(baseDir, ".agents", "skills"), label: "Codex", key: "codex" }
+    ];
+
+    if (includeRulesync) {
+        targets.push({ path: path.join(os.homedir(), ".rulesync", "skills"), label: "Rulesync", key: "rulesync" });
+    }
+
+    return targets;
+}
+
+/**
  * Returns a list of active agent skill directories.
  */
 export async function getAgentBerths(baseDir: string, targets?: string[]): Promise<AgentBerth[]> {
     const hasExplicitTargets = Array.isArray(targets) && targets.length > 0;
-    const targetConfigs = [
-        { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
-        { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
-        { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
-    ];
-    
     const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-    targetConfigs.push({ path: rulesyncBase, label: "Rulesync", key: "rulesync" });
+    const targetConfigs = getManagedAgentTargets(baseDir);
 
     const activeTargets: AgentBerth[] = [];
     for (const target of targetConfigs) {
@@ -70,6 +79,7 @@ export async function getStowageBerths(baseDir: string, targets?: string[]): Pro
         { path: path.join(stowageBase, "claude"), label: "Claude", key: "claude" },
         { path: path.join(stowageBase, "cursor"), label: "Cursor", key: "cursor" },
         { path: path.join(stowageBase, "antigravity"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(stowageBase, "codex"), label: "Codex", key: "codex" },
         { path: path.join(stowageBase, "rulesync"), label: "Rulesync", key: "rulesync" }
     ];
     

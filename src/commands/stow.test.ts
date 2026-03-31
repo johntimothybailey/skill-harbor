@@ -32,7 +32,7 @@ describe('stowAction', () => {
         await stowAction(options, mockCommand);
 
         expect(printHeader).toHaveBeenCalledWith('Stowing Agent Context');
-        expect(mockOrchestrator.stowTarget).toHaveBeenCalledTimes(3);
+        expect(mockOrchestrator.stowTarget).toHaveBeenCalledTimes(4);
         expect(mockOrchestrator.finalize).toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Stow complete.'));
     });
@@ -45,7 +45,7 @@ describe('stowAction', () => {
 
         await stowAction(options, mockCommand);
 
-        expect(mockOrchestrator.stowTarget).toHaveBeenCalledTimes(4);
+        expect(mockOrchestrator.stowTarget).toHaveBeenCalledTimes(5);
     });
 
     it('should handle errors and exit', async () => {
