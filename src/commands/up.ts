@@ -9,7 +9,7 @@ import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
-import { getManifestManager, exists } from "../utils";
+import { getManifestManager, exists, getAgentBerths, getManagedAgentTargets } from "../utils";
 import { printHeader, printSuccess, printError, printInfo } from "../ui";
 
 const execAsync = promisify(exec);
@@ -145,15 +145,8 @@ export async function upAction(options: any, command: any) {
             const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
             const stowageBase = path.join(baseDir, ".harbor", "stowage");
             const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
-            
-            const targetConfigs = [
-                { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
-                { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
-                { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" }
-            ];
-            
             const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
-            targetConfigs.push({ path: rulesyncBase, label: "Rulesync", key: "rulesync" });
+            const targetConfigs = getManagedAgentTargets(baseDir);
 
             for (const target of targetConfigs) {
                 const shouldLockdown = hasExplicitTargets 
@@ -185,26 +178,15 @@ export async function upAction(options: any, command: any) {
                 const cacheExists = await exists(cachedPath);
 
                 // 2. Target Identification
-                const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
-                const activeTargets: string[] = [];
-                
-                if (hasExplicitTargets ? manifest.targets!.includes("claude") : (opts.global ? await exists(path.join(os.homedir(), ".claude")) : await exists(path.join(baseDir, ".claude")))) activeTargets.push("claude");
-                if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) activeTargets.push("cursor");
-                if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) activeTargets.push("antigravity");
-                if (hasExplicitTargets ? manifest.targets!.includes("rulesync") : (await exists(path.join(os.homedir(), ".rulesync", "skills")))) activeTargets.push("rulesync");
-
-                const targetsChanged = JSON.stringify(activeTargets.sort()) !== JSON.stringify((skill.lastSyncTargets || []).sort());
+                const activeTargetConfigs = await getAgentBerths(baseDir, manifest.targets);
+                const activeTargets = activeTargetConfigs.map(target => target.key);
+                const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify([...(skill.lastSyncTargets || [])].sort());
                 
                 // 3. Destination Integrity Check
                 let destinationsMissing = false;
-                for (const target of activeTargets) {
-                    let dest = "";
-                    if (target === "claude") dest = path.join(baseDir, ".claude", "skills", skill.name);
-                    else if (target === "cursor") dest = path.join(baseDir, ".cursor", "skills", skill.name);
-                    else if (target === "antigravity") dest = path.join(baseDir, ".antigravity", "skills", skill.name);
-                    else if (target === "rulesync") dest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
-                    
-                    if (dest && !(await exists(dest))) {
+                for (const target of activeTargetConfigs) {
+                    const dest = path.join(target.path, skill.name);
+                    if (!(await exists(dest))) {
                         destinationsMissing = true;
                         break;
                     }
@@ -226,16 +208,19 @@ export async function upAction(options: any, command: any) {
 
                 // 5. Transpile & Berth
                 const berthedTargets: string[] = [];
-                const claudeProcessed = await orchestrator.processCargo(cargoPath, "claude");
+                const needsClaudeProcessed = activeTargets.some(target => target === "claude" || target === "cursor" || target === "rulesync");
+                const claudeProcessed = needsClaudeProcessed
+                    ? await orchestrator.processCargo(cargoPath, "claude")
+                    : null;
 
-                if (activeTargets.includes("claude")) {
+                if (activeTargets.includes("claude") && claudeProcessed) {
                     const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
                     const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
                     if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
                     berthedTargets.push("Claude");
                 }
 
-                if (activeTargets.includes("cursor")) {
+                if (activeTargets.includes("cursor") && claudeProcessed) {
                     const cursorDest = path.join(baseDir, ".cursor", "skills", skill.name);
                     const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
                     if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
@@ -250,10 +235,16 @@ export async function upAction(options: any, command: any) {
                     berthedTargets.push("Antigravity");
                 }
 
-                if (activeTargets.includes("rulesync")) {
+                if (activeTargets.includes("rulesync") && claudeProcessed) {
                     const rulesyncDest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
                     await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
                     berthedTargets.push("Rulesync");
+                }
+
+                if (activeTargets.includes("codex")) {
+                    const codexDest = path.join(baseDir, ".agents", "skills", skill.name);
+                    await orchestrator.berth(cargoPath, codexDest, "Codex");
+                    berthedTargets.push("Codex");
                 }
 
                 // 6. Update Cache & State (Only if we fetched fresh cargo)
@@ -294,24 +285,31 @@ export async function upAction(options: any, command: any) {
 
         if (metadataList.length > 0) {
             const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agentic skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Local Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
+            const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";
             const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
-            const targets = [];
+            const targets: Array<{ path: string; content: string }> = [];
             
             if (hasExplicitTargets ? manifest.targets!.includes("claude") : (opts.global ? await exists(path.join(os.homedir(), ".claude")) : await exists(path.join(baseDir, ".claude")))) {
-                targets.push(path.join(baseDir, ".claude", "skills", fleetIntelligencePath));
+                targets.push({ path: path.join(baseDir, ".claude", "skills", fleetIntelligencePath), content: manifestContent });
             }
             if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) {
-                targets.push(path.join(baseDir, ".cursor", "skills", fleetIntelligencePath));
+                targets.push({ path: path.join(baseDir, ".cursor", "skills", fleetIntelligencePath), content: manifestContent });
             }
             if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) {
-                targets.push(path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath));
+                targets.push({ path: path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath), content: manifestContent });
+            }
+            if (hasExplicitTargets ? manifest.targets!.includes("codex") : (opts.global ? await exists(path.join(os.homedir(), ".agents")) : await exists(path.join(baseDir, ".agents")))) {
+                targets.push({
+                    path: path.join(baseDir, ".agents", "skills", "000-fleet-intelligence", "SKILL.md"),
+                    content: codexManifestContent
+                });
             }
 
             for (const target of targets) {
-                await fs.mkdir(path.dirname(target), { recursive: true });
-                await fs.writeFile(target, manifestContent);
+                await fs.mkdir(path.dirname(target.path), { recursive: true });
+                await fs.writeFile(target.path, target.content);
             }
             console.log(kleur.green("  ✓ [Lighthouse] Master Fleet Manifest berthed to all active agent folders.\n"));
         }

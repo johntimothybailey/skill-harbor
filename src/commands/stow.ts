@@ -2,6 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
+import { getManagedAgentTargets } from "../utils";
 import { printHeader, printSuccess, printError } from "../ui";
 
 export async function stowAction(options: any, command: any) {
@@ -13,16 +14,7 @@ export async function stowAction(options: any, command: any) {
 
     try {
         printHeader("Stowing Agent Context");
-        
-        const targets = [
-            { path: path.join(baseDir, ".claude", "skills"), label: "Claude" },
-            { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor" },
-            { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity" }
-        ];
-
-        if (opts.global) {
-            targets.push({ path: path.join(os.homedir(), ".rulesync", "skills"), label: "Rulesync" });
-        }
+        const targets = getManagedAgentTargets(baseDir, opts.global === true);
 
         for (const target of targets) {
             const stowPath = path.join(stowageBase, target.label.toLowerCase());
