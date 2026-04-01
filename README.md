@@ -337,6 +337,25 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 ---
 
 
+## 🧰 The Quartermaster's Toolkit (Meta-Skills)
+
+Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. Instead of manual scaffolding, we provide a set of **AI-Native Meta-Skills** (Tools) that can be docked directly into your harbor to help you build, evaluate, and standardize your fleet.
+
+### ⚓ The Toolkit Collection
+- **`skill-architect`**: Guides you in designing a new skill. It ensures the skill is "right-sized" (Dinghy vs. Frigate) and enforces input/output contracts.
+- **`fleet-surgeon`**: Evaluates existing skills for "context bloat" and provides step-by-step refactoring guides to split a massive "Galleon" into smaller, efficient "Schooners."
+- **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
+
+### 👻 Interactive Ghost Docking
+When running `fathom --ghosts` or `voyage`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+
+```bash
+# Scan for ghosts and dock them interactively
+skill-harbor fathom --ghosts
+```
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! To ensure a smooth release process, we use **Quartermaster** (our nautical-themed wrapper for **[Changesets](https://github.com/changesets/changesets)**) for automated versioning and meaningful changelog generation.

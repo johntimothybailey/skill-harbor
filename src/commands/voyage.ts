@@ -8,7 +8,8 @@ import { getManifestManager, getAgentBerths } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
 import { VoyageTestDefinition } from "../types/voyage";
-import { printHeader, printError, printInfo } from "../ui";
+import { printHeader, printError, printInfo, printSuccess } from "../ui";
+import { ask } from "../utils";
 import os from "node:os";
 
 export async function voyageAction(queryArg: string | undefined, options: any, command: any) {
@@ -102,6 +103,26 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
 
         if (tools.length === 0) {
             spinnies.fail("voyage-init", { text: "No properly formatted skills found in active berths." });
+            
+            // Ghost Discovery Assistance
+            const ghosts = await profiler.findSkills(process.cwd());
+            const localGhosts = ghosts.filter(p => !p.includes(".harbor/skills"));
+
+            if (localGhosts.length > 0) {
+                console.log(kleur.magenta(`\n👻  Ghost Alert: I found ${localGhosts.length} local skill(s) that aren't manifested.`));
+                if (await ask("Would you like to dock these to your local manifest now?", kleur)) {
+                    for (const ghostPath of localGhosts) {
+                        const name = path.basename(ghostPath);
+                        await manifestManager.addSkill({
+                            name,
+                            source: ghostPath,
+                            localPath: ""
+                        }, "local");
+                        console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
+                    }
+                    printSuccess("All ghosts berthed. Run 'voyage' again to deploy them.");
+                }
+            }
             process.exit(1);
         }
 

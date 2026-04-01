@@ -1,10 +1,10 @@
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth } from "../utils";
+import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth, ask } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
-import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
+import { printHeader, printError, printInfo, printHarborHealthReport, printSuccess } from "../ui";
 import os from "node:os";
 
 export async function fathomAction(options: any, command: any) {
@@ -298,6 +298,24 @@ export async function fathomAction(options: any, command: any) {
             console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
             if (!showDetails) {
                 console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+            }
+        }
+
+        // 5. Interactive Ghost Docking
+        if (opts.ghosts && ghostSkillPaths.length > 0 && (!opts.format || opts.format === "pretty")) {
+            console.log(kleur.magenta(`\n👻  Ghost Alert: Found ${ghostSkillPaths.length} unregistered local skills.`));
+            if (await ask(`Would you like to dock these to your local manifest now?`, kleur)) {
+                for (const ghostPath of ghostSkillPaths) {
+                    const name = path.basename(ghostPath);
+                    // Dock as local override
+                    await manifestManager.addSkill({
+                        name: name,
+                        source: ghostPath,
+                        localPath: ""
+                    }, "local");
+                    console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
+                }
+                printSuccess("All ghosts have been successfully berthed to your harbor manifest.");
             }
         }
     } catch (error: any) {
