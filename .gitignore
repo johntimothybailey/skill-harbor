@@ -8,3 +8,4 @@ dist
 .env*
 .npmrc
 harbor-manifest.local.json
+*voyage-test.yaml

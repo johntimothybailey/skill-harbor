@@ -10,6 +10,7 @@ import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
+import { voyageAction } from "./commands/voyage";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -96,5 +97,13 @@ program
     .option("-c, --contracts", "Run semantic contract validation between skills to ensure I/O schema compatibility.")
     .option("-g, --global", "Target the global manifest (~/.harbor).")
     .action(fathomAction);
+
+program
+    .command("voyage [query]")
+    .description("End-to-end integration testing suite to simulate agentic workflows.")
+    .option("-f, --file <path>", "Path to a YAML test definition file (e.g., harbor-voyage-test.yaml)")
+    .option("-m, --model <name>", "Override the default LLM model for the voyage.")
+    .option("-b, --baseUrl <url>", "Override the default API base URL for the voyage.")
+    .action(voyageAction);
 
 await program.parseAsync(process.argv);

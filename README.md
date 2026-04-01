@@ -211,8 +211,31 @@ HARBOR_PROFILER_API_KEY=your_secret_key_here
 skill-harbor fathom --query "example" --baseUrl https://generativelanguage.googleapis.com/v1beta/openai/ --model gemini-1.5-flash
 ```
 
-#### ⚓ Why Use Fathom?
-Manually inspecting skill files for token bloat is impossible at scale. Fathom acts as your **Intelligence Auditor**.
+#### ⛵ Voyage: End-to-End Integration Testing
+While Fathom provides fast heuristic and single-skill probabilistic checks, **Voyage** is a dedicated integration testing suite. It simulates an entire agent loop, reading your active agent berths, constructing JSON Schema tool definitions, and passing mock context payloads to verify that the LLM uses the correct sequence of tools to reach the expected end state.
+
+- **`--file <path>`**: Provide a `harbor-voyage-test.yaml` to define the query, mocks, and expected assertion sequence.
+- **`--model <name>` / `--baseUrl <url>`**: Overrides just like Sonar configuration.
+
+```yaml
+# harbor-voyage-test.yaml
+query: "Check if the codebase is portable and then generate a report on any hidden skills."
+expected_tools: 
+  - Scryer
+  - Fathom
+mocks:
+  Scryer: "Portable issues found: None. The codebase looks clean."
+  Fathom: "Hidden skills report: 2 ghost skills found."
+```
+
+```bash
+skill-harbor voyage -f harbor-voyage-test.yaml
+```
+
+If the agent deviates and does not invoke the tools specified in `expected_tools`, the voyage will **exit with process code 1**.
+
+#### ⚓ Why Use Fathom & Voyage?
+Manually inspecting skill files for token bloat is impossible at scale. Fathom & Voyage act as your **Intelligence Auditors**.
 
 1.  **Confidence Check (Heuristic)**: Use `fathom --details` during development to see if your prompt is too "verbose" or "vague." If your **Heuristic Confidence** is low (1.0-4.0), your agent is likely to start hallucinating.
 2.  **Confidence Check (Sonar)**: Use `fathom --query` to see if a model *actually* triggered your skill for a specific input. Perfect for finding "rogue skills" that trigger when they shouldn't.
