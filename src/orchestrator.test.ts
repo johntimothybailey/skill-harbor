@@ -48,7 +48,7 @@ describe('Orchestrator Unit Tests', () => {
 
         expect(cargoPath).toBe(path.join(path.dirname(cargoPath), 'local-skill'));
         // Standardize the access check for cross-environment stability
-        await expect(fs.access(path.join(cargoPath, 'SKILL.md'))).resolves.not.toThrow();
+        await fs.access(path.join(cargoPath, 'SKILL.md')); 
         await expect(fs.access(path.join(cargoPath, '.claude'))).rejects.toThrow();
     });
 
