@@ -64,10 +64,11 @@ graph TD
     end
 ```
 
-## 🚀 Usage
+## 🚀 Getting Started
 
-### Installation
+Follow this 4-step "Success Path" to standardize your agent rules in less than 60 seconds.
 
+### 1. Install the CLI
 Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
 
 ```bash
@@ -80,6 +81,43 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 # Using pnpm
  pnpm add -g skill-harbor
 ```
+
+### 2. Dock Your First Skill Source
+Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo or local path) to register it in your `harbor-manifest.json`:
+
+```bash
+# Example: Adding a community React Hooks skill
+skill-harbor dock https://github.com/my-org/react-skills
+```
+
+### 3. Synchronize Your Space (The "Up")
+Run the core engine to fetch, transpile, and berth your skills. 
+
+```bash
+skill-harbor up
+```
+
+> [!TIP]
+> **Zero-Config Interaction**: If it's your first time, Skill Harbor will automatically detect your installed agents (Claude, Cursor, Gemini, etc.). If none are found, it will present a beautiful interactive prompt to help you select your "Berth Targets" on the fly.
+
+### 4. Verify Your Berth
+Check your agent's configuration folder (e.g., `.claude/skills` or `.cursor/rules`) to see your new berthed skills and the **Master Fleet Manifest** (`000-fleet-intelligence.md`). Your agent is now primed and ready.
+
+---
+
+## 🌍 The Global Fleet (Personal Rules Anywhere)
+Want your personal refactoring rules and keybindings available in *every* project you touch? Use the `--global` flag to manage your "User-Level" intelligence layer.
+
+```bash
+# Register a personal skill globally
+skill-harbor dock https://github.com/my-username/my-rules --global
+
+# Sync your personal brain into the current project workspace
+skill-harbor up --global
+```
+
+---
+
 ## ⚓ The Harbor Command Suite
 
 | Command | Why it exists | Typical Use Case |
@@ -92,10 +130,10 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 | **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
 | **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
+| **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
 | **`fathom`** | Fleet-scale profiler for context bloat & API costs. | Evaluating the cumulative cognitive load of your entire tool ecosystem. |
 | **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
-| **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 
 ### 🎯 Supported Targets (Berth Keys)
 When adding targets to your `harbor-manifest.json` or using the `--target` flag, use these internal keys:
