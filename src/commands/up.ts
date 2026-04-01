@@ -141,16 +141,18 @@ export async function upAction(options: any, command: any) {
         }
 
         // --- Lockdown Operation ---
+        const effectiveTargets = opts.target ? [opts.target] : manifest.targets;
+
         if (opts.lockdown) {
             const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
             const stowageBase = path.join(baseDir, ".harbor", "stowage");
-            const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
+            const hasExplicitTargets = Array.isArray(effectiveTargets) && effectiveTargets.length > 0;
             const rulesyncBase = path.join(os.homedir(), ".rulesync", "skills");
             const targetConfigs = getManagedAgentTargets(baseDir);
 
             for (const target of targetConfigs) {
                 const shouldLockdown = hasExplicitTargets 
-                    ? manifest.targets!.includes(target.key)
+                    ? effectiveTargets!.includes(target.key)
                     : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(target.path) : await exists(path.dirname(target.path))));
 
                 if (shouldLockdown) {
@@ -178,7 +180,7 @@ export async function upAction(options: any, command: any) {
                 const cacheExists = await exists(cachedPath);
 
                 // 2. Target Identification
-                const activeTargetConfigs = await getAgentBerths(baseDir, manifest.targets);
+                const activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
                 const activeTargets = activeTargetConfigs.map(target => target.key);
                 const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify([...(skill.lastSyncTargets || [])].sort());
                 
@@ -208,7 +210,7 @@ export async function upAction(options: any, command: any) {
 
                 // 5. Transpile & Berth
                 const berthedTargets: string[] = [];
-                const needsClaudeProcessed = activeTargets.some(target => ["claude", "cursor", "rulesync"].includes(target));
+                const needsClaudeProcessed = activeTargets.some(target => ["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target));
                 const needsGeminiProcessed = activeTargets.some(target => ["antigravity", "gemini"].includes(target));
 
                 const claudeProcessed = needsClaudeProcessed
@@ -223,7 +225,7 @@ export async function upAction(options: any, command: any) {
                     const dest = path.join(target.path, skill.name);
                     let success = false;
 
-                    if (["claude", "cursor", "rulesync"].includes(target.key) && claudeProcessed) {
+                    if (["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target.key) && claudeProcessed) {
                         success = await orchestrator.berth(claudeProcessed, dest, target.label);
                     } else if (["antigravity", "gemini"].includes(target.key) && geminiProcessed) {
                         success = await orchestrator.berth(geminiProcessed, dest, target.label);
@@ -282,7 +284,7 @@ export async function upAction(options: any, command: any) {
             const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";
-            const activeAgentBerths = await getAgentBerths(baseDir, manifest.targets);
+            const activeAgentBerths = await getAgentBerths(baseDir, effectiveTargets);
             const targets: Array<{ path: string; content: string }> = [];
             
             for (const agent of activeAgentBerths) {
