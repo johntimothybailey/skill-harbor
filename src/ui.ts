@@ -1,5 +1,7 @@
 import boxen, { Options as BoxenOptions } from 'boxen';
 import kleur from 'kleur';
+import prompts from 'prompts';
+import { AgentBerth } from './utils';
 
 const baseOptions: BoxenOptions = {
     padding: 1,
@@ -109,4 +111,45 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
         title: kleur.bold()[status.isHealthy ? 'blue' : 'red'](' HARBOR HEALTH REPORT '),
         titleAlignment: 'center'
     }));
+};
+
+export const promptSelectTargets = async (availableTargets: AgentBerth[]): Promise<string[] | null> => {
+    console.log(boxen(`${kleur.bold().yellow('🛳️  Skill Harbor: No targets detected.')}\n\n${kleur.gray('Your manifest does not define any targets, and no active agent berths\nwere auto-detected in this workspace.')}`, {
+        padding: 1,
+        margin: { top: 1, bottom: 0, left: 0, right: 0 },
+        borderStyle: 'round',
+        borderColor: 'yellow'
+    }));
+
+    const response = await prompts([
+        {
+            type: 'multiselect',
+            name: 'targets',
+            message: kleur.bold().cyan('Select targets to berth skills into:'),
+            choices: [
+                { title: kleur.bold().green('All Targets'), value: 'all' },
+                ...availableTargets.map(t => ({ title: t.label, value: t.key })),
+                { title: kleur.gray('Cancel Sync'), value: 'cancel' }
+            ],
+            hint: kleur.gray('- Space to select, Enter to confirm'),
+            instructions: false
+        }
+    ]);
+
+    if (!response.targets || response.targets.includes('cancel')) {
+        console.log(kleur.gray('\nSync cancelled by user.\n'));
+        return null;
+    }
+
+    if (response.targets.includes('all')) {
+        return availableTargets.map(t => t.key);
+    }
+
+    console.log(boxen(`${kleur.gray('Missing a target? Request one at:')}\n${kleur.blue().underline('https://github.com/johntimothybailey/skill-harbor/issues')}`, {
+        padding: { top: 0, bottom: 0, left: 1, right: 1 },
+        margin: { top: 0, bottom: 1, left: 0, right: 0 },
+        borderStyle: 'none'
+    }));
+
+    return response.targets;
 };

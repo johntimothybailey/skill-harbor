@@ -9,8 +9,8 @@ import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
-import { getManifestManager, exists, getAgentBerths, getManagedAgentTargets } from "../utils";
-import { printHeader, printSuccess, printError, printInfo } from "../ui";
+import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets } from "../utils";
+import { printHeader, printSuccess, printError, printInfo, promptSelectTargets } from "../ui";
 
 const execAsync = promisify(exec);
 
@@ -140,9 +140,19 @@ export async function upAction(options: any, command: any) {
             await ensureLocalManifestIgnored(process.cwd());
         }
 
-        // --- Lockdown Operation ---
-        const effectiveTargets = opts.target ? [opts.target] : manifest.targets;
+        // --- Target Identification & Prompt ---
+        let effectiveTargets = opts.target ? [opts.target] : manifest.targets;
+        let activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
 
+        if (activeTargetConfigs.length === 0) {
+            const allPossibleTargets = await getManagedAgentTargets(baseDir);
+            const selected = await promptSelectTargets(allPossibleTargets);
+            if (!selected) return; // User cancelled
+            effectiveTargets = selected;
+            activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
+        }
+
+        // --- Lockdown Operation ---
         if (opts.lockdown) {
             const orchestrator = new Orchestrator({ skillName: "Lockdown", spinnies });
             const stowageBase = path.join(baseDir, ".harbor", "stowage");
@@ -179,8 +189,7 @@ export async function upAction(options: any, command: any) {
                 const cachedPath = path.join(harborDir, skill.name);
                 const cacheExists = await exists(cachedPath);
 
-                // 2. Target Identification
-                const activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
+                // 2. Already identified activeTargetConfigs
                 const activeTargets = activeTargetConfigs.map(target => target.key);
                 const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify([...(skill.lastSyncTargets || [])].sort());
                 
@@ -284,10 +293,10 @@ export async function upAction(options: any, command: any) {
             const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";
-            const activeAgentBerths = await getAgentBerths(baseDir, effectiveTargets);
+            const activeAgentBerthsForLighthouse = await getAgentBerths(baseDir, effectiveTargets);
             const targets: Array<{ path: string; content: string }> = [];
             
-            for (const agent of activeAgentBerths) {
+            for (const agent of activeAgentBerthsForLighthouse) {
                 if (agent.key === "codex") {
                     targets.push({
                         path: path.join(agent.path, "000-fleet-intelligence", "SKILL.md"),
