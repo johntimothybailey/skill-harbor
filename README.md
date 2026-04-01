@@ -20,7 +20,7 @@
 
 **Skill Harbor** is the **Declarative Workspace Orchestrator for AI Agents**. It is a powerful **Sync & Governance Engine** designed to standardize agent behavior, specialized skills, and project context across your entire team.
 
-Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths including Codex.
+Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths.
 
 **It is the infrastructure layer for professional AI agent workflows.**
 
@@ -33,7 +33,7 @@ Here is exactly how the three tools relate to each other:
 - ⚓ **Skill Harbor (The General Contractor)**: Coordinates the entire lifecycle via `skill-harbor up`. It manages the `harbor-manifest.json` and ensures the final cargo is successfully delivered.
 - 🐬 **[skillfish](https://www.skill.fish) (⚓ Moor)**: When Harbor reads your manifest, it calls upon `skillfish` under the hood to locate the correct repository and download the raw markdown files into a temporary harbor.
 - 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter) (📦 Process)**: Harbor passes the downloaded files to `skill-porter` to handle complex transpilation. It "cuts the lumber" so it perfectly fits your local agent's strict prompt and rules expectations.
-- 🛳️ **Distribution (🛳️ Berth)**: Once processed, Harbor "berths" the skills—routing them seamlessly into the correct (and often hidden) IDE configuration folders like `.claude/skills`, `.cursor/rules`, `.antigravity/skills`, or `.agents/skills`.
+- 🛳️ **Distribution (🛳️ Berth)**: Once processed, Harbor "berths" the skills—routing them seamlessly into the correct (and often hidden) IDE configuration folders like `.claude/skills`, `.cursor/rules`, `.gemini/skills`, or `.gemini/antigravity/skills`.
 
 > **In summary**: Skill Harbor holds the blueprints. It uses `skillfish` to deliver the raw lumber, and `skill-porter` to cut that lumber so it perfectly fits your local `.claude` or `.cursor` directories.
 
@@ -248,7 +248,7 @@ skill-harbor up --global
 ## ✨ Features
 
 - 🚢 **Workspace Sync Engine**: Standardize AI context rules for your entire repo.
-- 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, **Codex**, and **Antigravity**.
+- 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, **Gemini CLI**, and **Antigravity**.
 - ⚡ **Parallel Synchronization**: Sync your entire fleet of skills concurrently for maximum performance.
 - 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
 - 🔌 **Idempotent**: Run `skill-harbor up` safely to pull down the latest transpiled skill updates.

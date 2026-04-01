@@ -25,7 +25,8 @@ export function getManagedAgentTargets(baseDir: string, includeRulesync = true):
     const targets: AgentBerth[] = [
         { path: path.join(baseDir, ".claude", "skills"), label: "Claude", key: "claude" },
         { path: path.join(baseDir, ".cursor", "skills"), label: "Cursor", key: "cursor" },
-        { path: path.join(baseDir, ".antigravity", "skills"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(baseDir, ".gemini", "antigravity", "skills"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(baseDir, ".gemini", "skills"), label: "Gemini", key: "gemini" },
         { path: path.join(baseDir, ".agents", "skills"), label: "Codex", key: "codex" }
     ];
 
@@ -79,6 +80,7 @@ export async function getStowageBerths(baseDir: string, targets?: string[]): Pro
         { path: path.join(stowageBase, "claude"), label: "Claude", key: "claude" },
         { path: path.join(stowageBase, "cursor"), label: "Cursor", key: "cursor" },
         { path: path.join(stowageBase, "antigravity"), label: "Antigravity", key: "antigravity" },
+        { path: path.join(stowageBase, "gemini"), label: "Gemini", key: "gemini" },
         { path: path.join(stowageBase, "codex"), label: "Codex", key: "codex" },
         { path: path.join(stowageBase, "rulesync"), label: "Rulesync", key: "rulesync" }
     ];

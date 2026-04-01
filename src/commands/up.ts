@@ -208,43 +208,37 @@ export async function upAction(options: any, command: any) {
 
                 // 5. Transpile & Berth
                 const berthedTargets: string[] = [];
-                const needsClaudeProcessed = activeTargets.some(target => target === "claude" || target === "cursor" || target === "rulesync");
+                const needsClaudeProcessed = activeTargets.some(target => ["claude", "cursor", "rulesync"].includes(target));
+                const needsGeminiProcessed = activeTargets.some(target => ["antigravity", "gemini"].includes(target));
+
                 const claudeProcessed = needsClaudeProcessed
                     ? await orchestrator.processCargo(cargoPath, "claude")
                     : null;
+                
+                const geminiProcessed = needsGeminiProcessed
+                    ? await orchestrator.processCargo(cargoPath, "gemini")
+                    : null;
 
-                if (activeTargets.includes("claude") && claudeProcessed) {
-                    const claudeDest = path.join(baseDir, ".claude", "skills", skill.name);
-                    const success = await orchestrator.berth(claudeProcessed, claudeDest, "Claude");
-                    if (!success) await orchestrator.berth(cargoPath, claudeDest, "Claude (Raw)");
-                    berthedTargets.push("Claude");
-                }
+                for (const target of activeTargetConfigs) {
+                    const dest = path.join(target.path, skill.name);
+                    let success = false;
 
-                if (activeTargets.includes("cursor") && claudeProcessed) {
-                    const cursorDest = path.join(baseDir, ".cursor", "skills", skill.name);
-                    const success = await orchestrator.berth(claudeProcessed, cursorDest, "Cursor");
-                    if (!success) await orchestrator.berth(cargoPath, cursorDest, "Cursor (Raw)");
-                    berthedTargets.push("Cursor");
-                }
+                    if (["claude", "cursor", "rulesync"].includes(target.key) && claudeProcessed) {
+                        success = await orchestrator.berth(claudeProcessed, dest, target.label);
+                    } else if (["antigravity", "gemini"].includes(target.key) && geminiProcessed) {
+                        success = await orchestrator.berth(geminiProcessed, dest, target.label);
+                    } else if (target.key === "codex") {
+                        // Codex usually likes raw or specific format, currently raw as per original logic
+                        success = await orchestrator.berth(cargoPath, dest, target.label);
+                    }
 
-                if (activeTargets.includes("antigravity")) {
-                    const antigravityDest = path.join(baseDir, ".antigravity", "skills", skill.name);
-                    const geminiProcessed = await orchestrator.processCargo(cargoPath, "gemini");
-                    const success = await orchestrator.berth(geminiProcessed, antigravityDest, "Antigravity");
-                    if (!success) await orchestrator.berth(cargoPath, antigravityDest, "Antigravity (Raw)");
-                    berthedTargets.push("Antigravity");
-                }
-
-                if (activeTargets.includes("rulesync") && claudeProcessed) {
-                    const rulesyncDest = path.join(os.homedir(), ".rulesync", "skills", skill.name);
-                    await orchestrator.berth(claudeProcessed, rulesyncDest, "Rulesync");
-                    berthedTargets.push("Rulesync");
-                }
-
-                if (activeTargets.includes("codex")) {
-                    const codexDest = path.join(baseDir, ".agents", "skills", skill.name);
-                    await orchestrator.berth(cargoPath, codexDest, "Codex");
-                    berthedTargets.push("Codex");
+                    if (success) {
+                        berthedTargets.push(target.label);
+                    } else if (target.key !== "codex") {
+                        // Fallback to raw for standard IDE targets if processing failed
+                        await orchestrator.berth(cargoPath, dest, `${target.label} (Raw)`);
+                        berthedTargets.push(`${target.label} (Raw)`);
+                    }
                 }
 
                 // 6. Update Cache & State (Only if we fetched fresh cargo)
@@ -288,23 +282,21 @@ export async function upAction(options: any, command: any) {
             const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";
-            const hasExplicitTargets = Array.isArray(manifest.targets) && manifest.targets.length > 0;
+            const activeAgentBerths = await getAgentBerths(baseDir, manifest.targets);
             const targets: Array<{ path: string; content: string }> = [];
             
-            if (hasExplicitTargets ? manifest.targets!.includes("claude") : (opts.global ? await exists(path.join(os.homedir(), ".claude")) : await exists(path.join(baseDir, ".claude")))) {
-                targets.push({ path: path.join(baseDir, ".claude", "skills", fleetIntelligencePath), content: manifestContent });
-            }
-            if (hasExplicitTargets ? manifest.targets!.includes("cursor") : (opts.global ? await exists(path.join(os.homedir(), ".cursor")) : await exists(path.join(baseDir, ".cursor")))) {
-                targets.push({ path: path.join(baseDir, ".cursor", "skills", fleetIntelligencePath), content: manifestContent });
-            }
-            if (hasExplicitTargets ? manifest.targets!.includes("antigravity") : (opts.global ? await exists(path.join(os.homedir(), ".antigravity")) : await exists(path.join(baseDir, ".antigravity")))) {
-                targets.push({ path: path.join(baseDir, ".antigravity", "skills", fleetIntelligencePath), content: manifestContent });
-            }
-            if (hasExplicitTargets ? manifest.targets!.includes("codex") : (opts.global ? await exists(path.join(os.homedir(), ".agents")) : await exists(path.join(baseDir, ".agents")))) {
-                targets.push({
-                    path: path.join(baseDir, ".agents", "skills", "000-fleet-intelligence", "SKILL.md"),
-                    content: codexManifestContent
-                });
+            for (const agent of activeAgentBerths) {
+                if (agent.key === "codex") {
+                    targets.push({
+                        path: path.join(agent.path, "000-fleet-intelligence", "SKILL.md"),
+                        content: codexManifestContent
+                    });
+                } else {
+                    targets.push({
+                        path: path.join(agent.path, fleetIntelligencePath),
+                        content: manifestContent
+                    });
+                }
             }
 
             for (const target of targets) {
