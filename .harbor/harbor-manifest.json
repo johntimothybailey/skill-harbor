@@ -7,13 +7,11 @@
     "scryer": {
       "name": "scryer",
       "source": "https://github.com/johntimothybailey/sia/skills/scryer",
-      "localPath": "/Users/johnbailey/Development/Yamanu/skill-harbor/.harbor/scryer",
+      "localPath": "/Users/johnbailey/Development/Yamanu/skill-harbor/.harbor/skills/scryer",
       "lastSyncHash": "https://github.com/johntimothybailey/sia/skills/scryer:c0ec1c92c4ed71a094bcc39adcc0b414a317102c",
       "lastSyncTargets": [
         "claude",
-        "cursor",
-        "antigravity",
-        "gemini"
+        "cursor"
       ]
     },
     "test-skill": {

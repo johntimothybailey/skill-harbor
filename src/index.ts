@@ -11,6 +11,7 @@ import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
 import { voyageAction } from "./commands/voyage";
+import { migrateAction } from "./commands/migrate";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -39,7 +40,13 @@ program
     .description("⚓ The Core Engine. Syncs, transpiles, and berths skills.")
     .option("-g, --global", "Include global manifest skills in the sync")
     .option("-l, --lockdown", "Enforces a strict, manifest-only environment. Stows existing rules first.")
+    .option("-m, --migrate", "⚓ Automates the transition to the consolidated .harbor/ layout.")
     .action(upAction);
+
+program
+    .command("migrate")
+    .description("🛳️  Move root manifests and legacy caches to the new .harbor/ standard.")
+    .action(migrateAction);
 
 program
     .command("freshen")

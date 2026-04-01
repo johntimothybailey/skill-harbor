@@ -11,15 +11,21 @@ import Spinnies from "spinnies";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, exists } from "../utils";
 import { printHeader, printSuccess, printError, printInfo } from "../ui";
+import { migrateAction } from "./migrate";
 
 const execAsync = promisify(exec);
 
 /**
- * Automates adding the local project manifest to .gitignore.
+ * Automates adding local-only harbor files and cache directories to .gitignore.
  */
-async function ensureLocalManifestIgnored(cwd: string) {
+async function ensureHarborIgnoreCorrect(cwd: string) {
     const gitignorePath = path.join(cwd, ".gitignore");
-    const localManifestName = "harbor-manifest.local.json";
+    const requiredIgnores = [
+        "harbor-manifest.local.json",
+        "harbor-compass.yaml",
+        ".harbor/skills/",
+        ".harbor/stowage/"
+    ];
     
     try {
         let content = "";
@@ -27,13 +33,31 @@ async function ensureLocalManifestIgnored(cwd: string) {
             content = await fs.readFile(gitignorePath, "utf-8");
         } catch (e) {
             // .gitignore doesn't exist, create it
-            await fs.writeFile(gitignorePath, `${localManifestName}\n`, "utf-8");
+            await fs.writeFile(gitignorePath, requiredIgnores.join("\n") + "\n", "utf-8");
             return;
         }
 
-        if (!content.includes(localManifestName)) {
-            const separator = content.endsWith("\n") ? "" : "\n";
-            await fs.appendFile(gitignorePath, `${separator}${localManifestName}\n`, "utf-8");
+        const lines = content.split("\n");
+        let updated = false;
+
+        // 1. If the user was ignoring the entire .harbor directory, transition them to just ignoring skills/
+        const legacyIndex = lines.findIndex(l => l.trim() === ".harbor" || l.trim() === ".harbor/");
+        if (legacyIndex !== -1) {
+            lines[legacyIndex] = ".harbor/skills/";
+            updated = true;
+        }
+
+        // 2. Add missing ignores
+        const currentContent = lines.join("\n");
+        for (const ignore of requiredIgnores) {
+            if (!currentContent.includes(ignore)) {
+                lines.push(ignore);
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            await fs.writeFile(gitignorePath, lines.join("\n").replace(/\n{3,}/g, "\n\n"), "utf-8");
         }
     } catch (e) {
         // Silently fail if we can't write to .gitignore (e.g. permission issues)
@@ -128,16 +152,35 @@ export async function upAction(options: any, command: any) {
             return;
         }
 
-        // 2. Override Warnings
+        // 2. Migration Warnings & Execution
+        if (opts.migrate) {
+            await migrateAction(opts);
+        } else {
+            if (manifestManager.isMigrationRecommended) {
+                console.log(kleur.yellow(`\n💡  Recommendation: Found harbor-manifest.json at project root.`));
+                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.\n`));
+            }
+
+            if (manifestManager.isLocalMigrationRecommended) {
+                console.log(kleur.yellow(`\n💡  Recommendation: Found harbor-manifest.local.json at project root.`));
+                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.\n`));
+            }
+        }
+
         if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
             console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
 
-        // 3. Gitignore Automation (Project Level only)
-        if (!opts.global) {
-            await ensureLocalManifestIgnored(process.cwd());
+        // 3. Gitignore Automation (Conditional)
+        if (!opts.global && opts.migrate) {
+            await ensureHarborIgnoreCorrect(process.cwd());
+        }
+        
+        // Always ensure basic local manifest ignore if it exists at root (for safety)
+        if (!opts.global && !opts.migrate && await exists(path.join(process.cwd(), "harbor-manifest.local.json"))) {
+            await ensureHarborIgnoreCorrect(process.cwd());
         }
 
         // --- Lockdown Operation ---

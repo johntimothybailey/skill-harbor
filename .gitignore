@@ -4,8 +4,10 @@ dist
 .agent/skills/
 .claude/
 .cursor/
-.harbor/
+.harbor/skills/
+.harbor/stowage/
 .env*
 .npmrc
 harbor-manifest.local.json
+harbor-compass.yaml
 *voyage-test.yaml
