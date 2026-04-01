@@ -144,7 +144,7 @@ When adding targets to your `harbor-manifest.json` or using the `--target` flag,
 | **`cursor`** | **Cursor** | `~/.cursor/skills` |
 | **`gemini`** | **Gemini CLI** | `~/.gemini/skills` |
 | **`antigravity`**| **Antigravity** | `~/.gemini/antigravity/skills` |
-| **`windsurf`** | **Windsurf IDE** | `~/.codeium/windsurf/skills` |
+| **`windsurf`** | **Windsurf IDE** | `.windsurf/rules` |
 | **`continue`** | **Continue.dev** | `~/.continue/rules` |
 | **`copilot`** | **GitHub Copilot**| `.github/instructions` |
 | **`codex`** | **Codex** | `.agents/skills` |

@@ -145,7 +145,7 @@ export async function upAction(options: any, command: any) {
         let activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
 
         if (activeTargetConfigs.length === 0) {
-            const allPossibleTargets = await getManagedAgentTargets(baseDir);
+            const allPossibleTargets = getManagedAgentTargets(baseDir);
             const selected = await promptSelectTargets(allPossibleTargets);
             if (!selected) return; // User cancelled
             effectiveTargets = selected;
