@@ -38,6 +38,7 @@ program
     .description("⚓ The Core Engine. Syncs, transpiles, and berths skills.")
     .option("-g, --global", "Include global manifest skills in the sync")
     .option("-l, --lockdown", "Enforces a strict, manifest-only environment. Stows existing rules first.")
+    .option("-t, --target <name>", "Override manifest targets and sync only to a specific agent berth")
     .action(upAction);
 
 program

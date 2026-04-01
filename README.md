@@ -20,7 +20,7 @@
 
 **Skill Harbor** is the **Declarative Workspace Orchestrator for AI Agents**. It is a powerful **Sync & Governance Engine** designed to standardize agent behavior, specialized skills, and project context across your entire team.
 
-Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths including Codex.
+Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths.
 
 **It is the infrastructure layer for professional AI agent workflows.**
 
@@ -33,7 +33,7 @@ Here is exactly how the three tools relate to each other:
 - ⚓ **Skill Harbor (The General Contractor)**: Coordinates the entire lifecycle via `skill-harbor up`. It manages the `harbor-manifest.json` and ensures the final cargo is successfully delivered.
 - 🐬 **[skillfish](https://www.skill.fish) (⚓ Moor)**: When Harbor reads your manifest, it calls upon `skillfish` under the hood to locate the correct repository and download the raw markdown files into a temporary harbor.
 - 📦 **[skill-porter](https://mcpmarket.com/tools/skills/skill-porter-cross-platform-ai-converter) (📦 Process)**: Harbor passes the downloaded files to `skill-porter` to handle complex transpilation. It "cuts the lumber" so it perfectly fits your local agent's strict prompt and rules expectations.
-- 🛳️ **Distribution (🛳️ Berth)**: Once processed, Harbor "berths" the skills—routing them seamlessly into the correct (and often hidden) IDE configuration folders like `.claude/skills`, `.cursor/rules`, `.antigravity/skills`, or `.agents/skills`.
+- 🛳️ **Distribution (🛳️ Berth)**: Once processed, Harbor "berths" the skills—routing them seamlessly into the correct (and often hidden) IDE configuration folders like `.claude/skills`, `.cursor/rules`, `.gemini/skills`, or `.gemini/antigravity/skills`.
 
 > **In summary**: Skill Harbor holds the blueprints. It uses `skillfish` to deliver the raw lumber, and `skill-porter` to cut that lumber so it perfectly fits your local `.claude` or `.cursor` directories.
 
@@ -64,10 +64,11 @@ graph TD
     end
 ```
 
-## 🚀 Usage
+## 🚀 Getting Started
 
-### Installation
+Follow this 4-step "Success Path" to standardize your agent rules in less than 60 seconds.
 
+### 1. Install the CLI
 Install Skill Harbor globally via your preferred package manager to use the `skill-harbor` command anywhere:
 
 ```bash
@@ -80,23 +81,74 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 # Using pnpm
  pnpm add -g skill-harbor
 ```
+
+### 2. Dock Your First Skill Source
+Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo or local path) to register it in your `harbor-manifest.json`:
+
+```bash
+# Example: Adding a community React Hooks skill
+skill-harbor dock https://github.com/my-org/react-skills
+```
+
+### 3. Synchronize Your Space (The "Up")
+Run the core engine to fetch, transpile, and berth your skills. 
+
+```bash
+skill-harbor up
+```
+
+> [!TIP]
+> **Zero-Config Interaction**: If it's your first time, Skill Harbor will automatically detect your installed agents (Claude, Cursor, Gemini, etc.). If none are found, it will present a beautiful interactive prompt to help you select your "Berth Targets" on the fly.
+
+### 4. Verify Your Berth
+Check your agent's configuration folder (e.g., `.claude/skills` or `.cursor/rules`) to see your new berthed skills and the **Master Fleet Manifest** (`000-fleet-intelligence.md`). Your agent is now primed and ready.
+
+---
+
+## 🌍 The Global Fleet (Personal Rules Anywhere)
+Want your personal refactoring rules and keybindings available in *every* project you touch? Use the `--global` flag to manage your "User-Level" intelligence layer.
+
+```bash
+# Register a personal skill globally
+skill-harbor dock https://github.com/my-username/my-rules --global
+
+# Sync your personal brain into the current project workspace
+skill-harbor up --global
+```
+
+---
+
 ## ⚓ The Harbor Command Suite
 
 | Command | Why it exists | Typical Use Case |
 | :--- | :--- | :--- |
 | **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
+| **`up --target <key>`** | **Targeted Sync.** Only berths to a specific agent. | You only want to sync to Gemini without affecting Cursor. |
 | **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |
 | **`up --lockdown`** | Enforces a strict, manifest-only environment. | Switching from a personal project to a client project with strict rules. |
 | **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |
 | **`unstow`** | Restores previously stowed context (The "Unlock"). | Re-enabling your personal global fleet after a lockdown session. |
 | **`lighthouse`** | Generates a fleet intelligence prompt snippet. | Priming an agent like ChatGPT or Claude on what specialized skills you have berthed. |
+| **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`check`** | Verifies that berthed skills have valid metadata. | Debugging why an agent isn't "seeing" or routing to a specific berthed skill. |
 | **`fathom`** | Fleet-scale profiler for context bloat & API costs. | Evaluating the cumulative cognitive load of your entire tool ecosystem. |
-| **`list`** | Shows all skills currently tracked in the harbor. | Seeing if you already have 'sia-hooks' docked before adding it again. |
 | **`undock`** | Destructive purge of agent skill folders. | Deep cleaning or resetting an environment that has become cluttered. |
 
-### 🔐 Governance & Lockdown
+### 🎯 Supported Targets (Berth Keys)
+When adding targets to your `harbor-manifest.json` or using the `--target` flag, use these internal keys:
+
+| Key | Agent / IDE | Default Path |
+| :--- | :--- | :--- |
+| **`claude`** | **Claude Code** | `~/.claude/skills` |
+| **`cursor`** | **Cursor** | `~/.cursor/skills` |
+| **`gemini`** | **Gemini CLI** | `~/.gemini/skills` |
+| **`antigravity`**| **Antigravity** | `~/.gemini/antigravity/skills` |
+| **`windsurf`** | **Windsurf IDE** | `.windsurf/rules` |
+| **`continue`** | **Continue.dev** | `~/.continue/rules` |
+| **`copilot`** | **GitHub Copilot**| `.github/instructions` |
+| **`codex`** | **Codex** | `.agents/skills` |
+| **`rulesync`** | **Rulesync** | `~/.rulesync/skills` |
 Enforce team-wide consistency by isolating your agent's context.
 
 *   **Lockdown Mode**: Sync and stow. Moves current agent context to stowage before berthing manifest skills.
@@ -248,7 +300,7 @@ skill-harbor up --global
 ## ✨ Features
 
 - 🚢 **Workspace Sync Engine**: Standardize AI context rules for your entire repo.
-- 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, **Codex**, and **Antigravity**.
+- 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, **Gemini CLI**, **Windsurf**, **Continue**, and **Antigravity**.
 - ⚡ **Parallel Synchronization**: Sync your entire fleet of skills concurrently for maximum performance.
 - 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
 - 🔌 **Idempotent**: Run `skill-harbor up` safely to pull down the latest transpiled skill updates.

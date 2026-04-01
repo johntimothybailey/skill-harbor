@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { unstowAction } from './unstow';
 import { Orchestrator } from '../orchestrator';
 import { printHeader, printSuccess, printError } from '../ui';
+import { getManagedAgentTargets } from '../utils';
 import os from 'node:os';
 
 vi.mock('../orchestrator');
 vi.mock('../ui');
 vi.mock('node:os');
 vi.mock('spinnies');
+vi.mock('../utils');
 
 describe('unstowAction', () => {
     let mockOrchestrator: any;
@@ -20,6 +22,14 @@ describe('unstowAction', () => {
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (os.homedir as any).mockReturnValue('/home/user');
+        (getManagedAgentTargets as any).mockImplementation((_dir: string, _includeRulesync: boolean) => {
+            return [
+                { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+                { path: '/app/.cursor/skills', label: 'Cursor', key: 'cursor' },
+                { path: '/app/.antigravity/skills', label: 'Antigravity', key: 'antigravity' },
+                { path: '/app/.agents/skills', label: 'Codex', key: 'codex' }
+            ];
+        });
     });
 
     it('should unstow local targets', async () => {

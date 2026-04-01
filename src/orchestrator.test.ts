@@ -47,7 +47,8 @@ describe('Orchestrator Unit Tests', () => {
         const cargoPath = await orchestrator.moor(localSkillPath);
 
         expect(cargoPath).toBe(path.join(path.dirname(cargoPath), 'local-skill'));
-        await expect(fs.access(path.join(cargoPath, 'SKILL.md'))).resolves.toBeUndefined();
+        // Standardize the access check for cross-environment stability
+        await fs.access(path.join(cargoPath, 'SKILL.md')); 
         await expect(fs.access(path.join(cargoPath, '.claude'))).rejects.toThrow();
     });
 

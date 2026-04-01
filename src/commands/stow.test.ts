@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { stowAction } from './stow';
 import { Orchestrator } from '../orchestrator';
 import { printHeader, printSuccess, printError } from '../ui';
+import { getManagedAgentTargets } from '../utils';
 import os from 'node:os';
 
 vi.mock('../orchestrator');
 vi.mock('../ui');
 vi.mock('node:os');
 vi.mock('spinnies');
+vi.mock('../utils');
 
 describe('stowAction', () => {
     let mockOrchestrator: any;
@@ -20,6 +22,19 @@ describe('stowAction', () => {
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (os.homedir as any).mockReturnValue('/home/user');
+        
+        (getManagedAgentTargets as any).mockImplementation((_dir: string, includeRulesync: boolean) => {
+            const targets = [
+                { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+                { path: '/app/.cursor/skills', label: 'Cursor', key: 'cursor' },
+                { path: '/app/.antigravity/skills', label: 'Antigravity', key: 'antigravity' },
+                { path: '/app/.agents/skills', label: 'Codex', key: 'codex' }
+            ];
+            if (includeRulesync) {
+                targets.push({ path: '/home/user/.rulesync/skills', label: 'Rulesync', key: 'rulesync' });
+            }
+            return targets;
+        });
     });
 
     it('should stow local targets', async () => {
