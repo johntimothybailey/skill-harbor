@@ -52,7 +52,7 @@ export class ProfilerService {
         if (skillType === "API Tool") {
             result = this.evaluateApiToolWake(metadata);
         } else {
-            result = this.evaluateAgenticSkillWake(metadata, content);
+            result = this.evaluateAgentSkillWake(metadata, content);
         }
 
         let score = result.score;
@@ -173,7 +173,7 @@ export class ProfilerService {
         let totalSonarSum = 0;
         let sonarCount = 0;
         let scoreCount = 0;
-        let agenticCount = 0;
+        let agentCount = 0;
         let toolCount = 0;
         
         const shipDistribution: Record<ShipClass, number> = {
@@ -210,7 +210,7 @@ export class ProfilerService {
                 }
             }
 
-            if (heuristic.skillType === "Agentic Skill") agenticCount++;
+            if (heuristic.skillType === "Agent Skill") agentCount++;
             else toolCount++;
 
             shipDistribution[disp.shipClass]++;
@@ -278,7 +278,7 @@ export class ProfilerService {
             averageHeuristicConfidence,
             averageSonarConfidence,
             composition: {
-                agentic: agenticCount,
+                agent: agentCount,
                 tools: toolCount
             },
             shipDistribution,
@@ -325,11 +325,11 @@ export class ProfilerService {
 
     private async detectSkillType(skillPath: string, metadata: any): Promise<SkillType> {
         if (metadata.name && (metadata.triggers?.length > 0 || metadata.tags?.length > 0)) {
-            return "Agentic Skill";
+            return "Agent Skill";
         }
 
         if (metadata.name && metadata.description) {
-            return "Agentic Skill";
+            return "Agent Skill";
         }
 
         const schemaExclusions = ["package.json", "tsconfig.json", ".skillfish.json", "package-lock.json"];
@@ -394,7 +394,7 @@ export class ProfilerService {
         };
     }
 
-    private evaluateAgenticSkillWake(metadata: any, content: string): { score: number, heuristics: FathomMetrics["heuristics"] } {
+    private evaluateAgentSkillWake(metadata: any, content: string): { score: number, heuristics: FathomMetrics["heuristics"] } {
         let score = 5;
         let semanticVagueness = 0;
         let negativeConstraints = 0;

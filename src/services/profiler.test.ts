@@ -28,8 +28,8 @@ description: A simple API tool to fetch data.
             expect(result.heuristics.schemaStrictness).toBeDefined();
         });
 
-        it("should detect and evaluate an Agentic Skill correctly", async () => {
-            const skillPath = "/fake/agentic-skill";
+        it("should detect and evaluate an Agent Skill correctly", async () => {
+            const skillPath = "/fake/agent-skill";
             const skillMd = `---
 name: hook-ascender
 description: A specialized skill for refactoring React hooks into cleaner patterns.
@@ -45,13 +45,13 @@ To improve code quality.`;
 
             const result = await service.calculateHeuristicConfidence(skillPath);
 
-            expect(result.skillType).toBe("Agentic Skill");
+            expect(result.skillType).toBe("Agent Skill");
             expect(result.score).toBeGreaterThan(0); // Should be a valid score
             expect(result.heuristics.tagDensity).toBe(-2); // 3 tags
             expect(result.heuristics.triggerClarity).toBe(-3); // 2 sections
         });
 
-        it("should penalize Agentic Skills with short descriptions", async () => {
+        it("should penalize Agent Skills with short descriptions", async () => {
             const skillPath = "/fake/vague-skill";
             const skillMd = `---
 name: vague-skill
@@ -64,7 +64,7 @@ tags: []
 
             const result = await service.calculateHeuristicConfidence(skillPath);
 
-            expect(result.skillType).toBe("Agentic Skill");
+            expect(result.skillType).toBe("Agent Skill");
             expect(result.heuristics.semanticVagueness).toBe(3);
         });
 

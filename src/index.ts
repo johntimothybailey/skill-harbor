@@ -24,7 +24,7 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .description("⚓ Skill Harbor: The Declarative Workspace Orchestrator for AI Agents")
+    .description("⚓ Skill Harbor: The Declarative Skill Setup & Orchestration Engine")
     .version(pkg.version);
 
 

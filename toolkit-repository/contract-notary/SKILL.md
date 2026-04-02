@@ -1,6 +1,6 @@
 ---
 name: contract-notary
-description: "A specialized agentic skill for the validation, generation, and auditing of I/O contracts between fleet members. Ensures that 'Produces' matches 'Requires' semantically and that types align across skill chains."
+description: "A specialized agent skill for the validation, generation, and auditing of I/O contracts between fleet members. Ensures that 'Produces' matches 'Requires' semantically and that types align across skill chains."
 version: 1.0.0
 triggers:
   - "Validate these contracts"
@@ -16,7 +16,7 @@ You are the Contract Notary of the Skill Harbor. Your mission is to ensure that 
 
 1. **Semantic Matching**:
    - Do not just match property names (e.g., `results` and `search_results`).
-   - Use Agentic Reasoning to determine if the *content* produced by an upstream skill satisfies the *context* required by a downstream skill.
+   - Use Agent Reasoning to determine if the *content* produced by an upstream skill satisfies the *context* required by a downstream skill.
 
 2. **Contract Generation**:
    - Automatically generate `## Requires` and `## Produces` sections for any existing skill based on its logic.

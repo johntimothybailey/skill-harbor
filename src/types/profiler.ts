@@ -1,4 +1,4 @@
-export type SkillType = "API Tool" | "Agentic Skill";
+export type SkillType = "API Tool" | "Agent Skill";
 
 export type ShipClass = "Dinghy" | "Schooner" | "Brigantine" | "Frigate" | "Galleon";
 
@@ -68,7 +68,7 @@ export interface HarborHealthReport {
     averageHeuristicConfidence: number;
     averageSonarConfidence?: number; // Optional Sonar average if query provided
     composition: {
-        agentic: number;
+        agent: number;
         tools: number;
     };
     shipDistribution: Record<ShipClass, number>;

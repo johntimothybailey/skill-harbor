@@ -1,6 +1,6 @@
 ---
 name: fleet-surgeon
-description: "A specialized agentic skill for evaluating, analyzing, and refactoring existing AI agent skills. Designed to ensure standardized naming conventions, contract integrity, and to split bloated skills (Galleons) into manageable components."
+description: "A specialized agent skill for evaluating, analyzing, and refactoring existing AI agent skills. Designed to ensure standardized naming conventions, contract integrity, and to split bloated skills (Galleons) into manageable components."
 version: 1.0.0
 triggers:
   - "Evaluate my existing fleet"
