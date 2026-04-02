@@ -1,0 +1,66 @@
+# Skill Harbor: The Intelligence Infrastructure Layer ⚓
+
+Skill Harbor is the **Declarative Skill Setup & Orchestration Engine**, designed to standardize and prepare engineering context across teams and individual projects. It bridges the gap between raw AI "lumber" (prompts, rules, tools) and the precision-engineered "ships" that developers use to navigate complex codebases.
+
+## Core Mission
+To enable teams to maintain a **Collective Intelligence** that is shared, governed, and optimized for performance. Skill Harbor provides the tools to **gain deep insights** into your skills, **hone** them for specific workflows, and **orchestrate** their delivery to every developer's local environment (Claude, Cursor, Antigravity) with zero manual friction.
+
+## The Maritime Lifecycle
+Harbor coordinates the entire lifecycle of an AI skill through multiple nautical phases:
+
+1.  **⚓ Moor (Acquire)**: Registers and fetches raw skill repositories using `skill-harbor dock` and `up`.
+2.  **⚙️ Fitting Out (Process)**: Transpiles raw "lumber" into precision-engineered skills for specific platforms (Gemini, Claude, etc.) via `up`.
+3.  **🛳️ Berth (Distribute)**: Automatically deploys processed cargo into hidden agent configuration folders (e.g., `.claude/skills`).
+4.  **📏 Surveying (Insights)**: Mathematically audits the fleet for token bloat and semantic collisions using **Fathom**.
+5.  **⛵ Sea Trials (Verify)**: Simulates autonomous agent journeys (Voyage) and force-syncs updates (Freshen).
+6.  **🕯️ Beacon (Discovery)**: Generates a Master Fleet Intelligence manifest for zero-tier agent routing (`lighthouse`).
+
+---
+
+## ⚓ Why You & Your Team Benefit
+
+Skill Harbor is built for the **Solo Captain** and the **Full Fleet Command**.
+
+### 🚢 For Teams (Fleet Command)
+- **The Synced Brain**: Commit a `harbor-manifest.json` once, and every developer gets the same specialized skills and context instantly. No more "Works on my machine" agent behavior.
+- **Collaborative Governance**: Enforce strict `--lockdown` rules and semantic contract validation across your entire repository.
+- **Atomic Standardization**: Ensure all agents (Claude, Cursor, Antigravity) are playing by the same set of maritime rules.
+
+### 🚣 For Individuals (Solo Captains)
+- **Skill Honing**: Use the **Loft Master** and **Fleet Surgeon** to right-size and refactor your personal skills for maximum performance.
+- **Context Insights**: Understand exactly how much "displacement" (tokens) your skills are consuming and avoid reasoning degradation.
+- **Global Fleet**: Manage a persistent user-level manifest to sync your personal brand of intelligence across every project you touch.
+
+## Key Intelligence Features
+
+### 📏 Fathom: Fleet-Scale Profiling
+Fathom provides a mathematical audit of your intelligence layer to prevent **"context bloat."**
+- **Deterministic Token Math**: Calculates exact token footprints using `js-tiktoken`.
+- **"Wake" Scoring**: Evaluates prompt reliability based on semantic vagueness, trigger clarity, and boundary constraints.
+- **Semantic Contracts**: Globally inspects `## Requires` and `## Produces` sections to ensure multi-skill chaining is safe and hallucination-free.
+
+### 📡 Sonar: Probabilistic Confidence
+Using sample user queries, Sonar extracts **logprobs** from LLM providers (Groq, OpenAI, Gemini) to measure real-world skill triggering likelihood.
+
+### 🎨 Thematic Refining (Honing)
+Specialized "Harbormaster" tools help you craft the perfect fleet:
+- **`loft-master`**: Guides you in designing new, right-sized skills.
+- **`fleet-surgeon`**: Refactors massive context "Galleons" into efficient "Schooners."
+- **`contract-notary`**: Audits and certifies chaining compatibility.
+
+## Global Fleet Management
+Manage your personal "synced brain" across every project:
+- **`--global` Manifest**: Create a persistent set of personal skills that follow you to every repository.
+- **`skill-harbor up --global`**: Instantly berth your global fleet into your current project workspace.
+
+## Command Suite Summary
+- `dock <url>`: Register a new skill in the manifest.
+- `up`: The core sync engine (Moor -> Process -> Berth).
+- `freshen`: Force-sync fresh cargo by bypassing local cache.
+- `lighthouse`: Generate a fleet intelligence prompt snippet for zero-tier discovery.
+- `fathom`: Profile complexity, costs, and contract alignment.
+- `voyage`: End-to-end integration testing for agent-skill loops.
+- `stow/unstow`: Secure lockdown governance for sensitive sessions.
+
+---
+*For more details, visit our documentation at [docs.skill-harbor.app](https://docs.skill-harbor.app)*

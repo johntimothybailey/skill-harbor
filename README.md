@@ -5,7 +5,7 @@
 <h1 align="center">⚓ Skill Harbor</h1>
 
 <p align="center">
-  <strong>The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.</strong>
+  <strong>The Declarative Skill Setup & Orchestration Engine — Standardize and prepare engineering context for your entire team.</strong>
 </p>
 
 <p align="center">
@@ -18,15 +18,15 @@
 
 ## 🌊 Overview
 
-**Skill Harbor** is the **Declarative Workspace Orchestrator for AI Agents**. It is a powerful **Sync & Governance Engine** designed to standardize agent behavior, specialized skills, and project context across your entire team.
+**Skill Harbor** is the **Declarative Skill Setup & Orchestration Engine**. It is a powerful **Sync & Governance Engine** designed to standardize engineering context, specialized skills, and project rules across your entire team.
 
 Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths.
 
-**It is the infrastructure layer for professional AI agent workflows.**
+**It is the intelligence infrastructure layer for professional AI agent workflows.**
 
 ## 🛠️ The Architecture: How It Works
 
-Skill Harbor is designed as the **Commander** of your Workspace Sync Engine. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
+Skill Harbor is designed as the **Commander of your Skill Sync Engine**. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
 
 Here is exactly how the three tools relate to each other:
 
@@ -130,6 +130,8 @@ As your ecosystem of AI agent tools grows, injecting too many skills causes **"c
 
 The `fathom` command provides a rigorous, mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
 
+For a deep dive into how we evaluate and categorize skills, see **[Skill Standards](https://docs.skill-harbor.app/concepts/skill-standards)**.
+
 #### ⚓ Fathom TL;DR
 ```bash
 # Basic Heuristic Audit (Offline, Instant)
@@ -169,7 +171,7 @@ To prevent hallucinations when passing unstructured data between linked skills, 
 
 If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill B requires `string`), Fathom will aggressively reject the build (Exit Code 1).
 
-[Read the full documentation on implementing the Semantic Contracts Standard here!](docs/contracts.md)
+[Read the full documentation on Skill Standards and Semantic Contracts here!](https://docs.skill-harbor.app/concepts/skill-standards)
 
 #### 📡 Sonar: Probabilistic Confidence
 Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
@@ -278,7 +280,7 @@ skill-harbor up --global
 
 ## ✨ Features
 
-- 🚢 **Workspace Sync Engine**: Standardize AI context rules for your entire repo.
+- 🚢 **Skill Sync Engine**: Standardize AI context rules for your entire repo.
 - 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, and **Antigravity**.
 - ⚡ **Parallel Synchronization**: Sync your entire fleet of skills concurrently for maximum performance.
 - 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
@@ -379,5 +381,5 @@ When your PR is merged to `main`, our GitHub Action will automatically:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 <p align="center">
-  Built with ❤️ for the AI Agent Ecosystem
+  Built with ❤️ for the Modern Developer Workflow
 </p>

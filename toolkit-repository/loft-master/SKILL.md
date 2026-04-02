@@ -1,6 +1,6 @@
 ---
 name: loft-master
-description: "A specialized agentic skill for designing and right-sizing AI agent skills. Uses the 'Lofting' process to ensure proper scale (Dinghy vs. Galleon) and enforces input/output contracts (Requires/Produces)."
+description: "A specialized agent skill for designing and right-sizing AI agent skills. Uses the 'Lofting' process to ensure proper scale (Dinghy vs. Galleon) and enforces input/output contracts (Requires/Produces)."
 version: 1.0.0
 triggers:
   - "I want to create a new skill"

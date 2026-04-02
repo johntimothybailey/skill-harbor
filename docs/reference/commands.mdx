@@ -1,0 +1,108 @@
+---
+title: CLI Reference
+description: "Detailed documentation for all Skill Harbor CLI commands and flags."
+icon: "terminal"
+---
+
+# ⚓ CLI Reference
+
+Explore the full suite of **Skill Harbor** commands designed for skill orchestration, synchronization, and governance.
+
+---
+
+## `dock <url>`
+Register a skill's source in the manifest.
+
+**Flags:**
+- `-g, --global`: Register the skill in the global manifest (`~/.harbor/harbor-manifest.json`).
+- `-l, --local <path>`: Register a local project-specific skill from a file path.
+
+**Example:**
+```bash
+skill-harbor dock https://github.com/skill-mill/react-hooks --global
+```
+
+---
+
+## `up`
+**The Core Engine**. Synchronizes, transpiles, and berths skills into your agent's configuration folders.
+
+**Flags:**
+- `-l, --lockdown`: Enforces a strict, manifest-only environment. Moves non-manifested skills to stowage.
+- `-m, --migrate`: Triggers the migration engine if legacy manifests or structures are detected.
+- `-g, --global`: Targets the user-level global manifest instead of the local project manifest.
+
+**Example:**
+```bash
+skill-harbor up --lockdown
+```
+
+---
+
+## `freshen`
+**Force-syncs fresh cargo.** Bypasses the local hash cache to ensure you have the absolute latest versions of all remote and local skills.
+
+**Flags:**
+- `-g, --global`: Freshen the global fleet instead of the local project fleet.
+
+---
+
+## `fathom`
+The skill intelligence and profiling engine. Measures token saturation, quality scores, and contract alignment.
+
+**Flags:**
+- `--report`: Generates a high-level Harbor Health Report.
+- `--details`: Provides a deep heuristic breakdown for every skill.
+- `--query <text>`: Conducts a probabilistic **Sonar** audit using the configured LLM provider.
+- `--contracts`: Audits semantic I/O contract alignment between fleet members.
+- `--ghosts`: Scans agent folders for unregistered "Ghost" skills and offers to dock them.
+
+*For more details on the science behind Fathom, see the [Fathom Deep Dive](/concepts/fathom).*
+
+---
+
+## `voyage`
+End-to-end integration testing suite for agent-skill loops.
+
+**Flags:**
+- `-f, --file <path>`: Provide a YAML test definition file containing mocks and assertions.
+- `--query <text>`: Run an ad-hoc query simulation.
+- `--model <name>`: Override the model used for the simulation.
+
+*For more details on integration testing, see the [Voyage Deep Dive](/concepts/voyage).*
+
+---
+
+## `lighthouse`
+Generates a "Master Fleet Intelligence" prompt snippet. This is designed to be pasted into the project context of agents that don't support native skill discovery (like ChatGPT or basic Claude instances).
+
+---
+
+## `stow` / `unstow`
+Manage your agent's environment state.
+
+- **`stow`**: Safely backs up all current agent skills to `.harbor/stowage`.
+- **`unstow`**: Restores previously stowed skills to their original locations.
+
+---
+
+## `check`
+Verifies that all berthed skills have valid metadata and are correctly indexed for agent discovery.
+
+---
+
+## `list`
+Shows a breakdown of all skills currently tracked by Skill Harbor, including their source URLs and local paths.
+
+**Flags:**
+- `-g, --global`: List skills from the global manifest.
+
+---
+
+## `undock`
+**Destructive**. Purges the agent's skill folders of all currently berthed manifest items. This is useful for resetting a cluttered environment.
+
+---
+
+## `migrate`
+Modernizes a project directory to the new `.harbor/` standard by moving legacy manifests and initializing the compass.

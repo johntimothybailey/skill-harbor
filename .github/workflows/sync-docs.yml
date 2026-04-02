@@ -1,0 +1,35 @@
+name: Sync Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'package.json'
+
+jobs:
+  sync-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build CLI
+        run: bun run build
+
+      - name: Sync CLI Reference
+        run: bun ./scripts/sync-docs-reference.ts
+
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: auto-sync CLI command reference [skip ci]"
+          file_pattern: 'docs/reference/commands.mdx'

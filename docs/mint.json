@@ -1,0 +1,46 @@
+{
+  "name": "Skill Harbor",
+  "logo": {
+    "light": "/assets/hero.png",
+    "dark": "/assets/hero.png"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#06b6d4",
+    "light": "#22d3ee",
+    "dark": "#0891b2"
+  },
+  "navigation": [
+    {
+      "group": "Introduction",
+      "icon": "anchor",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "concepts/skill-standards",
+        "concepts/manifest"
+      ]
+    },
+    {
+      "group": "Commands Deep Dive",
+      "icon": "ship",
+      "pages": [
+        "concepts/fathom",
+        "concepts/voyage",
+        "concepts/governance",
+        "concepts/global-fleet",
+        "concepts/toolkit"
+      ]
+    },
+    {
+      "group": "CLI Reference",
+      "icon": "terminal",
+      "pages": [
+        "reference/commands"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/johntimothybailey/skill-harbor"
+  }
+}

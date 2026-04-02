@@ -1,0 +1,86 @@
+---
+title: Skill Standards
+description: "Understanding the harbor certified skill anatomy."
+icon: "award"
+---
+
+# ⚓ Skill Standards
+
+Skill Harbor enforces a standardized anatomy for AI agent skills to ensure they are **platform-agnostic**, **auditable**, and **ready for automated chaining**. By following these standards, your skills are "Harbor Certified" and can be precision-engineered by the `up` command for various environments.
+
+Every skill is a combination of strategic markdown headers and optional metadata that define its purpose, constraints, and operational boundaries.
+
+---
+
+## 🏗️ Skill Structure (Anatomy)
+
+Standardization is the key to deterministic agent behavior. Each `SKILL.md` file should include the following structural elements.
+
+### 1. Strategic Headers
+These headers provide the core logic that agents use to understand their tools.
+
+<AccordionGroup>
+  <Accordion title="## Purpose">
+    **High-level description.** This is what the agent reads during the discovery/routing phase. It should be concise but descriptive (e.g., *"A specialized skill for analyzing and refactoring React hooks into cleaner patterns."*).
+  </Accordion>
+  <Accordion title="## Trigger">
+    **Explicit invocation rules.** Defines exactly *when* the agent should pull this tool from its berth.
+    - **Example**: *"Invoke this whenever the user asks for a code review focusing on component sprawl or hook logic."*
+  </Accordion>
+  <Accordion title="## Guidelines">
+    **Operational instructions.** The "How-To" of the skill. This section contains the actual logic or prompt engineering for the agent to follow.
+    - **Example**: 
+    ```markdown
+    1. Scan the file for any hooks used outside the top level.
+    2. Suggest a 'Refactor' if a component exceeds 200 lines.
+    3. Ensure all useEffect dependency arrays are complete.
+    ```
+  </Accordion>
+  <Accordion title="## Exceptions">
+    **Boundary constraints.** Crucial for preventing hallucinations and "over-routing."
+    - **Example**: *"Do not use this skill for backend Node.js files or unit tests. Only applies to .tsx and .jsx files."*
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## 🤝 Semantic Contracts (I/O)
+
+To safely chain skills together, Harbor monitors **Engagements** via input/output contracts.
+
+### `## Requires`
+Defines the context state or variables the skill needs.
+- **Example**:
+```markdown
+## Requires
+- `project_root`: The absolute path to the React project.
+- `target_file`: The relative path to the file for refactoring.
+```
+
+### `## Produces`
+Defines the predictable output the skill guarantees.
+- **Example**:
+```markdown
+## Produces
+- `refactor_log`: A JSON payload containing the before/after line numbers.
+- `new_component`: The optimized source code as a string.
+```
+
+---
+
+## 🚢 Ship Classes (Displacement)
+
+We classify the scale of a skill by its **Token Displacement** to ensure the fleet remains light and efficient.
+
+| Class | Token Range | Payload Description |
+| :--- | :--- | :--- |
+| 🛶 **Dinghy** | < 500 | Lightweight utility or single-purpose prompt. |
+| ⛵ **Schooner** | < 1,500 | Standard tool definition with clear boundaries. |
+| 🚤 **Brigantine** | < 3,500 | Complex skill with multiple auxiliary sections. |
+| 🛳️ **Frigate** | < 7,000 | Heavyweight context; requires strict triggers to avoid bloat. |
+| 🚢 **Galleon** | 7,000+ | Massive cargo; use with caution in multi-tool environments. |
+
+---
+
+## 🛠️ Management & Control
+While the **Skill Standard** defines the *content* of a skill, the **[Manifest & .harbor Folder](/concepts/manifest)** defines how that skill is tracked, versioned, and delivered to your agent fleet.
