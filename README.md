@@ -337,12 +337,12 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 ---
 
 
-## 🧰 The Quartermaster's Toolkit (Meta-Skills)
+## 🧰 The Harbormaster's Toolkit (Meta-Skills)
 
 Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. Instead of manual scaffolding, we provide a set of **AI-Native Meta-Skills** (Tools) that can be docked directly into your harbor to help you build, evaluate, and standardize your fleet.
 
 ### ⚓ The Toolkit Collection
-- **`skill-architect`**: Guides you in designing a new skill. It ensures the skill is "right-sized" (Dinghy vs. Frigate) and enforces input/output contracts.
+- **`loft-master`**: Guides you in designing a new skill. It uses the "Lofting" process to ensure the skill is "right-sized" (Dinghy vs. Frigate) and enforces input/output contracts.
 - **`fleet-surgeon`**: Evaluates existing skills for "context bloat" and provides step-by-step refactoring guides to split a massive "Galleon" into smaller, efficient "Schooners."
 - **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
 
