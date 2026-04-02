@@ -14,7 +14,7 @@ describe('Orchestrator Unit Tests', () => {
     });
 
     it('should extract metadata from a valid SKILL.md in the test-skill directory', async () => {
-        const targetPath = path.resolve(__dirname, '../.harbor/test-skill');
+        const targetPath = path.resolve(__dirname, '../.harbor/skills/test-skill');
         const metadata = await orchestrator.getMetadata(targetPath);
         
         expect(metadata).not.toBeNull();

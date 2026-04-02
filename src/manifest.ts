@@ -250,6 +250,11 @@ export class ManifestManager {
         await this.write(manifest, type);
     }
 
+    public getSkillsCacheDir(): string {
+        return this.skillsDir;
+    }
+
+    /** @deprecated Use getSkillsCacheDir() instead */
     public getHarborDir(): string {
         return this.skillsDir;
     }

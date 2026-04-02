@@ -30,8 +30,10 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
                 printError(`Failed to read test definition from ${opts.file}: ${err.message}`);
                 process.exit(1);
             }
-        } else if (!testDef.query) {
-            printError("You must provide either a inline [query] or a -f/--file definition.");
+        }
+
+        if (!testDef.query) {
+            printError("You must provide either an inline [query] or a -f/--file definition with a 'query' field.");
             process.exit(1);
         }
 
@@ -72,19 +74,19 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         for (const berth of activeBerths) {
             const skillPaths = await profiler.findSkills(berth.path);
             for (const spath of skillPaths) {
-                const name = path.basename(spath);
-                if (loadedSkillNames.has(name)) continue;
-
                 try {
                     const skillFile = path.join(spath, "SKILL.md");
                     const rawContent = await fs.readFile(skillFile, "utf-8");
                     const { data } = matter(rawContent);
 
                     if (data.name && data.description) {
+                        const sanitizedName = data.name.replace(/[^a-zA-Z0-9_-]/g, "");
+                        if (loadedSkillNames.has(sanitizedName)) continue;
+
                         tools.push({
                             type: "function",
                             function: {
-                                name: data.name.replace(/[^a-zA-Z0-9_-]/g, ""), // Sanitize for OpenAI strict rules
+                                name: sanitizedName,
                                 description: data.description,
                                 parameters: {
                                     type: "object",
@@ -93,7 +95,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
                                 }
                             }
                         });
-                        loadedSkillNames.add(name);
+                        loadedSkillNames.add(sanitizedName);
                     }
                 } catch {
                     // Skip unreadable
@@ -211,6 +213,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
 
         if (iteration >= maxIterations) {
             printError(`Voyage automatically terminated after ${maxIterations} loops to prevent infinite drifting.`);
+            process.exit(1);
         }
 
         // Assertions

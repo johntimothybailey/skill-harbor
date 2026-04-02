@@ -49,7 +49,7 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     let content = `${kleur.bold().blue('⚓  Harbor Health Report: Fleet Intelligence Status')}\n`;
     content += `${kleur.gray('─────────────────────────────────────────────────')}\n\n`;
     
-    content += `${kleur.cyan('Fleet Size:')}    ${totalSkills} Skills (${composition.agentic} Agentic, ${composition.tools} Tools)\n`;
+    content += `${kleur.cyan('Fleet Size:')}    ${totalSkills} Skills (${composition.agent} Agent, ${composition.tools} Tools)\n`;
     content += `${kleur.cyan('Total Volume:')}  ${kleur.bold(totalTokens.toLocaleString())} Tokens\n`;
     content += `${kleur.cyan('Daily Maintenance:')} GPT-4o: $${totalCost.gpt4o.toFixed(4)} | Mini: $${totalCost.gpt4oMini.toFixed(4)}\n\n`;
     
