@@ -21,7 +21,13 @@
       {
         "group": "Core Concepts",
         "pages": [
-          "concepts/agentic-skills"
+          "concepts/skill-standards",
+          "concepts/manifest",
+          "concepts/fathom",
+          "concepts/voyage",
+          "concepts/governance",
+          "concepts/global-fleet",
+          "concepts/toolkit"
         ],
         "icon": "ship"
       },
