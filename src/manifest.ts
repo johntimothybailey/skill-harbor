@@ -17,7 +17,7 @@ export interface SkillEntry {
 
 export interface HarborManifest {
     version: string;
-    targets?: string[]; // e.g. ["claude", "cursor", "antigravity", "rulesync"]
+    targets?: string[]; // e.g. ["claude", "cursor", "antigravity", "codex", "rulesync"]
     dependencies: Record<string, string>; // "skill-name": "version/source"
     skills: Record<string, SkillEntry>;
     overrides?: string[]; // Optional names of skills being overridden in the current stack

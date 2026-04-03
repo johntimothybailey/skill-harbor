@@ -41,6 +41,7 @@ program
     .option("-g, --global", "Include global manifest skills in the sync")
     .option("-l, --lockdown", "Enforces a strict, manifest-only environment. Stows existing rules first.")
     .option("-m, --migrate", "⚓ Automates the transition to the consolidated .harbor/ layout.")
+    .option("-t, --target <name>", "Override manifest targets and sync only to a specific agent berth")
     .action(upAction);
 
 program

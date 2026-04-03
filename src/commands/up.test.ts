@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { upAction } from './up';
 import { Orchestrator } from '../orchestrator';
-import { getManifestManager, exists } from '../utils';
-import { printHeader, printSuccess, printError } from '../ui';
+import { getAgentBerths, getManagedAgentTargets, getManifestManager, exists } from '../utils';
+import { printHeader, printSuccess, printError, promptSelectTargets } from '../ui';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
@@ -53,12 +53,27 @@ describe('upAction', () => {
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
+        (getManagedAgentTargets as any).mockReturnValue([
+            { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+            { path: '/app/.cursor/skills', label: 'Cursor', key: 'cursor' },
+            { path: '/app/.antigravity/skills', label: 'Antigravity', key: 'antigravity' },
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' },
+            { path: '/home/user/.rulesync/skills', label: 'Rulesync', key: 'rulesync' }
+        ]);
+        (getAgentBerths as any).mockResolvedValue([
+            { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+            { path: '/app/.cursor/skills', label: 'Cursor', key: 'cursor' },
+            { path: '/app/.antigravity/skills', label: 'Antigravity', key: 'antigravity' },
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' },
+            { path: '/home/user/.rulesync/skills', label: 'Rulesync', key: 'rulesync' }
+        ]);
         (os.homedir as any).mockReturnValue('/home/user');
         (exists as any).mockResolvedValue(true);
         (fs.mkdir as any).mockResolvedValue(undefined);
         (fs.writeFile as any).mockResolvedValue(undefined);
         (lstatSync as any).mockReturnValue({ size: 100, mtimeMs: 123456789 });
         (fs.stat as any).mockResolvedValue({ isFile: () => false, size: 100, mtimeMs: 123456789 });
+        (promptSelectTargets as any).mockResolvedValue(['claude']);
     });
 
     it('should perform a full sync when changes are detected', async () => {
@@ -88,7 +103,7 @@ describe('upAction', () => {
                     name: 'skill1', 
                     source: 'source1', 
                     lastSyncHash: 'source1',
-                    lastSyncTargets: ['claude', 'cursor', 'antigravity', 'rulesync']
+                    lastSyncTargets: ['claude', 'cursor', 'antigravity', 'codex', 'rulesync']
                 }
             }
         });
@@ -148,6 +163,63 @@ describe('upAction', () => {
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete.'));
     });
 
+    it('should berth Codex skills into .agents/skills using raw cargo', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        process.cwd = vi.fn().mockReturnValue('/app');
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.berth).toHaveBeenCalledWith('/tmp/cargo', '/app/.agents/skills/skill1', 'Codex');
+    });
+
+    it('should skip Claude conversion when Codex is the only active target', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        process.cwd = vi.fn().mockReturnValue('/app');
+        mockManifestManager.readMerged.mockResolvedValue({
+            targets: ['codex'],
+            skills: {
+                'skill1': { name: 'skill1', source: 'source1' }
+            }
+        });
+        (getAgentBerths as any).mockResolvedValue([
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' }
+        ]);
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.processCargo).not.toHaveBeenCalled();
+    });
+
+    it('should berth the Lighthouse manifest into the Codex target as a Codex skill', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        process.cwd = vi.fn().mockReturnValue('/app');
+        mockManifestManager.readMerged.mockResolvedValue({
+            targets: ['codex'],
+            skills: {
+                'skill1': { name: 'skill1', source: 'source1' }
+            }
+        });
+        (getAgentBerths as any).mockResolvedValue([
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' }
+        ]);
+
+        await upAction(options, mockCommand);
+
+        expect(fs.writeFile).toHaveBeenCalledWith(
+            '/app/.agents/skills/000-fleet-intelligence/SKILL.md',
+            expect.stringContaining('name: fleet-intelligence')
+        );
+    });
+
     it('should handle lockdown mode', async () => {
         const options = { lockdown: true };
         const mockCommand = {
@@ -157,6 +229,48 @@ describe('upAction', () => {
         await upAction(options, mockCommand);
 
         expect(mockOrchestrator.stowTarget).toHaveBeenCalled();
+    });
+
+    it('should prompt for targets when no active berths are detected', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        (getAgentBerths as any)
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([
+                { path: '/app/.claude/skills', label: 'Claude', key: 'claude' }
+            ]);
+        (promptSelectTargets as any).mockResolvedValue(['claude']);
+
+        await upAction(options, mockCommand);
+
+        expect(getManagedAgentTargets).toHaveBeenCalledWith(process.cwd());
+        expect(promptSelectTargets).toHaveBeenCalledWith([
+            { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+            { path: '/app/.cursor/skills', label: 'Cursor', key: 'cursor' },
+            { path: '/app/.antigravity/skills', label: 'Antigravity', key: 'antigravity' },
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' },
+            { path: '/home/user/.rulesync/skills', label: 'Rulesync', key: 'rulesync' }
+        ]);
+        expect(getAgentBerths).toHaveBeenNthCalledWith(2, process.cwd(), ['claude']);
+        expect(mockOrchestrator.berth).toHaveBeenCalled();
+    });
+
+    it('should exit without syncing when target selection is cancelled', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        (getAgentBerths as any).mockResolvedValue([]);
+        (promptSelectTargets as any).mockResolvedValue(null);
+
+        await upAction(options, mockCommand);
+
+        expect(promptSelectTargets).toHaveBeenCalled();
+        expect(mockOrchestrator.moor).not.toHaveBeenCalled();
+        expect(mockOrchestrator.berth).not.toHaveBeenCalled();
+        expect(printSuccess).not.toHaveBeenCalled();
     });
 
     it('should detect changes in local skills using hashing', async () => {

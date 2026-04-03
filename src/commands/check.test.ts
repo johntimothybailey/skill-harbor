@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkAction } from './check';
 import { Orchestrator } from '../orchestrator';
-import { getManifestManager, exists } from '../utils';
+import { getAgentBerths, getManifestManager, exists } from '../utils';
 import { printHeader, printInfo } from '../ui';
 import os from 'node:os';
 
@@ -35,6 +35,10 @@ describe('checkAction', () => {
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
+        (getAgentBerths as any).mockResolvedValue([
+            { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
+            { path: '/app/.agents/skills', label: 'Codex', key: 'codex' }
+        ]);
         (os.homedir as any).mockReturnValue('/home/user');
         (exists as any).mockImplementation(() => Promise.resolve(true));
     });

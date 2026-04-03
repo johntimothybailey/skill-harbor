@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { undockAction } from './undock';
 import { Orchestrator } from '../orchestrator';
-import { exists } from '../utils';
+import { exists, getManagedAgentTargets } from '../utils';
 import { printHeader, printSuccess, printError } from '../ui';
 import os from 'node:os';
 
@@ -22,6 +22,20 @@ describe('undockAction', () => {
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (os.homedir as any).mockReturnValue('/home/user');
+        (getManagedAgentTargets as any).mockImplementation((baseDir: string, includeRulesync: boolean) => {
+            const targets = [
+                { path: `${baseDir}/.claude/skills`, label: 'Claude', key: 'claude' },
+                { path: `${baseDir}/.cursor/skills`, label: 'Cursor', key: 'cursor' },
+                { path: `${baseDir}/.antigravity/skills`, label: 'Antigravity', key: 'antigravity' },
+                { path: `${baseDir}/.agents/skills`, label: 'Codex', key: 'codex' }
+            ];
+
+            if (includeRulesync) {
+                targets.push({ path: '/home/user/.rulesync/skills', label: 'Rulesync', key: 'rulesync' });
+            }
+
+            return targets;
+        });
         (exists as any).mockResolvedValue(true);
     });
 
@@ -35,7 +49,7 @@ describe('undockAction', () => {
         await undockAction(options, mockCommand);
 
         expect(printHeader).toHaveBeenCalledWith('Undocking Operations Initiated');
-        expect(mockOrchestrator.purgeTarget).toHaveBeenCalledTimes(3);
+        expect(mockOrchestrator.purgeTarget).toHaveBeenCalledTimes(4);
         expect(mockOrchestrator.finalize).toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Local workspace is clean.'));
     });
@@ -48,7 +62,7 @@ describe('undockAction', () => {
 
         await undockAction(options, mockCommand);
 
-        expect(mockOrchestrator.purgeTarget).toHaveBeenCalledTimes(4); // 3 standard + Rulesync
+        expect(mockOrchestrator.purgeTarget).toHaveBeenCalledTimes(5); // 4 standard + Rulesync
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Global workspace is clean.'));
     });
 
