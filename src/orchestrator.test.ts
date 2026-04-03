@@ -22,8 +22,17 @@ describe('Orchestrator Unit Tests', () => {
         await fs.rm(tempDir, { recursive: true, force: true });
     });
 
-    it('should extract metadata from a valid SKILL.md in the test-skill directory', async () => {
-        const targetPath = path.resolve(__dirname, '../.harbor/skills/test-skill');
+    it('should extract metadata from a valid SKILL.md', async () => {
+        const targetPath = path.join(tempDir, 'test-skill');
+        await fs.mkdir(targetPath, { recursive: true });
+        await fs.writeFile(path.join(targetPath, 'SKILL.md'),
+            '---\n' +
+            'name: test-skill\n' +
+            'description: Internal skill for testing Skill Harbor orchestration and metadata capabilities.\n' +
+            'triggers: [test-skill, internal-test, skill-harbor-validation]\n' +
+            '---\n'
+        );
+
         const metadata = await orchestrator.getMetadata(targetPath);
         
         expect(metadata).not.toBeNull();
