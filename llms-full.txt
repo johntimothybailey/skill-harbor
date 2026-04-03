@@ -12,7 +12,7 @@ Harbor coordinates the entire lifecycle of an AI skill through multiple nautical
 2.  **⚙️ Fitting Out (Process)**: Transpiles raw "lumber" into precision-engineered skills for specific platforms (Gemini, Claude, etc.) via `up`.
 3.  **🛳️ Berth (Distribute)**: Automatically deploys processed cargo into hidden agent configuration folders (e.g., `.claude/skills`).
 4.  **📏 Surveying (Insights)**: Mathematically audits the fleet for token bloat and semantic collisions using **Fathom**.
-5.  **⛵ Sea Trials (Verify)**: Simulates autonomous agent journeys (Voyage) and force-syncs updates (Freshen).
+5.  **⛵ Sea Trials (Verify)**: Simulates autonomous agent journeys (Voyager) and force-syncs updates (Freshen).
 6.  **🕯️ Beacon (Discovery)**: Generates a Master Fleet Intelligence manifest for zero-tier agent routing (`lighthouse`).
 
 ---
@@ -59,7 +59,7 @@ Manage your personal "synced brain" across every project:
 - `freshen`: Force-sync fresh cargo by bypassing local cache.
 - `lighthouse`: Generate a fleet intelligence prompt snippet for zero-tier discovery.
 - `fathom`: Profile complexity, costs, and contract alignment.
-- `voyage`: End-to-end integration testing for agent-skill loops.
+- `voyager`: End-to-end integration testing for agent-skill loops.
 - `stow/unstow`: Secure lockdown governance for sensitive sessions.
 
 ---

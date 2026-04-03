@@ -10,14 +10,14 @@ Enable teams and individuals to **gain deep insights** into their skills, **refi
 - **[Quickstart](https://docs.skill-harbor.app/quickstart)**: 3-step installation and first sync.
 - **[Concepts: Skill Standards](https://docs.skill-harbor.app/concepts/skill-standards)**: Documentation on 'Ship Classes' (Dinghy -> Galleon) and harbor certified skill anatomy.
 - **[Concepts: The Manifest & .harbor](https://docs.skill-harbor.app/concepts/manifest)**: Tracking, control, and management of the skill fleet.
-- **[CLI Reference](https://docs.skill-harbor.app/reference/commands)**: Detailed guide for all commands (`up`, `fathom`, `voyage`, etc.).
+- **[CLI Reference](https://docs.skill-harbor.app/reference/commands)**: Detailed guide for all commands (`up`, `fathom`, `voyager`, etc.).
 
 ## Key Features (Nautical Phases)
 - **⚓ Moor (Acquire)**: Registering and fetching raw skill repositories (`dock`, `up`).
 - **⚙️ Fitting Out (Process)**: Transpiling raw "lumber" into precision-engineered skills for specific platforms (`up`).
 - **🛳️ Berth (Distribute)**: Deploying processed cargo into agent configuration folders (`up`).
 - **📏 Surveying (Insights)**: Auditing the fleet for token bloat and semantic collisions using **Fathom**.
-- **⛵ Sea Trials (Verify)**: Simulating autonomous agent journeys (Voyage) and force-syncing updates (Freshen).
+- **⛵ Sea Trials (Verify)**: Simulating autonomous agent journeys (Voyager) and force-syncing updates (Freshen).
 - **🕯️ Beacon (Discovery)**: Generating Master Fleet Intelligence manifests for zero-tier routing (`lighthouse`).
 - **Global Fleet Control**: Manage personal or team-wide skills across any workspace using the `--global` manifest.
 - **Lockdown Governance**: Securely isolate agent context for sensitive projects.

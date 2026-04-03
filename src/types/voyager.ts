@@ -1,4 +1,4 @@
-export interface VoyageTestDefinition {
+export interface VoyagerTestDefinition {
     /** The instruction given to the agent */
     query: string;
     /** The sequence of skills the agent should use in order */

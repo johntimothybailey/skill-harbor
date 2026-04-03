@@ -10,7 +10,7 @@ import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
-import { voyageAction } from "./commands/voyage";
+import { voyagerAction } from "./commands/voyager";
 import { migrateAction } from "./commands/migrate";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
@@ -107,11 +107,11 @@ program
     .action(fathomAction);
 
 program
-    .command("voyage [query]")
+    .command("voyager [query]")
     .description("End-to-end integration testing suite to simulate agentic workflows.")
-    .option("-f, --file <path>", "Path to a YAML test definition file (e.g., harbor-voyage-test.yaml)")
-    .option("-m, --model <name>", "Override the default LLM model for the voyage.")
-    .option("-b, --baseUrl <url>", "Override the default API base URL for the voyage.")
-    .action(voyageAction);
+    .option("-f, --file <path>", "Path to a YAML test definition file (e.g., harbor-voyager-test.yaml)")
+    .option("-m, --model <name>", "Override the default LLM model for the voyager.")
+    .option("-b, --baseUrl <url>", "Override the default API base URL for the voyager.")
+    .action(voyagerAction);
 
 await program.parseAsync(process.argv);

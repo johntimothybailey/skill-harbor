@@ -7,25 +7,25 @@ import matter from "gray-matter";
 import { getManifestManager, getAgentBerths } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
-import { VoyageTestDefinition } from "../types/voyage";
+import { VoyagerTestDefinition } from "../types/voyager";
 import { printHeader, printError, printInfo, printSuccess } from "../ui";
 import { ask } from "../utils";
 import os from "node:os";
 
-export async function voyageAction(queryArg: string | undefined, options: any, command: any) {
+export async function voyagerAction(queryArg: string | undefined, options: any, command: any) {
     const opts = command.opts();
     const spinnies = new Spinnies();
     
-    let testDef: VoyageTestDefinition = { query: queryArg || "" };
+    let testDef: VoyagerTestDefinition = { query: queryArg || "" };
 
     try {
-        printHeader("Voyage: Fleet Integration Testing");
+        printHeader("Voyager: Fleet Integration Testing");
 
         if (opts.file) {
             const filePath = path.resolve(process.cwd(), opts.file);
             try {
                 const fileContent = await fs.readFile(filePath, "utf-8");
-                testDef = yaml.load(fileContent) as VoyageTestDefinition;
+                testDef = yaml.load(fileContent) as VoyagerTestDefinition;
             } catch (err: any) {
                 printError(`Failed to read test definition from ${opts.file}: ${err.message}`);
                 process.exit(1);
@@ -44,11 +44,11 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         });
 
         if (!config.sonar.apiKey) {
-            printError("Voyage simulation requires an API key in HARBOR_PROFILER_API_KEY, OPENAI_API_KEY, or profiler.yaml");
+            printError("Voyager simulation requires an API key in HARBOR_PROFILER_API_KEY, OPENAI_API_KEY, or profiler.yaml");
             process.exit(1);
         }
 
-        spinnies.add("voyage-init", { text: "Discovering active berths and preparing fleet cargo..." });
+        spinnies.add("voyager-init", { text: "Discovering active berths and preparing fleet cargo..." });
 
         const manifestManager = getManifestManager({ global: false });
         let manifest: any;
@@ -63,7 +63,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         const activeBerths = await getAgentBerths(baseDir, manifest.targets && manifest.targets.length > 0 ? manifest.targets : undefined);
 
         if (activeBerths.length === 0) {
-            spinnies.fail("voyage-init", { text: "No active agent berths found to voyage with." });
+            spinnies.fail("voyager-init", { text: "No active agent berths found to voyager with." });
             process.exit(1);
         }
 
@@ -104,7 +104,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         }
 
         if (tools.length === 0) {
-            spinnies.fail("voyage-init", { text: "No properly formatted skills found in active berths." });
+            spinnies.fail("voyager-init", { text: "No properly formatted skills found in active berths." });
             
             // Ghost Discovery Assistance
             const ghosts = await profiler.findSkills(process.cwd());
@@ -122,13 +122,13 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
                         }, "local");
                         console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
                     }
-                    printSuccess("All ghosts berthed. Run 'voyage' again to deploy them.");
+                    printSuccess("All ghosts berthed. Run 'voyager' again to deploy them.");
                 }
             }
             process.exit(1);
         }
 
-        spinnies.succeed("voyage-init", { text: `Fleet ready. Discovered ${tools.length} actionable skills.` });
+        spinnies.succeed("voyager-init", { text: `Fleet ready. Discovered ${tools.length} actionable skills.` });
         
         console.log(`\n${kleur.blue("▶")} ${kleur.bold("Query:")} ${kleur.gray(testDef.query)}\n`);
 
@@ -147,7 +147,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         const maxIterations = 10;
         const traceSequence: string[] = [];
 
-        spinnies.add("voyage-loop", { text: "Agent thinking..." });
+        spinnies.add("voyager-loop", { text: "Agent thinking..." });
 
         while (iteration < maxIterations) {
             iteration++;
@@ -168,7 +168,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
 
             if (!response.ok) {
                 const errText = await response.text();
-                spinnies.fail("voyage-loop");
+                spinnies.fail("voyager-loop");
                 printError(`LLM API Error (${response.status}): ${errText}`);
                 process.exit(1);
             }
@@ -181,13 +181,13 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
 
             if (message.tool_calls && message.tool_calls.length > 0) {
                 // Agent invoked tools
-                spinnies.update("voyage-loop", { text: "Agent orchestrating..." });
+                spinnies.update("voyager-loop", { text: "Agent orchestrating..." });
                 
                 for (const toolCall of message.tool_calls) {
                     const toolName = toolCall.function.name;
                     traceSequence.push(toolName);
                     
-                    spinnies.succeed("voyage-loop", { text: `${kleur.cyan("⚓ Agent deployed skill:")} ${kleur.bold(toolName)}` });
+                    spinnies.succeed("voyager-loop", { text: `${kleur.cyan("⚓ Agent deployed skill:")} ${kleur.bold(toolName)}` });
                     
                     // Simulate execution
                     const mockResponse = testDef.mocks?.[toolName] || "Simulated success. Context payload acknowledged.";
@@ -202,17 +202,17 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
                     console.log(`  ${kleur.gray("↳ Mocked Response:")} ${kleur.dim(mockResponse)}`);
                 }
                 
-                spinnies.add("voyage-loop", { text: "Agent evaluating results..." });
+                spinnies.add("voyager-loop", { text: "Agent evaluating results..." });
             } else {
                 // Final answer provided
-                spinnies.succeed("voyage-loop", { text: `${kleur.green("Voyage Complete!")}` });
+                spinnies.succeed("voyager-loop", { text: `${kleur.green("Voyager Complete!")}` });
                 console.log(`\n${kleur.magenta("■ Final Output:")}\n${kleur.white(message.content)}`);
                 break;
             }
         }
 
         if (iteration >= maxIterations) {
-            printError(`Voyage automatically terminated after ${maxIterations} loops to prevent infinite drifting.`);
+            printError(`Voyager automatically terminated after ${maxIterations} loops to prevent infinite drifting.`);
             process.exit(1);
         }
 
@@ -235,7 +235,7 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
             }
 
             if (!allPassed) {
-                console.log(`\n${kleur.bgRed().white(" ASSERTION FAILED ")} The voyage did not match the expected course.`);
+                console.log(`\n${kleur.bgRed().white(" ASSERTION FAILED ")} The voyager did not match the expected course.`);
                 process.exit(1);
             } else {
                 console.log(`\n${kleur.bgGreen().white(" ASSERTIONS PASSED ")} The agent navigated perfectly.`);
@@ -243,8 +243,8 @@ export async function voyageAction(queryArg: string | undefined, options: any, c
         }
 
     } catch (error: any) {
-        if (spinnies.hasActiveSpinners()) spinnies.fail("voyage-loop");
-        printError(`Voyage critical failure: ${error.message}`);
+        if (spinnies.hasActiveSpinners()) spinnies.fail("voyager-loop");
+        printError(`Voyager critical failure: ${error.message}`);
         process.exit(1);
     }
 }

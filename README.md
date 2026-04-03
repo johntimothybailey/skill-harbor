@@ -265,14 +265,14 @@ HARBOR_PROFILER_API_KEY=your_secret_key_here
 skill-harbor fathom --query "example" --baseUrl https://generativelanguage.googleapis.com/v1beta/openai/ --model gemini-1.5-flash
 ```
 
-#### ⛵ Voyage: End-to-End Integration Testing
-While Fathom provides fast heuristic and single-skill probabilistic checks, **Voyage** is a dedicated integration testing suite. It simulates an entire agent loop, reading your active agent berths, constructing JSON Schema tool definitions, and passing mock context payloads to verify that the LLM uses the correct sequence of tools to reach the expected end state.
+#### ⛵ Voyager: End-to-End Integration Testing
+While Fathom provides fast heuristic and single-skill probabilistic checks, **Voyager** is a dedicated integration testing suite. It simulates an entire agent loop, reading your active agent berths, constructing JSON Schema tool definitions, and passing mock context payloads to verify that the LLM uses the correct sequence of tools to reach the expected end state.
 
-- **`--file <path>`**: Provide a `harbor-voyage-test.yaml` to define the query, mocks, and expected assertion sequence.
+- **`--file <path>`**: Provide a `harbor-voyager-test.yaml` to define the query, mocks, and expected assertion sequence.
 - **`--model <name>` / `--baseUrl <url>`**: Overrides just like Sonar configuration.
 
 ```yaml
-# harbor-voyage-test.yaml
+# harbor-voyager-test.yaml
 query: "Check if the codebase is portable and then generate a report on any hidden skills."
 expected_tools: 
   - Scryer
@@ -283,13 +283,13 @@ mocks:
 ```
 
 ```bash
-skill-harbor voyage -f harbor-voyage-test.yaml
+skill-harbor voyager -f harbor-voyager-test.yaml
 ```
 
-If the agent deviates and does not invoke the tools specified in `expected_tools`, the voyage will **exit with process code 1**.
+If the agent deviates and does not invoke the tools specified in `expected_tools`, the voyager will **exit with process code 1**.
 
-#### ⚓ Why Use Fathom & Voyage?
-Manually inspecting skill files for token bloat is impossible at scale. Fathom & Voyage act as your **Intelligence Auditors**.
+#### ⚓ Why Use Fathom & Voyager?
+Manually inspecting skill files for token bloat is impossible at scale. Fathom & Voyager act as your **Intelligence Auditors**.
 
 1.  **Confidence Check (Heuristic)**: Use `fathom --details` during development to see if your prompt is too "verbose" or "vague." If your **Heuristic Confidence** is low (1.0-4.0), your agent is likely to start hallucinating.
 2.  **Confidence Check (Sonar)**: Use `fathom --query` to see if a model *actually* triggered your skill for a specific input. Perfect for finding "rogue skills" that trigger when they shouldn't.
@@ -401,7 +401,7 @@ Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. I
 - **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
 
 ### 👻 Interactive Ghost Docking
-When running `fathom --ghosts` or `voyage`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+When running `fathom --ghosts` or `voyager`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
 
 ```bash
 # Scan for ghosts and dock them interactively
