@@ -9,6 +9,9 @@ on:
       - 'scripts/**'
       - 'package.json'
 
+permissions:
+  contents: write
+
 jobs:
   sync-reference:
     runs-on: ubuntu-latest
