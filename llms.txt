@@ -12,12 +12,22 @@ Enable teams and individuals to **gain deep insights** into their skills, **refi
 - **[Concepts: The Manifest & .harbor](https://docs.skill-harbor.app/concepts/manifest)**: Tracking, control, and management of the skill fleet.
 - **[CLI Reference](https://docs.skill-harbor.app/reference/commands)**: Detailed guide for all commands (`up`, `fathom`, `voyager`, etc.).
 
-## Key Features (Nautical Phases)
-- **⚓ Moor (Acquire)**: Registering and fetching raw skill repositories (`dock`, `up`).
-- **⚙️ Fitting Out (Process)**: Transpiling raw "lumber" into precision-engineered skills for specific platforms (`up`).
-- **🛳️ Berth (Distribute)**: Deploying processed cargo into agent configuration folders (`up`).
-- **📏 Surveying (Insights)**: Auditing the fleet for token bloat and semantic collisions using **Fathom**.
-- **⛵ Sea Trials (Verify)**: Simulating autonomous agent journeys (Voyager) and force-syncing updates (Freshen).
-- **🕯️ Beacon (Discovery)**: Generating Master Fleet Intelligence manifests for zero-tier routing (`lighthouse`).
-- **Global Fleet Control**: Manage personal or team-wide skills across any workspace using the `--global` manifest.
-- **Lockdown Governance**: Securely isolate agent context for sensitive projects.
+## Commands
+- `dock <url>`: Register a new skill in the manifest.
+- `up`: The core sync engine — fetch, transpile, and berth skills into agent folders.
+- `freshen`: Force-sync by bypassing local hash cache.
+- `fathom`: Profile token displacement, heuristic confidence, sonar confidence, and contract alignment.
+- `voyager`: End-to-end integration testing that simulates an agent loop with mocked tool calls.
+- `lighthouse`: Generate a fleet intelligence prompt snippet for zero-tier discovery.
+- `stow` / `unstow`: Back up and restore agent skills for lockdown governance.
+- `check`: Verify berthed skills have valid metadata and integrity.
+- `list`: Show all skills tracked in the manifest.
+- `undock`: Purge berthed skills from agent folders.
+- `migrate`: Move legacy root-level manifests into the `.harbor/` standard.
+
+## Key Concepts
+- **Three-Layer Manifests**: Global (`~/.harbor/`) > Project (`.harbor/`) > Local Override, merged with last-wins priority.
+- **Multi-Platform**: Automatic distribution to Claude Code, Cursor, Codex, and Antigravity.
+- **Semantic Contracts**: Skills declare `## Requires` and `## Produces` for validated chaining.
+- **Ghost Discovery**: Detect unregistered skills in agent berths with `fathom --ghosts`.
+- **Lockdown Governance**: Enforce manifest-only environments for sensitive projects.
