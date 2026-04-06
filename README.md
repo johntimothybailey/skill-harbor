@@ -5,7 +5,7 @@
 <h1 align="center">⚓ Skill Harbor</h1>
 
 <p align="center">
-  <strong>The Declarative Workspace Orchestrator for AI Agents — Standardize skills and context across your entire team.</strong>
+  <strong>The Declarative Skill Setup & Orchestration Engine — Standardize and prepare engineering context for your entire team.</strong>
 </p>
 
 <p align="center">
@@ -18,15 +18,15 @@
 
 ## 🌊 Overview
 
-**Skill Harbor** is the **Declarative Workspace Orchestrator for AI Agents**. It is a powerful **Sync & Governance Engine** designed to standardize agent behavior, specialized skills, and project context across your entire team.
+**Skill Harbor** is the **Declarative Skill Setup & Orchestration Engine**. It is a powerful **Sync & Governance Engine** designed to standardize engineering context, specialized skills, and project rules across your entire team.
 
 Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative `harbor-manifest.json` to manage your team's "Collective Intelligence." With a single command (`skill-harbor up`), Harbor orchestrates the entire lifecycle: fetching raw repositories, transpiling them for specific platforms (Claude, Gemini, Cursor), enforcing security lockdowns, and injecting them natively into agent configuration berths.
 
-**It is the infrastructure layer for professional AI agent workflows.**
+**It is the intelligence infrastructure layer for professional AI agent workflows.**
 
 ## 🛠️ The Architecture: How It Works
 
-Skill Harbor is designed as the **Commander** of your Workspace Sync Engine. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
+Skill Harbor is designed as the **Commander of your Skill Sync Engine**. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
 
 Here is exactly how the three tools relate to each other:
 
@@ -182,6 +182,8 @@ As your ecosystem of AI agent tools grows, injecting too many skills causes **"c
 
 The `fathom` command provides a rigorous, mathematical audit of your intelligence layer to guarantee your multi-tool ecosystem remains efficient, deterministic, and safe from context exhaustion.
 
+For a deep dive into how we evaluate and categorize skills, see **[Skill Standards](https://docs.skill-harbor.app/concepts/skill-standards)**.
+
 #### ⚓ Fathom TL;DR
 ```bash
 # Basic Heuristic Audit (Offline, Instant)
@@ -213,7 +215,15 @@ Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or q
 - **`--max-tokens <n>`**: Fail if total fleet tokens exceed limit.
 - **`--max-bloat <p>`**: Fail if GPT-4o context saturation exceeds percentage.
 - **`--min-score <s>`**: Fail if average fleet quality score falls below threshold.
+- **`--contracts`**: Fail if explicit upstream outputs do not match downstream input requirements.
 - **`--format json`**: Output machine-parsable data for programmatic consumption.
+
+#### 🤝 Semantic Contracts (Chaining Validation)
+To prevent hallucinations when passing unstructured data between linked skills, Fathom includes a **Semantic Contract Validation** engine. By running `skill-harbor fathom --contracts`, Fathom globally inspects all your skills to ensure their input and output requirements align safely. 
+
+If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill B requires `string`), Fathom will aggressively reject the build (Exit Code 1).
+
+[Read the full documentation on Skill Standards and Semantic Contracts here!](https://docs.skill-harbor.app/concepts/skill-standards)
 
 #### 📡 Sonar: Probabilistic Confidence
 Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
@@ -255,8 +265,31 @@ HARBOR_PROFILER_API_KEY=your_secret_key_here
 skill-harbor fathom --query "example" --baseUrl https://generativelanguage.googleapis.com/v1beta/openai/ --model gemini-1.5-flash
 ```
 
-#### ⚓ Why Use Fathom?
-Manually inspecting skill files for token bloat is impossible at scale. Fathom acts as your **Intelligence Auditor**.
+#### ⛵ Voyager: End-to-End Integration Testing
+While Fathom provides fast heuristic and single-skill probabilistic checks, **Voyager** is a dedicated integration testing suite. It simulates an entire agent loop, reading your active agent berths, constructing JSON Schema tool definitions, and passing mock context payloads to verify that the LLM uses the correct sequence of tools to reach the expected end state.
+
+- **`--file <path>`**: Provide a `harbor-voyager-test.yaml` to define the query, mocks, and expected assertion sequence.
+- **`--model <name>` / `--baseUrl <url>`**: Overrides just like Sonar configuration.
+
+```yaml
+# harbor-voyager-test.yaml
+query: "Check if the codebase is portable and then generate a report on any hidden skills."
+expected_tools: 
+  - Scryer
+  - Fathom
+mocks:
+  Scryer: "Portable issues found: None. The codebase looks clean."
+  Fathom: "Hidden skills report: 2 ghost skills found."
+```
+
+```bash
+skill-harbor voyager -f harbor-voyager-test.yaml
+```
+
+If the agent deviates and does not invoke the tools specified in `expected_tools`, the voyager will **exit with process code 1**.
+
+#### ⚓ Why Use Fathom & Voyager?
+Manually inspecting skill files for token bloat is impossible at scale. Fathom & Voyager act as your **Intelligence Auditors**.
 
 1.  **Confidence Check (Heuristic)**: Use `fathom --details` during development to see if your prompt is too "verbose" or "vague." If your **Heuristic Confidence** is low (1.0-4.0), your agent is likely to start hallucinating.
 2.  **Confidence Check (Sonar)**: Use `fathom --query` to see if a model *actually* triggered your skill for a specific input. Perfect for finding "rogue skills" that trigger when they shouldn't.
@@ -299,7 +332,7 @@ skill-harbor up --global
 
 ## ✨ Features
 
-- 🚢 **Workspace Sync Engine**: Standardize AI context rules for your entire repo.
+- 🚢 **Skill Sync Engine**: Standardize AI context rules for your entire repo.
 - 🏗️ **Multi-Agent Support**: Automatic distribution to **Claude Code**, **Cursor**, **Gemini CLI**, **Windsurf**, **Continue**, and **Antigravity**.
 - ⚡ **Parallel Synchronization**: Sync your entire fleet of skills concurrently for maximum performance.
 - 🏗️ **Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
@@ -358,6 +391,25 @@ Skill Harbor acts as the "Docker Compose" of agent skills—it is a strict team 
 ---
 
 
+## 🧰 The Harbormaster's Toolkit (Meta-Skills)
+
+Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. Instead of manual scaffolding, we provide a set of **AI-Native Meta-Skills** (Tools) that can be docked directly into your harbor to help you build, evaluate, and standardize your fleet.
+
+### ⚓ The Toolkit Collection
+- **`loft-master`**: Guides you in designing a new skill. It uses the "Lofting" process to ensure the skill is "right-sized" (Dinghy vs. Frigate) and enforces input/output contracts.
+- **`fleet-surgeon`**: Evaluates existing skills for "context bloat" and provides step-by-step refactoring guides to split a massive "Galleon" into smaller, efficient "Schooners."
+- **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
+
+### 👻 Interactive Ghost Docking
+When running `fathom --ghosts` or `voyager`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+
+```bash
+# Scan for ghosts and dock them interactively
+skill-harbor fathom --ghosts
+```
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! To ensure a smooth release process, we use **Quartermaster** (our nautical-themed wrapper for **[Changesets](https://github.com/changesets/changesets)**) for automated versioning and meaningful changelog generation.
@@ -381,5 +433,5 @@ When your PR is merged to `main`, our GitHub Action will automatically:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 <p align="center">
-  Built with ❤️ for the AI Agent Ecosystem
+  Built with ❤️ for the Modern Developer Workflow
 </p>

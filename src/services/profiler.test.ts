@@ -28,8 +28,8 @@ description: A simple API tool to fetch data.
             expect(result.heuristics.schemaStrictness).toBeDefined();
         });
 
-        it("should detect and evaluate an Agentic Skill correctly", async () => {
-            const skillPath = "/fake/agentic-skill";
+        it("should detect and evaluate an Agent Skill correctly", async () => {
+            const skillPath = "/fake/agent-skill";
             const skillMd = `---
 name: hook-ascender
 description: A specialized skill for refactoring React hooks into cleaner patterns.
@@ -45,13 +45,13 @@ To improve code quality.`;
 
             const result = await service.calculateHeuristicConfidence(skillPath);
 
-            expect(result.skillType).toBe("Agentic Skill");
+            expect(result.skillType).toBe("Agent Skill");
             expect(result.score).toBeGreaterThan(0); // Should be a valid score
             expect(result.heuristics.tagDensity).toBe(-2); // 3 tags
             expect(result.heuristics.triggerClarity).toBe(-3); // 2 sections
         });
 
-        it("should penalize Agentic Skills with short descriptions", async () => {
+        it("should penalize Agent Skills with short descriptions", async () => {
             const skillPath = "/fake/vague-skill";
             const skillMd = `---
 name: vague-skill
@@ -64,7 +64,7 @@ tags: []
 
             const result = await service.calculateHeuristicConfidence(skillPath);
 
-            expect(result.skillType).toBe("Agentic Skill");
+            expect(result.skillType).toBe("Agent Skill");
             expect(result.heuristics.semanticVagueness).toBe(3);
         });
 
@@ -86,6 +86,62 @@ tags: [a, b, c]
 
             expect(result.heuristics.triggerClarity).toBe(-3);
             expect(result.score).toBeGreaterThanOrEqual(9); // Glassy Water territory (high = good)
+        });
+
+        it("should parse contracts from frontmatter", async () => {
+            const skillPath = "/fake/frontmatter-contract";
+            const skillMd = `---
+name: frontmatter-contract
+description: A config testing skill.
+contracts:
+  requires:
+    input_text: string
+  produces:
+    summary: json
+---`;
+            vi.mocked(fs.readFile).mockResolvedValue(skillMd);
+            vi.mocked(fs.readdir).mockResolvedValue([]);
+
+            const result = await service.calculateHeuristicConfidence(skillPath);
+
+            expect(result.contracts?.missingStandard).toBe(false);
+            expect(result.contracts?.requires["input_text"]).toBe("string");
+            expect(result.contracts?.produces["summary"]).toBe("json");
+        });
+
+        it("should parse contracts from markdown lists", async () => {
+            const skillPath = "/fake/markdown-contract";
+            const skillMd = `---
+name: markdown-contract
+description: A markdown testing skill.
+---
+## Requires
+- \`input_text\`: string
+
+## Produces
+- summary: json array`;
+            vi.mocked(fs.readFile).mockResolvedValue(skillMd);
+            vi.mocked(fs.readdir).mockResolvedValue([]);
+
+            const result = await service.calculateHeuristicConfidence(skillPath);
+
+            expect(result.contracts?.missingStandard).toBe(false);
+            expect(result.contracts?.requires["input_text"]).toBe("string");
+            expect(result.contracts?.produces["summary"]).toBe("json array");
+        });
+
+        it("should mark missingStandard if no contracts defined", async () => {
+            const skillPath = "/fake/no-contract";
+            const skillMd = `---
+name: no-contract
+description: No contracts here.
+---`;
+            vi.mocked(fs.readFile).mockResolvedValue(skillMd);
+            vi.mocked(fs.readdir).mockResolvedValue([]);
+
+            const result = await service.calculateHeuristicConfidence(skillPath);
+
+            expect(result.contracts?.missingStandard).toBe(true);
         });
     });
 });

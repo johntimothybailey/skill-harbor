@@ -25,17 +25,26 @@ export interface HarborManifest {
 
 export class ManifestManager {
     private manifestPath: string;
+    private localManifestPath: string;
     private harborDir: string;
+    private skillsDir: string;
     private cwd: string;
+    private migrationRecommended: boolean = false;
+    private localMigrationRecommended: boolean = false;
+    private initialized: boolean = false;
 
     constructor(options?: { cwd?: string; customPath?: string }) {
         this.cwd = options?.cwd || process.cwd();
+        this.harborDir = path.join(this.cwd, ".harbor");
+        this.skillsDir = path.join(this.harborDir, "skills");
+
         if (options?.customPath) {
             this.manifestPath = options.customPath;
-            this.harborDir = path.dirname(options.customPath);
+            this.localManifestPath = path.join(this.cwd, "harbor-manifest.local.json"); // Default fallback
         } else {
+            // Defaults, paths will be refined in init()
             this.manifestPath = path.join(this.cwd, "harbor-manifest.json");
-            this.harborDir = path.join(this.cwd, ".harbor");
+            this.localManifestPath = path.join(this.cwd, "harbor-manifest.local.json");
         }
     }
 
@@ -44,24 +53,86 @@ export class ManifestManager {
     }
 
     public getLocalPath(): string {
-        return path.join(this.cwd, "harbor-manifest.local.json");
+        return this.localManifestPath;
+    }
+
+    public get isMigrationRecommended(): boolean {
+        return this.migrationRecommended;
+    }
+
+    public get isLocalMigrationRecommended(): boolean {
+        return this.localMigrationRecommended;
     }
 
     public async init(): Promise<void> {
-        await fs.mkdir(this.harborDir, { recursive: true });
+        if (this.initialized) return;
+
+        // Ensure .harbor/skills exists
+        await fs.mkdir(this.skillsDir, { recursive: true });
+
+        // Resolve shared manifest location
+        const preferredPath = path.join(this.harborDir, "harbor-manifest.json");
+        const legacyPath = path.join(this.cwd, "harbor-manifest.json");
+
+        // If not using a custom path or haven't resolved yet
+        if (this.manifestPath === legacyPath || this.manifestPath === preferredPath) {
+            const hasPreferred = await this.pathExists(preferredPath);
+            const hasLegacy = await this.pathExists(legacyPath);
+
+            if (hasPreferred) {
+                this.manifestPath = preferredPath;
+            } else if (hasLegacy) {
+                this.manifestPath = legacyPath;
+                this.migrationRecommended = true;
+            } else {
+                this.manifestPath = preferredPath;
+            }
+        }
+
+        // Resolve local manifest location
+        const localPreferredPath = path.join(this.harborDir, "harbor-manifest.local.json");
+        const localLegacyPath = path.join(this.cwd, "harbor-manifest.local.json");
+
+        const hasLocalPreferred = await this.pathExists(localPreferredPath);
+        const hasLocalLegacy = await this.pathExists(localLegacyPath);
+
+        if (hasLocalPreferred) {
+            this.localManifestPath = localPreferredPath;
+        } else if (hasLocalLegacy) {
+            this.localManifestPath = localLegacyPath;
+            this.localMigrationRecommended = true;
+        } else {
+            this.localManifestPath = localPreferredPath;
+        }
+
         try {
             await fs.access(this.manifestPath);
         } catch {
-            const initialManifest: HarborManifest = {
-                version: "1.0",
-                dependencies: {},
-                skills: {}
-            };
-            await this.write(initialManifest);
+            // Only write a new manifest if we're not using a global or local-only layer
+            // For the shared (preferred) layer, create it if it doesn't exist
+            if (this.manifestPath.includes("harbor-manifest.json")) {
+                const initialManifest: HarborManifest = {
+                    version: "1.0",
+                    dependencies: {},
+                    skills: {}
+                };
+                await this.write(initialManifest);
+            }
+        }
+        this.initialized = true;
+    }
+
+    private async pathExists(p: string): Promise<boolean> {
+        try {
+            await fs.access(p);
+            return true;
+        } catch {
+            return false;
         }
     }
 
     public async read(type: ManifestLayer = "shared"): Promise<HarborManifest> {
+        await this.init();
         let filePath = this.manifestPath;
         if (type === "global") filePath = ManifestManager.getGlobalPath();
         if (type === "local") filePath = this.getLocalPath();
@@ -86,6 +157,7 @@ export class ManifestManager {
      * Priority: Local > Shared > Global
      */
     public async readMerged(): Promise<HarborManifest> {
+        await this.init();
         const globalManifest = await this.read("global");
         const sharedManifest = await this.read("shared");
         const localManifest = await this.read("local");
@@ -178,7 +250,12 @@ export class ManifestManager {
         await this.write(manifest, type);
     }
 
+    public getSkillsCacheDir(): string {
+        return this.skillsDir;
+    }
+
+    /** @deprecated Use getSkillsCacheDir() instead */
     public getHarborDir(): string {
-        return this.harborDir;
+        return this.skillsDir;
     }
 }

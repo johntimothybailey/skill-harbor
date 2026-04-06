@@ -1,4 +1,4 @@
-export type SkillType = "API Tool" | "Agentic Skill";
+export type SkillType = "API Tool" | "Agent Skill";
 
 export type ShipClass = "Dinghy" | "Schooner" | "Brigantine" | "Frigate" | "Galleon";
 
@@ -8,6 +8,12 @@ export type WaterCondition =
     | "Choppy Water" 
     | "Rough Seas" 
     | "Storm Surge";
+
+export interface ContractValidation {
+    missingStandard: boolean;
+    requires: Record<string, string>;
+    produces: Record<string, string>;
+}
 
 export interface FathomMetrics {
     displacement: {
@@ -44,6 +50,7 @@ export interface FathomMetrics {
         tagDensity?: number;
         triggerClarity?: number;
     };
+    contracts?: ContractValidation;
 }
 
 export interface SkillProfile {
@@ -61,7 +68,7 @@ export interface HarborHealthReport {
     averageHeuristicConfidence: number;
     averageSonarConfidence?: number; // Optional Sonar average if query provided
     composition: {
-        agentic: number;
+        agent: number;
         tools: number;
     };
     shipDistribution: Record<ShipClass, number>;
@@ -74,6 +81,8 @@ export interface HarborHealthReport {
         isHealthy: boolean;
         violations: string[];
     };
+    contractMismatches?: string[];
+    contractWarnings?: string[];
     fleetStatus?: {
         berthed: number;
         stowed: number;

@@ -10,6 +10,8 @@ import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
 import { fathomAction } from "./commands/fathom";
+import { voyagerAction } from "./commands/voyager";
+import { migrateAction } from "./commands/migrate";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -22,7 +24,7 @@ const program = new Command();
 
 program
     .name("skill-harbor")
-    .description("⚓ Skill Harbor: The Declarative Workspace Orchestrator for AI Agents")
+    .description("⚓ Skill Harbor: The Declarative Skill Setup & Orchestration Engine")
     .version(pkg.version);
 
 
@@ -38,8 +40,14 @@ program
     .description("⚓ The Core Engine. Syncs, transpiles, and berths skills.")
     .option("-g, --global", "Include global manifest skills in the sync")
     .option("-l, --lockdown", "Enforces a strict, manifest-only environment. Stows existing rules first.")
+    .option("-m, --migrate", "⚓ Automates the transition to the consolidated .harbor/ layout.")
     .option("-t, --target <name>", "Override manifest targets and sync only to a specific agent berth")
     .action(upAction);
+
+program
+    .command("migrate")
+    .description("🛳️  Move root manifests and legacy caches to the new .harbor/ standard.")
+    .action(migrateAction);
 
 program
     .command("freshen")
@@ -94,7 +102,16 @@ program
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")
+    .option("-c, --contracts", "Run semantic contract validation between skills to ensure I/O schema compatibility.")
     .option("-g, --global", "Target the global manifest (~/.harbor).")
     .action(fathomAction);
+
+program
+    .command("voyager [query]")
+    .description("End-to-end integration testing suite to simulate agentic workflows.")
+    .option("-f, --file <path>", "Path to a YAML test definition file (e.g., harbor-voyager-test.yaml)")
+    .option("-m, --model <name>", "Override the default LLM model for the voyager.")
+    .option("-b, --baseUrl <url>", "Override the default API base URL for the voyager.")
+    .action(voyagerAction);
 
 await program.parseAsync(process.argv);

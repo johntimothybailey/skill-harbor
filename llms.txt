@@ -1,0 +1,33 @@
+# Skill Harbor ⚓
+
+> The Declarative Skill Setup & Orchestration Engine.
+
+## Mission
+Enable teams and individuals to **gain deep insights** into their skills, **refine and hone** them for project-specific needs, and **orchestrate** their distribution at scale. Skill Harbor is the intelligence infrastructure layer that makes sharing, managing, and optimizing engineering context seamless at both the local project and global fleet levels.
+
+## Documentation Structure
+- **[Introduction](https://docs.skill-harbor.app/introduction)**: Overview and core mission.
+- **[Quickstart](https://docs.skill-harbor.app/quickstart)**: 3-step installation and first sync.
+- **[Concepts: Skill Standards](https://docs.skill-harbor.app/concepts/skill-standards)**: Documentation on 'Ship Classes' (Dinghy -> Galleon) and harbor certified skill anatomy.
+- **[Concepts: The Manifest & .harbor](https://docs.skill-harbor.app/concepts/manifest)**: Tracking, control, and management of the skill fleet.
+- **[CLI Reference](https://docs.skill-harbor.app/reference/commands)**: Detailed guide for all commands (`up`, `fathom`, `voyager`, etc.).
+
+## Commands
+- `dock <url>`: Register a new skill in the manifest.
+- `up`: The core sync engine — fetch, transpile, and berth skills into agent folders.
+- `freshen`: Force-sync by bypassing local hash cache.
+- `fathom`: Profile token displacement, heuristic confidence, sonar confidence, and contract alignment.
+- `voyager`: End-to-end integration testing that simulates an agent loop with mocked tool calls.
+- `lighthouse`: Generate a fleet intelligence prompt snippet for zero-tier discovery.
+- `stow` / `unstow`: Back up and restore agent skills for lockdown governance.
+- `check`: Verify berthed skills have valid metadata and integrity.
+- `list`: Show all skills tracked in the manifest.
+- `undock`: Purge berthed skills from agent folders.
+- `migrate`: Move legacy root-level manifests into the `.harbor/` standard.
+
+## Key Concepts
+- **Three-Layer Manifests**: Global (`~/.harbor/`) > Project (`.harbor/`) > Local Override, merged with last-wins priority.
+- **Multi-Platform**: Automatic distribution to Claude Code, Cursor, Codex, and Antigravity.
+- **Semantic Contracts**: Skills declare `## Requires` and `## Produces` for validated chaining.
+- **Ghost Discovery**: Detect unregistered skills in agent berths with `fathom --ghosts`.
+- **Lockdown Governance**: Enforce manifest-only environments for sensitive projects.

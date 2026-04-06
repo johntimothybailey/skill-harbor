@@ -14,7 +14,7 @@ describe('Skill Harbor CLI Integration Tests', () => {
     it('should display help information correctly', async () => {
         const { stdout } = await runCommand('--help');
         expect(stdout).toContain('Usage:');
-        expect(stdout).toContain('⚓ Skill Harbor: The Declarative Workspace Orchestrator for AI Agents');
+        expect(stdout).toContain('⚓ Skill Harbor: The Declarative Skill Setup & Orchestration Engine');
     });
 
     it('should run the "list" command successfully', async () => {

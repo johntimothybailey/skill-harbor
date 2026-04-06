@@ -36,10 +36,13 @@ export class ProfilerService {
     /**
      * Confidence (Heuristic): Calculates trigger likelihood (1-10) based on local heuristics.
      */
-    async calculateHeuristicConfidence(skillPath: string): Promise<FathomMetrics["heuristicConfidence"] & { heuristics: FathomMetrics["heuristics"], validation: FathomMetrics["validation"] }> {
+    async calculateHeuristicConfidence(skillPath: string): Promise<FathomMetrics["heuristicConfidence"] & { heuristics: FathomMetrics["heuristics"], validation: FathomMetrics["validation"], contracts: FathomMetrics["contracts"] }> {
         const { metadata, content } = await this.readSkillMetadata(skillPath);
         const validation = this.validateMetadata(metadata);
         const skillType = await this.detectSkillType(skillPath, metadata);
+
+        const configManager = ConfigManager.getInstance();
+        const contracts = this.extractContracts(metadata, content, configManager);
 
         let result: { 
             score: number; 
@@ -49,7 +52,7 @@ export class ProfilerService {
         if (skillType === "API Tool") {
             result = this.evaluateApiToolWake(metadata);
         } else {
-            result = this.evaluateAgenticSkillWake(metadata, content);
+            result = this.evaluateAgentSkillWake(metadata, content);
         }
 
         let score = result.score;
@@ -66,7 +69,8 @@ export class ProfilerService {
             wakeSize,
             skillType,
             validation,
-            heuristics: result.heuristics
+            heuristics: result.heuristics,
+            contracts
         };
     }
 
@@ -163,13 +167,13 @@ export class ProfilerService {
     /**
      * Generates a comprehensive health report by aggregating metrics from all discovered skills.
      */
-    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds, query?: string, sonarConfig?: SonarConfig): Promise<HarborHealthReport> {
+    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds, query?: string, sonarConfig?: SonarConfig, validateContracts: boolean = false): Promise<HarborHealthReport> {
         let totalTokens = 0;
         let totalScoreSum = 0;
         let totalSonarSum = 0;
         let sonarCount = 0;
         let scoreCount = 0;
-        let agenticCount = 0;
+        let agentCount = 0;
         let toolCount = 0;
         
         const shipDistribution: Record<ShipClass, number> = {
@@ -179,6 +183,11 @@ export class ProfilerService {
             "Frigate": 0,
             "Galleon": 0
         };
+
+        const globalProduces: Record<string, { type: string; skillName: string }[]> = {};
+        const globalRequires: { skillName: string; variableName: string; requiredType: string }[] = [];
+        const contractWarnings: string[] = [];
+        const contractMismatches: string[] = [];
 
         for (const skillPath of skillPaths) {
             const skillName = path.basename(skillPath);
@@ -201,10 +210,24 @@ export class ProfilerService {
                 }
             }
 
-            if (heuristic.skillType === "Agentic Skill") agenticCount++;
+            if (heuristic.skillType === "Agent Skill") agentCount++;
             else toolCount++;
 
             shipDistribution[disp.shipClass]++;
+
+            if (validateContracts) {
+                if (heuristic.contracts?.missingStandard) {
+                    contractWarnings.push(`[${skillName}] ⚠️  Not explicitly configured for chaining.`);
+                } else if (heuristic.contracts) {
+                    for (const [varName, type] of Object.entries(heuristic.contracts.produces)) {
+                        if (!globalProduces[varName]) globalProduces[varName] = [];
+                        globalProduces[varName].push({ type, skillName });
+                    }
+                    for (const [varName, requiredType] of Object.entries(heuristic.contracts.requires)) {
+                        globalRequires.push({ skillName, variableName: varName, requiredType });
+                    }
+                }
+            }
         }
 
         const averageHeuristicConfidence = scoreCount > 0 ? totalScoreSum / scoreCount : 0;
@@ -231,6 +254,23 @@ export class ProfilerService {
             }
         }
 
+        if (validateContracts) {
+            for (const req of globalRequires) {
+                const producers = globalProduces[req.variableName];
+                if (!producers || producers.length === 0) {
+                    contractWarnings.push(`[${req.skillName}] Requires '${req.variableName}', but no skill in the harbor produces it. (May be provided by prompt).`);
+                } else {
+                    for (const producer of producers) {
+                        if (producer.type.toLowerCase() !== req.requiredType.toLowerCase()) {
+                            const mismatchMsg = `[${req.skillName}] Type mismatch for '${req.variableName}': ${req.skillName} requires '${req.requiredType}', but ${producer.skillName} produces '${producer.type}'.`;
+                            contractMismatches.push(mismatchMsg);
+                            violations.push(mismatchMsg); // Fails CI/CD
+                        }
+                    }
+                }
+            }
+        }
+
         return {
             totalSkills: skillPaths.length,
             totalTokens,
@@ -238,7 +278,7 @@ export class ProfilerService {
             averageHeuristicConfidence,
             averageSonarConfidence,
             composition: {
-                agentic: agenticCount,
+                agent: agentCount,
                 tools: toolCount
             },
             shipDistribution,
@@ -246,7 +286,9 @@ export class ProfilerService {
             status: {
                 isHealthy: violations.length === 0,
                 violations
-            }
+            },
+            contractMismatches,
+            contractWarnings
         };
     }
 
@@ -283,11 +325,11 @@ export class ProfilerService {
 
     private async detectSkillType(skillPath: string, metadata: any): Promise<SkillType> {
         if (metadata.name && (metadata.triggers?.length > 0 || metadata.tags?.length > 0)) {
-            return "Agentic Skill";
+            return "Agent Skill";
         }
 
         if (metadata.name && metadata.description) {
-            return "Agentic Skill";
+            return "Agent Skill";
         }
 
         const schemaExclusions = ["package.json", "tsconfig.json", ".skillfish.json", "package-lock.json"];
@@ -352,7 +394,7 @@ export class ProfilerService {
         };
     }
 
-    private evaluateAgenticSkillWake(metadata: any, content: string): { score: number, heuristics: FathomMetrics["heuristics"] } {
+    private evaluateAgentSkillWake(metadata: any, content: string): { score: number, heuristics: FathomMetrics["heuristics"] } {
         let score = 5;
         let semanticVagueness = 0;
         let negativeConstraints = 0;
@@ -434,6 +476,53 @@ export class ProfilerService {
             return res.isDirectory() ? this.getAllFiles(resPath) : resPath;
         }));
         return Array.prototype.concat(...files);
+    }
+
+    private extractContracts(metadata: any, content: string, config: ConfigManager): FathomMetrics["contracts"] {
+        let contractsConfig;
+        try {
+            contractsConfig = config.getConfig().contracts;
+        } catch {
+            contractsConfig = { requiresHeader: "Requires", producesHeader: "Produces" };
+        }
+        const requiresHeader = contractsConfig?.requiresHeader || "Requires";
+        const producesHeader = contractsConfig?.producesHeader || "Produces";
+
+        let requires: Record<string, string> = {};
+        let produces: Record<string, string> = {};
+        let missingStandard = true;
+
+        // 1. Try YAML frontmatter first
+        if (metadata.contracts) {
+            missingStandard = false;
+            requires = metadata.contracts.requires || {};
+            produces = metadata.contracts.produces || {};
+            return { missingStandard, requires, produces };
+        }
+
+        // 2. Fallback to Markdown parsing
+        const parseSection = (headerName: string): Record<string, string> => {
+            const result: Record<string, string> = {};
+            const headerRegex = new RegExp(`##\\s+${headerName}\\s*\\n([\\s\\S]*?)(?:\\n##|$)`, 'i');
+            const match = content.match(headerRegex);
+            
+            if (match && match[1]) {
+                missingStandard = false;
+                const sectionContent = match[1];
+                
+                const itemRegex = /-\s*`?([a-zA-Z0-9_\-]+)`?:\s*(.+)/g;
+                let itemMatch;
+                while ((itemMatch = itemRegex.exec(sectionContent)) !== null) {
+                    result[itemMatch[1]] = itemMatch[2].trim();
+                }
+            }
+            return result;
+        };
+
+        requires = parseSection(requiresHeader);
+        produces = parseSection(producesHeader);
+
+        return { missingStandard, requires, produces };
     }
 
     private async readSkillMetadata(skillPath: string): Promise<{ metadata: any, content: string }> {

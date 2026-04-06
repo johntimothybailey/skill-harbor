@@ -1,10 +1,10 @@
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth } from "../utils";
+import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth, ask } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
-import { printHeader, printError, printInfo, printHarborHealthReport } from "../ui";
+import { printHeader, printError, printInfo, printHarborHealthReport, printSuccess } from "../ui";
 import os from "node:os";
 
 export async function fathomAction(options: any, command: any) {
@@ -119,7 +119,7 @@ export async function fathomAction(options: any, command: any) {
                 minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
             };
 
-            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar);
+            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar, opts.contracts);
             
             // Calculate Fleet Status for the report
             const fleetStatus = { berthed: 0, stowed: 0, dryDock: 0 };
@@ -238,6 +238,20 @@ export async function fathomAction(options: any, command: any) {
                 console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
                 console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
 
+                if (opts.contracts) {
+                    if (heuristic.contracts?.missingStandard) {
+                        console.log(`    ${kleur.yellow("Contracts:")}              ⚠️  Not explicitly configured for chaining. (See: https://docs.skill-harbor.app/concepts/skill-standards#-semantic-contracts-io)`);
+                    } else if (heuristic.contracts) {
+                        const reqStr = Object.keys(heuristic.contracts.requires).length > 0 
+                            ? Object.keys(heuristic.contracts.requires).join(", ") 
+                            : "none";
+                        const prodStr = Object.keys(heuristic.contracts.produces).length > 0 
+                            ? Object.keys(heuristic.contracts.produces).join(", ") 
+                            : "none";
+                        console.log(`    ${kleur.cyan("Contracts:")}              Requires: [${reqStr}] | Produces: [${prodStr}]`);
+                    }
+                }
+
                 if (showDetails) {
                     if (!heuristic.validation.isProperlyFormatted) {
                         console.log(kleur.yellow(`\n    ⚠️  Manifest Validation Warnings:`));
@@ -284,6 +298,24 @@ export async function fathomAction(options: any, command: any) {
             console.log(`\n${kleur.gray("Heuristic Tip: Skills with low scores (1-2) have a 'Massive Wake' and are likely to be triggered accidentally by LLMs.")}`);
             if (!showDetails) {
                 console.log(kleur.gray("Use --details for a full breakdown of each heuristic."));
+            }
+        }
+
+        // 5. Interactive Ghost Docking
+        if (opts.ghosts && ghostSkillPaths.length > 0 && (!opts.format || opts.format === "pretty")) {
+            console.log(kleur.magenta(`\n👻  Ghost Alert: Found ${ghostSkillPaths.length} unregistered local skills.`));
+            if (await ask(`Would you like to dock these to your local manifest now?`, kleur)) {
+                for (const ghostPath of ghostSkillPaths) {
+                    const name = path.basename(ghostPath);
+                    // Dock as local override
+                    await manifestManager.addSkill({
+                        name: name,
+                        source: ghostPath,
+                        localPath: ""
+                    }, "local");
+                    console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
+                }
+                printSuccess("All ghosts have been successfully berthed to your harbor manifest.");
             }
         }
     } catch (error: any) {

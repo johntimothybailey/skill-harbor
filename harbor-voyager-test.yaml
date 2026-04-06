@@ -1,0 +1,7 @@
+query: "Check if the codebase is portable and then generate a report on any hidden skills."
+expected_tools: 
+  - Scryer
+  - Fathom
+mocks:
+  Scryer: "Portable issues found: None. The codebase looks clean."
+  Fathom: "Hidden skills report: 2 ghost skills found."

@@ -51,7 +51,7 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     let content = `${kleur.bold().blue('⚓  Harbor Health Report: Fleet Intelligence Status')}\n`;
     content += `${kleur.gray('─────────────────────────────────────────────────')}\n\n`;
     
-    content += `${kleur.cyan('Fleet Size:')}    ${totalSkills} Skills (${composition.agentic} Agentic, ${composition.tools} Tools)\n`;
+    content += `${kleur.cyan('Fleet Size:')}    ${totalSkills} Skills (${composition.agent} Agent, ${composition.tools} Tools)\n`;
     content += `${kleur.cyan('Total Volume:')}  ${kleur.bold(totalTokens.toLocaleString())} Tokens\n`;
     content += `${kleur.cyan('Daily Maintenance:')} GPT-4o: $${totalCost.gpt4o.toFixed(4)} | Mini: $${totalCost.gpt4oMini.toFixed(4)}\n\n`;
     
@@ -82,7 +82,24 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
         content += `⚓ Berthed: ${report.fleetStatus.berthed} | 📦 Stowed: ${report.fleetStatus.stowed} | 🚜 Dry Dock: ${report.fleetStatus.dryDock}\n\n`;
     }
 
-    content += `${kleur.bold().magenta('🧠 Context Window Saturation (Cumulative Bloat)')}\n`;
+    if (report.contractMismatches || report.contractWarnings) {
+        if ((report.contractMismatches && report.contractMismatches.length > 0) || (report.contractWarnings && report.contractWarnings.length > 0)) {
+            content += `${kleur.bold().magenta('🤝 Contract Integrity')}\n`;
+            if (report.contractMismatches && report.contractMismatches.length > 0) {
+                for (const mismatch of report.contractMismatches) {
+                    content += `${kleur.red(`❌ ${mismatch}`)}\n`;
+                }
+            }
+            if (report.contractWarnings && report.contractWarnings.length > 0) {
+                for (const warning of report.contractWarnings) {
+                    content += `${kleur.yellow(`⚠️  ${warning}`)}\n`;
+                }
+            }
+            content += `\n`;
+        }
+    }
+
+    content += `${kleur.bold().blue('🧠 Context Window Saturation (Cumulative Bloat)')}\n`;
     for (const model of contextBloat) {
         const percent = model.percentage.toFixed(1);
         const barLength = 20;

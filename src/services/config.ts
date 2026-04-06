@@ -10,8 +10,14 @@ export interface SonarConfig {
     apiKey?: string;
 }
 
+export interface ContractsConfig {
+    requiresHeader: string;
+    producesHeader: string;
+}
+
 export interface ProfilerConfig {
     sonar: SonarConfig;
+    contracts: ContractsConfig;
 }
 
 export class ConfigManager {
@@ -53,8 +59,19 @@ export class ConfigManager {
         // API Key Priority: 1. ENV, 2. profiler.yaml (not recommended), 3. SONAR_API_KEY
         mergedSonar.apiKey = process.env.HARBOR_PROFILER_API_KEY || process.env.OPENAI_API_KEY;
 
+        const contractsDefaults: ContractsConfig = {
+            requiresHeader: "Requires",
+            producesHeader: "Produces"
+        };
+
+        const mergedContracts: ContractsConfig = {
+            ...contractsDefaults,
+            ...(fileConfig.contracts || {})
+        };
+
         this.config = {
-            sonar: mergedSonar
+            sonar: mergedSonar,
+            contracts: mergedContracts
         };
 
         return this.config;

@@ -1,0 +1,60 @@
+---
+title: "The Toolkit (Meta-Skills)"
+description: "AI-native tools to help you design, refactor, and certify your agent fleet."
+icon: "toolbox"
+---
+
+# 🧰 The Harbormaster's Toolkit
+
+Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. Instead of manual scaffolding, we provide a set of **AI-Native Meta-Skills** (Tools) that can be docked directly into your harbor to help you build, evaluate, and standardize your fleet.
+
+## ⚓ The Toolkit Collection
+
+These meta-skills aren't part of the CLI itself—they are **Doctor-Sourced Skills** that you run with your favorite agent (Claude, Cursor, Codex, Antigravity) to help manage your other skills.
+
+<CardGroup cols={1}>
+  <Card title="Loft Master" icon="drafting-compass">
+    **Designer Skill**. Use the "Lofting" process to ensure new skills are "right-sized" (Dinghy vs. Frigate) and enforce strict input/output contracts.
+  </Card>
+  <Card title="Fleet Surgeon" icon="stethoscope">
+    **Refactorist Skill**. Evaluates existing skills for "context bloat" and provides step-by-step refactoring guides to split a massive "Galleon" into smaller, efficient "Schooners."
+  </Card>
+  <Card title="Contract Notary" icon="signature">
+    **Auditor Skill**. Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility between skills.
+  </Card>
+</CardGroup>
+
+---
+
+## ⚓ Usage: How to Dock the Toolkit
+
+You can dock the entire toolkit at once or individual pieces. Since these are provided by the official Skill Harbor library, they integrate seamlessly with our governance features.
+
+```bash
+# Dock a skill from a remote repository
+skill-harbor dock https://github.com/johntimothybailey/sia/skills/catch-22 --global
+
+# Run up to berth these skills into your agent folders
+skill-harbor up --global
+```
+
+---
+
+## ⚓ Authoring Workflow
+
+1.  **Lofting**: Start by prompting your agent with **Loft Master**. Describe the new skill you want to create. It will guide you through the prompt design and contract definition.
+2.  **Surgeons & Refactoring**: When **Fathom** reports a "Storm Surge" (Collision Risk), call the **Fleet Surgeon**. Provide the offending skill file, and it will give you a refactor plan to reduce its "displacement" (token usage).
+3.  **Certification**: Before a major release or team rollout, use the **Contract Notary** to certify every connection point in your multi-tool fleet.
+
+---
+
+## ⚓ Interactive Ghost Docking
+
+When running `skill-harbor fathom --ghosts`, Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+
+```bash
+# Scan for ghosts and dock them interactively
+skill-harbor fathom --ghosts
+```
+
+For details on what counts as a ghost and how the scan works, see [Fathom: Ghost Skill Discovery](/concepts/fathom#-ghost-skill-discovery).

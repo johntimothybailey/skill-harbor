@@ -108,3 +108,21 @@ export async function getStowageBerths(baseDir: string, targets?: string[]): Pro
     
     return activeStowage;
 }
+
+/**
+ * Interactive CLI prompt for Yes/No questions.
+ */
+export async function ask(query: string, kleur: any): Promise<boolean> {
+    const readline = await import("node:readline");
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    return new Promise((resolve) => {
+        rl.question(`${kleur.bold().yellow("🤔 " + query) + " "} ${kleur.gray("(y/N)")} `, (answer: string) => {
+            rl.close();
+            resolve(answer.toLowerCase() === 'y');
+        });
+    });
+}
