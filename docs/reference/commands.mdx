@@ -105,4 +105,17 @@ Shows a breakdown of all skills currently tracked by Skill Harbor, including the
 ---
 
 ## `migrate`
-Modernizes a project directory to the new `.harbor/` standard by moving legacy manifests and initializing the compass.
+Interactive migration engine that modernizes a project from the legacy root-level layout to the consolidated `.harbor/` standard.
+
+The engine detects and offers to move:
+1. **Root manifests** — `harbor-manifest.json` and `harbor-manifest.local.json` from the project root into `.harbor/`.
+2. **Loose skill caches** — Skill directories sitting directly in `.harbor/` are relocated to `.harbor/skills/`.
+3. **Broad gitignore rules** — A blanket `.harbor/` ignore is replaced with granular rules (`.harbor/skills/`, `.harbor/stowage/`) so that manifests and hooks can be committed.
+
+Every step is interactive — nothing moves without confirmation.
+
+<Tip>
+You can also trigger migration during sync with `skill-harbor up --migrate`.
+</Tip>
+
+*For context on why the `.harbor/` layout exists, see [The Manifest & .harbor](/concepts/manifest#-migrating-from-root-level-manifests).*

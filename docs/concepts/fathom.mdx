@@ -24,7 +24,7 @@ skill-harbor fathom --query "Can you help me refactor this React code?" --detail
 
 ## 🧮 The Science of Fathom
 
-While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the core "Intelligence Audit" is powered by proprietary heuristic formulas:
+While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the core "Intelligence Audit" is powered by custom heuristic formulas:
 
 <Steps>
   <Step title="Deterministic Token Math">
@@ -70,12 +70,74 @@ If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill
 
 ---
 
+## 👻 Ghost Skill Discovery
+
+A **Ghost** is any skill folder containing a valid `SKILL.md` that exists inside your agent berths (e.g., `.claude/skills/`, `.cursor/skills/`) or stowage but is **not registered** in your harbor manifest.
+
+Ghosts appear when skills are manually copied into agent folders, left behind after an undock, or created outside of the `dock` workflow. They represent untracked context that can affect agent behavior without being governed by your manifest.
+
+### How it works
+
+When you run `skill-harbor fathom --ghosts`, Fathom:
+
+1. Scans all **active agent berths** (Claude, Cursor, Codex, etc.) for directories containing a `SKILL.md`.
+2. Scans **stowage berths** (`.harbor/stowage/`) for the same.
+3. Compares discovered skill names against the merged manifest (Global + Shared + Local).
+4. Any skill found in a berth but **not** in the manifest is flagged as a Ghost.
+
+Ghosts are included in the individual skill analysis output, tagged with a `[Ghost]` label. If `--report` is also active, ghost skill paths are merged into the health report scan.
+
+### Interactive Docking
+
+After the scan, if ghosts are found, Fathom prompts you to **dock them** into your local manifest:
+
+```bash
+skill-harbor fathom --ghosts
+
+# 👻 Ghost Alert: Found 2 unregistered local skills.
+# 🤔 Would you like to dock these to your local manifest now? (y/N)
+```
+
+Selecting `y` registers each ghost as a local override in `harbor-manifest.local.json`.
+
+<Note>
+`skill-harbor voyager` also performs ghost discovery automatically when no properly formatted skills are found in active berths, offering the same interactive docking prompt.
+</Note>
+
+---
+
 ## 📡 Sonar: Probabilistic Confidence
 
 Fathom includes a **Sonar** engine that moves beyond local heuristics to measure real-world model behavior. By providing a sample user query, Fathom hits an LLM provider (OpenAI, Groq, Gemini, or Ollama) and extracts the exact **logprobs** (mathematical likelihood) of that skill triggering.
 
 - **`--query <text>`**: Run a Sonar audit against all skills for a specific query.
 - **`--model <name>`**: Override the model configured in `profiler.yaml`.
+
+---
+
+## 📊 Output Modes
+
+By default, Fathom prints a per-skill breakdown showing displacement, heuristic confidence, sonar confidence, and contract status for each skill in your manifest.
+
+### `--report`
+
+Switches to an aggregate **Harbor Health Report** that summarizes the entire fleet in one view: total tokens, average confidence scores, ship class distribution, context window saturation across models (GPT-4o, Claude Sonnet, GPT-4o-mini), and fleet status (berthed / stowed / dry dock). Use this for a quick fleet-wide health check.
+
+```bash
+# Fleet-wide summary
+skill-harbor fathom --report
+```
+
+When combined with `--details`, the report is printed first followed by the individual skill breakdowns.
+
+### `--format json`
+
+Outputs all data as machine-parsable JSON instead of the styled terminal output. Works with both default and `--report` modes. Useful for piping into dashboards or CI scripts.
+
+```bash
+# JSON output for CI consumption
+skill-harbor fathom --report --format json
+```
 
 ---
 

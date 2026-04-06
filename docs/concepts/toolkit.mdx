@@ -10,7 +10,7 @@ Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. I
 
 ## ⚓ The Toolkit Collection
 
-These meta-skills aren't part of the CLI itself—they are **Doctor-Sourced Skills** that you run with your favorite agent (Claude, Cursor, Antigravity) to help manage your other skills.
+These meta-skills aren't part of the CLI itself—they are **Doctor-Sourced Skills** that you run with your favorite agent (Claude, Cursor, Codex, Antigravity) to help manage your other skills.
 
 <CardGroup cols={1}>
   <Card title="Loft Master" icon="drafting-compass">
@@ -31,8 +31,8 @@ These meta-skills aren't part of the CLI itself—they are **Doctor-Sourced Skil
 You can dock the entire toolkit at once or individual pieces. Since these are provided by the official Skill Harbor library, they integrate seamlessly with our governance features.
 
 ```bash
-# Register the official Skill Harbor Toolkit
-skill-harbor dock https://github.com/skill-harbor/toolkit --global
+# Dock a skill from a remote repository
+skill-harbor dock https://github.com/johntimothybailey/sia/skills/catch-22 --global
 
 # Run up to berth these skills into your agent folders
 skill-harbor up --global
@@ -50,9 +50,11 @@ skill-harbor up --global
 
 ## ⚓ Interactive Ghost Docking
 
-When running `skill-harbor fathom --ghosts`, Harbor acting as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+When running `skill-harbor fathom --ghosts`, Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
 
 ```bash
 # Scan for ghosts and dock them interactively
 skill-harbor fathom --ghosts
 ```
+
+For details on what counts as a ghost and how the scan works, see [Fathom: Ghost Skill Discovery](/concepts/fathom#-ghost-skill-discovery).

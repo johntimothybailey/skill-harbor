@@ -12,23 +12,37 @@ The manifest identifies which skills to pull and how to track them, while the `.
 
 ---
 
-## ⚓ The Dual Manifest Architecture
+## ⚓ The Three-Layer Manifest Architecture
 
-Skill Harbor recognizes two distinct levels of orchestration:
+Skill Harbor merges three manifest layers into a single resolved view every time you run `up`, `fathom`, or any command that reads the manifest. Later layers override earlier ones.
 
-### 1. Project Manifest (`.harbor/harbor-manifest.json`)
-This is the **shared configuration** for a specific repository. It defines the skills every developer on your team needs to have berthed to their respective agents.
+### 1. Global Manifest (`~/.harbor/harbor-manifest.json`)
+Your **personal fleet** — skills that follow you across every project on your machine. Registered with `skill-harbor dock <url> --global` and synced with `skill-harbor up --global`. See [Global Fleet](/concepts/global-fleet) for details.
 
-### 2. Local Override (`.harbor/harbor-manifest.local.json`)
-This allows you to add your **personal skills** or override specific versions of team skills without polluting the main repository. This file is automatically ignored by Git.
+### 2. Project Manifest (`.harbor/harbor-manifest.json`)
+The **shared team configuration** for a specific repository. Committed to Git so every developer gets the same skills. Overrides any Global skill with the same name.
+
+### 3. Local Override (`.harbor/harbor-manifest.local.json`)
+Your **personal overrides** for this specific project — swap a skill version, add a debugging tool, or test a branch without affecting teammates. This file is automatically ignored by Git. Overrides both Project and Global skills with the same name.
+
+### Merge Priority
 
 ```mermaid
-graph TD
-    ProjectManifest[Project Manifest] --- MergedManifest[Merged Manifest]
-    LocalManifest[Local Override] --- MergedManifest
-    MergedManifest --> UP[skill-harbor up]
-    UP --> Agents[AI Agents]
+graph LR
+    Global["1. Global<br/>(lowest priority)"] --> Shared["2. Project<br/>(overrides Global)"]
+    Shared --> Local["3. Local<br/>(highest priority)"]
+    Local --> Merged["Merged Manifest"]
+    Merged --> UP["skill-harbor up"]
 ```
+
+When a skill name exists in multiple layers, the highest-priority layer wins. Overridden skills are flagged in the `up` output:
+
+```
+⚠️  Local Override: The following skills are being overridden by personal definitions:
+   - my-skill
+```
+
+Targets (agent platforms) are merged as a union across all three layers.
 
 ---
 
@@ -67,3 +81,36 @@ By using the `--lockdown` flag, you force your environment to mirror the manifes
 # Sync and enforce the manifest-only environment
 skill-harbor up --lockdown
 ```
+
+---
+
+## 🚀 Migrating from Root-Level Manifests
+
+Earlier versions of Skill Harbor stored `harbor-manifest.json` at the project root. The current standard consolidates everything under `.harbor/` for consistency with the broader AI tooling ecosystem (`.claude/`, `.cursor/`, `.github/`).
+
+If Skill Harbor detects a root-level manifest during `up`, it will display a recommendation:
+
+```
+💡 Recommendation: Found harbor-manifest.json at project root.
+   Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.
+```
+
+### What `migrate` does
+
+The migration engine interactively walks through three steps:
+
+1. **Manifest relocation** — Moves `harbor-manifest.json` and `harbor-manifest.local.json` from the project root into `.harbor/`.
+2. **Skills cache reorganization** — Moves loose skill directories from `.harbor/` into `.harbor/skills/` so that cache and config are cleanly separated.
+3. **Gitignore update** — Replaces a blanket `.harbor/` ignore with granular rules so your manifest and hooks can be committed while the cache stays ignored.
+
+```bash
+# Run the interactive migration
+skill-harbor migrate
+
+# Or trigger it during a sync
+skill-harbor up --migrate
+```
+
+<Warning>
+Moving the manifest is a **breaking change** for teammates still on the old layout. Coordinate the migration with your team and ensure everyone runs `migrate` or pulls the updated `.harbor/` structure.
+</Warning>
