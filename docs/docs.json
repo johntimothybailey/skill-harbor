@@ -14,15 +14,15 @@
         "group": "Introduction",
         "pages": [
           "introduction",
-          "quickstart"
+          "quickstart",
+          "concepts/skill-standards",
+          "concepts/manifest"
         ],
         "icon": "anchor"
       },
       {
-        "group": "Core Concepts",
+        "group": "Commands Deep Dive",
         "pages": [
-          "concepts/skill-standards",
-          "concepts/manifest",
           "concepts/fathom",
           "concepts/voyager",
           "concepts/governance",
