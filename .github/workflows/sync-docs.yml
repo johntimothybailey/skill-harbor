@@ -35,4 +35,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "docs: auto-sync CLI command reference [skip ci]"
-          file_pattern: 'docs/reference/commands.mdx'
+          file_pattern: 'docs/src/content/docs/reference/commands.mdx'

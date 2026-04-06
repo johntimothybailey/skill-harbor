@@ -1,16 +1,13 @@
 ---
 title: "Voyager: Integration Testing"
 description: "Simulate an autonomous agent's loop to verify integration and tool-chaining."
-icon: "vial"
 ---
-
-# ⛵ Voyager
 
 While Fathom provides fast heuristic and single-skill probabilistic checks, **Voyager** is a dedicated integration testing suite for your agent skills. It simulates an entire agent loop to verify that the LLM uses the correct sequence of tools to reach the expected end state.
 
 Voyager reads your active agent berths, constructs JSON Schema tool definitions, and passes mock context payloads to ensure your "fleet" is ready for real-world deployment.
 
-## ⚓ Voyager TL;DR
+## Voyager TL;DR
 
 ```bash
 # Run a specific integration test file
@@ -22,7 +19,7 @@ skill-harbor voyager --query "Check if the codebase is portable."
 
 ---
 
-## 🛠️ Defining a Voyager Test
+## Defining a Voyager Test
 
 Voyager tests are defined in YAML files (typically `harbor-voyager-test.yaml`). This allows you to define the user query, specify which tools *must* be invoked, and provide mock responses for those tools.
 
@@ -31,7 +28,7 @@ Voyager tests are defined in YAML files (typically `harbor-voyager-test.yaml`). 
 ```yaml
 # harbor-voyager-test.yaml
 query: "Check if the codebase is portable and then generate a report on any hidden skills."
-expected_tools: 
+expected_tools:
   - Scryer
   - Fathom
 mocks:
@@ -46,7 +43,7 @@ mocks:
 
 ---
 
-## 🛡️ Governance & CI/CD
+## Governance & CI/CD
 
 Voyager is designed to be a **Pull Request Gate**. If the agent deviates from the `expected_tools` or fails to reach a terminal state, Voyager will **exit with process code 1**, blocking your CI/CD pipeline.
 
@@ -56,12 +53,12 @@ Voyager is designed to be a **Pull Request Gate**. If the agent deviates from th
 
 ---
 
-## ⚓ Why Use Voyager?
+## Why Use Voyager?
 
-1.  **Regression Testing**: Ensure that adding a new skill doesn't break the routing logic for existing skills.
-2.  **Chaining Validation**: Verify that the output of one tool is correctly utilized by the next tool in a multi-step journey.
-3.  **Mocking Destructive Actions**: Test agents that use non-idempotent tools (like `rm` or `git commit`) without actually modifying your environment.
-4.  **Team Standards**: Commit your voyager tests to Git so every developer can verify the fleet's integrity before merging.
+1. **Regression Testing**: Ensure that adding a new skill doesn't break the routing logic for existing skills.
+2. **Chaining Validation**: Verify that the output of one tool is correctly utilized by the next tool in a multi-step journey.
+3. **Mocking Destructive Actions**: Test agents that use non-idempotent tools (like `rm` or `git commit`) without actually modifying your environment.
+4. **Team Standards**: Commit your voyager tests to Git so every developer can verify the fleet's integrity before merging.
 
 ```bash
 # Run Voyager with a specific model override

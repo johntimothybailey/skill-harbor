@@ -1,29 +1,21 @@
 ---
 title: "Governance & Lockdown"
 description: "Isolate agent context and enforce team-wide skill standards."
-icon: "shield-check"
 ---
 
-# 🛡️ Governance & Lockdown
-
-In a professional development environment, ensuring that your AI agent is operating with the correct set of specialized skills—and *only* those skills—is critical for security, performance, and reproducibility.
+In a professional development environment, ensuring that your AI agent is operating with the correct set of specialized skills — and *only* those skills — is critical for security, performance, and reproducibility.
 
 Skill Harbor provides a robust governance system that allows you to isolate your agent's context using **Lockdown Mode**, **Stowage**, and **Unstowing**.
 
-## ⚓ The Governance Lifecycle
+## The Governance Lifecycle
 
-```mermaid
-graph LR
-    Local[Project Manifest] --> Lockdown[skill-harbor up --lockdown]
-    Lockdown --> Stow[Stow Existing Skills]
-    Stow --> Berth[Berth Manifest Skills]
-    Berth --> Unstow[skill-harbor unstow]
-    Unstow --> Restore[Original Environment]
+```
+Project Manifest → skill-harbor up --lockdown → Stow Existing Skills → Berth Manifest Skills → skill-harbor unstow → Original Environment
 ```
 
 ---
 
-## 🔒 Lockdown Mode (`--lockdown`)
+## Lockdown Mode (`--lockdown`)
 
 When you run `skill-harbor up --lockdown`, Harbor treats your `harbor-manifest.json` as the **exclusive** source of truth. Any existing skills in your agent's configuration folders that are *not* defined in the manifest are moved into a secure backup location (Stowage).
 
@@ -39,7 +31,7 @@ skill-harbor up --lockdown
 
 ---
 
-## 📦 Stowage & Unstowing
+## Stowage & Unstowing
 
 If you need a clean slate for a limited time but don't want to permanently delete your existing skills, you can use the `stow` and `unstow` commands.
 
@@ -59,11 +51,11 @@ skill-harbor unstow
 
 ---
 
-## ⚓ Why Use Governance?
+## Why Use Governance?
 
-1.  **Consistency**: One developer adding a 10,000-token skill can ruin the token economy for the whole team. Lockdown prevents this.
-2.  **Context Hygiene**: Agents perform better when their context is "right-sized." Governance helps you keep the "displacement" (token usage) low.
-3.  **Auditability**: By using a declarative manifest and --lockdown, you can audit exactly what logic was available to an agent during any specific development phase.
+1. **Consistency**: One developer adding a 10,000-token skill can ruin the token economy for the whole team. Lockdown prevents this.
+2. **Context Hygiene**: Agents perform better when their context is "right-sized." Governance helps you keep the "displacement" (token usage) low.
+3. **Auditability**: By using a declarative manifest and --lockdown, you can audit exactly what logic was available to an agent during any specific development phase.
 
 ```bash
 # Combining global and local governance

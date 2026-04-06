@@ -1,10 +1,7 @@
 ---
 title: The Manifest & .harbor
 description: "Mastering the control system and directory structure of Skill Harbor."
-icon: "book-open"
 ---
-
-# 📖 The Manifest & .harbor Folder
 
 Skill Harbor manages your fleet of agent skills via a **Declarative Control System**. This system is powered by two main components: the `harbor-manifest.json` file and the hidden `.harbor/` folder in your project or home directory.
 
@@ -12,12 +9,12 @@ The manifest identifies which skills to pull and how to track them, while the `.
 
 ---
 
-## ⚓ The Three-Layer Manifest Architecture
+## The Three-Layer Manifest Architecture
 
 Skill Harbor merges three manifest layers into a single resolved view every time you run `up`, `fathom`, or any command that reads the manifest. Later layers override earlier ones.
 
 ### 1. Global Manifest (`~/.harbor/harbor-manifest.json`)
-Your **personal fleet** — skills that follow you across every project on your machine. Registered with `skill-harbor dock <url> --global` and synced with `skill-harbor up --global`. See [Global Fleet](/concepts/global-fleet) for details.
+Your **personal fleet** — skills that follow you across every project on your machine. Registered with `skill-harbor dock <url> --global` and synced with `skill-harbor up --global`. See [Global Fleet](/concepts/global-fleet/) for details.
 
 ### 2. Project Manifest (`.harbor/harbor-manifest.json`)
 The **shared team configuration** for a specific repository. Committed to Git so every developer gets the same skills. Overrides any Global skill with the same name.
@@ -27,18 +24,14 @@ Your **personal overrides** for this specific project — swap a skill version, 
 
 ### Merge Priority
 
-```mermaid
-graph LR
-    Global["1. Global<br/>(lowest priority)"] --> Shared["2. Project<br/>(overrides Global)"]
-    Shared --> Local["3. Local<br/>(highest priority)"]
-    Local --> Merged["Merged Manifest"]
-    Merged --> UP["skill-harbor up"]
+```
+Global (lowest priority) → Project (overrides Global) → Local (highest priority) → Merged Manifest → skill-harbor up
 ```
 
 When a skill name exists in multiple layers, the highest-priority layer wins. Overridden skills are flagged in the `up` output:
 
 ```
-⚠️  Local Override: The following skills are being overridden by personal definitions:
+ Local Override: The following skills are being overridden by personal definitions:
    - my-skill
 ```
 
@@ -46,25 +39,31 @@ Targets (agent platforms) are merged as a union across all three layers.
 
 ---
 
-## 🏗️ The `.harbor/` Folder Structure
+## The `.harbor/` Folder Structure
 
 Skill Harbor keeps all its internal control files and cached "cargo" in the `.harbor/` directory.
 
-<AccordionGroup>
-  <Accordion title=".harbor/skills/">
-    **The Cargo Cache**. This is where raw skill repositories are fetched and stored. Skill Harbor uses a hashing mechanism to compare the state of your cache with the remote source.
-  </Accordion>
-  <Accordion title=".harbor/stowage/">
-    **The Secure Backup**. When you run in **Lockdown Mode** (`--lockdown`), any skills in your agent folders that aren't defined in your manifest are moved here. This ensures a clean, auditable environment without deleting your personal rule-sets.
-  </Accordion>
-  <Accordion title=".harbor/hooks/">
-    **Automation Scripts**. Contains custom logic for transpiling and validating skills during the `up` process.
-  </Accordion>
-</AccordionGroup>
+<details>
+<summary><strong>.harbor/skills/</strong></summary>
+
+**The Cargo Cache**. This is where raw skill repositories are fetched and stored. Skill Harbor uses a hashing mechanism to compare the state of your cache with the remote source.
+</details>
+
+<details>
+<summary><strong>.harbor/stowage/</strong></summary>
+
+**The Secure Backup**. When you run in **Lockdown Mode** (`--lockdown`), any skills in your agent folders that aren't defined in your manifest are moved here. This ensures a clean, auditable environment without deleting your personal rule-sets.
+</details>
+
+<details>
+<summary><strong>.harbor/hooks/</strong></summary>
+
+**Automation Scripts**. Contains custom logic for transpiling and validating skills during the `up` process.
+</details>
 
 ---
 
-## ⚙️ How Skills are Managed (Control)
+## How Skills are Managed (Control)
 
 Skill Harbor does more than just copy files; it ensures your agent environment is deterministic and auditable.
 
@@ -84,14 +83,14 @@ skill-harbor up --lockdown
 
 ---
 
-## 🚀 Migrating from Root-Level Manifests
+## Migrating from Root-Level Manifests
 
 Earlier versions of Skill Harbor stored `harbor-manifest.json` at the project root. The current standard consolidates everything under `.harbor/` for consistency with the broader AI tooling ecosystem (`.claude/`, `.cursor/`, `.github/`).
 
 If Skill Harbor detects a root-level manifest during `up`, it will display a recommendation:
 
 ```
-💡 Recommendation: Found harbor-manifest.json at project root.
+Recommendation: Found harbor-manifest.json at project root.
    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.
 ```
 
@@ -111,6 +110,6 @@ skill-harbor migrate
 skill-harbor up --migrate
 ```
 
-<Warning>
+:::caution
 Moving the manifest is a **breaking change** for teammates still on the old layout. Coordinate the migration with your team and ensure everyone runs `migrate` or pulls the updated `.harbor/` structure.
-</Warning>
+:::

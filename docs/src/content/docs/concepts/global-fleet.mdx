@@ -1,23 +1,20 @@
 ---
 title: "Global Fleet"
 description: "Sync your personal agent skills across every project you touch."
-icon: "globe"
 ---
-
-# 🌍 Global Fleet
 
 Managing skills shouldn't be limited to a single repository. Skill Harbor allows you to maintain a **Global Manifest** to synchronize your personal utilities, refactoring rules, and documentation helpers across every project in your workspace.
 
-## ⚓ The Global/Local Duality
+## The Global/Local Duality
 
 Skill Harbor recognizes two distinct levels of orchestration:
 
-1.  **Project Manifest**: Stored at `.harbor/harbor-manifest.json`. Defines the skills every developer on the team needs.
-2.  **Global Manifest**: Stored at `~/.harbor/harbor-manifest.json`. Defines your personal "synced brain" that follows you from project to project.
+1. **Project Manifest**: Stored at `.harbor/harbor-manifest.json`. Defines the skills every developer on the team needs.
+2. **Global Manifest**: Stored at `~/.harbor/harbor-manifest.json`. Defines your personal "synced brain" that follows you from project to project.
 
 ---
 
-## ⚓ Usage and the `--global` Flag
+## Usage and the `--global` Flag
 
 By default, all commands target the local project manifest. To target the user-level manifest, use the `--global` or `-g` flag.
 
@@ -42,11 +39,11 @@ skill-harbor dock https://github.com/my-org/my-rules --global
 
 ---
 
-## ⚓ Why Use Global Fleet?
+## Why Use Global Fleet?
 
-1.  **Personal Governance**: Keep your project manifests clean and professional, while still having access to your custom keybindings and automation scripts.
-2.  **Context Portability**: Your personal intelligence layer is no longer tethered to a single machine or repository.
-3.  **Zero-Tier Discovery**: Global skills are automatically included in the `000-fleet-intelligence.md` Master Manifest produced by `up`, allowing agents to discover your personal tools even when they aren't part of the core team repo.
+1. **Personal Governance**: Keep your project manifests clean and professional, while still having access to your custom keybindings and automation scripts.
+2. **Context Portability**: Your personal intelligence layer is no longer tethered to a single machine or repository.
+3. **Zero-Tier Discovery**: Global skills are automatically included in the `000-fleet-intelligence.md` Master Manifest produced by `up`, allowing agents to discover your personal tools even when they aren't part of the core team repo.
 
 ```bash
 # List all skills in your global fleet
