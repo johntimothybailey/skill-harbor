@@ -7,42 +7,48 @@
     "light": "#22d3ee",
     "dark": "#0891b2"
   },
-  "favicon": "/favicon.png",
-  "navigation": {
-    "groups": [
-      {
-        "group": "Introduction",
-        "pages": [
-          "introduction",
-          "quickstart",
-          "concepts/skill-standards",
-          "concepts/manifest"
-        ],
-        "icon": "anchor"
-      },
-      {
-        "group": "Commands Deep Dive",
-        "pages": [
-          "concepts/fathom",
-          "concepts/voyager",
-          "concepts/governance",
-          "concepts/global-fleet",
-          "concepts/toolkit"
-        ],
-        "icon": "ship"
-      },
-      {
-        "group": "CLI Reference",
-        "pages": [
-          "reference/commands"
-        ],
-        "icon": "terminal"
-      }
-    ]
-  },
+  "favicon": "/favicon.svg",
   "logo": {
     "light": "/assets/hero.png",
     "dark": "/assets/hero.png"
+  },
+  "navigation": [
+    {
+      "group": "Introduction",
+      "icon": "anchor",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "concepts/skill-standards",
+        "concepts/manifest"
+      ]
+    },
+    {
+      "group": "Commands Deep Dive",
+      "icon": "ship",
+      "pages": [
+        "concepts/fathom",
+        "concepts/voyager",
+        "concepts/governance",
+        "concepts/global-fleet",
+        "concepts/toolkit"
+      ]
+    },
+    {
+      "group": "CLI Reference",
+      "icon": "terminal",
+      "pages": [
+        "reference/commands"
+      ]
+    }
+  ],
+  "navbar": {
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/johntimothybailey/skill-harbor"
+      }
+    ]
   },
   "footer": {
     "socials": {
