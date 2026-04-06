@@ -240,7 +240,7 @@ export async function fathomAction(options: any, command: any) {
 
                 if (opts.contracts) {
                     if (heuristic.contracts?.missingStandard) {
-                        console.log(`    ${kleur.yellow("Contracts:")}              ⚠️  Not explicitly configured for chaining. (See: https://github.com/johntimothybailey/skill-harbor/blob/main/docs/contracts.md)`);
+                        console.log(`    ${kleur.yellow("Contracts:")}              ⚠️  Not explicitly configured for chaining. (See: https://docs.skill-harbor.app/concepts/skill-standards#-semantic-contracts-io)`);
                     } else if (heuristic.contracts) {
                         const reqStr = Object.keys(heuristic.contracts.requires).length > 0 
                             ? Object.keys(heuristic.contracts.requires).join(", ") 
