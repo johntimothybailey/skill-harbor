@@ -73,7 +73,7 @@ jobs:
       - name: Create GitHub Release
         if: steps.check.outputs.has_changesets == 'false'
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
           TAG="v$VERSION"
 
           # Check if the tag already exists (changeset publish may have created it)
@@ -83,10 +83,10 @@ jobs:
           fi
 
           # Extract Hero Title from CHANGELOG.md
-          HERO_TITLE=$(grep -A 10 "## $VERSION" CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
+          HERO_TITLE=$(grep -A 10 "## $VERSION" apps/cli/CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
 
           # Extract release notes for this version from CHANGELOG.md
-          sed -n "/## $VERSION/,/## [0-9]/p" CHANGELOG.md | sed '1d;$d' > release_notes.md
+          sed -n "/## $VERSION/,/## [0-9]/p" apps/cli/CHANGELOG.md | sed '1d;$d' > release_notes.md
 
           if [ -z "$HERO_TITLE" ]; then
             FINAL_TITLE="⚓ Skill Harbor v$VERSION"

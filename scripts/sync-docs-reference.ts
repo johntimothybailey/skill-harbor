@@ -5,7 +5,7 @@ import path from "node:path";
 async function sync() {
     console.log("⚓ Syncing CLI Reference Docs...");
 
-    const helpOutput = execSync("node dist/index.js --help", { encoding: "utf-8" });
+    const helpOutput = execSync("node apps/cli/dist/index.js --help", { encoding: "utf-8" });
     const targetFile = path.join(process.cwd(), "docs", "reference", "commands.mdx");
 
     if (!(await fs.stat(targetFile).catch(() => false))) {
