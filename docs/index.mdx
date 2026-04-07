@@ -20,12 +20,44 @@ Welcome to **Skill Harbor**, the **Declarative Skill Setup & Orchestration Engin
 
 Skill Harbor coordinates the entire lifecycle of an AI skill through multiple nautical phases:
 
+```mermaid
+graph TD
+    ProjectNew([Project needs new skill]) -->|⚓ Mooring / dock| B(.harbor/manifest)
+    UserExist([User clones/syncs repo]) -->|⚙️ Outfitting / up| C{Processing}
+    B -->|Triggers| C
+    C -->|Adapt| D[Claude Code]
+    C -->|Adapt| E[Cursor]
+    C -->|Adapt| F[Antigravity]
+    D & E & F -->|🛳️ Berth| G[Agent Context Berth]
+    G -->|🕯️ Beacon| H[Fleet Intelligence]
+    H -->|📏 Survey| I[Fathom Audit]
+```
+
+---
+
+## 🕯️ Entry Points & Discovery
+
+How does an agent know which tool to pull from the berth? Every Skill Harbor setup includes a **Lighthouse Beacon**—a dynamically generated intelligence layer that maps user intent to specific skill triggers.
+
+```mermaid
+graph TD
+    User([User Prompt]) -->|1. Analysis| Beacon{Fleet Intelligence}
+    Beacon -->|2. Matches Trigger| Skill[Target Skill Entry Point]
+    Skill -->|3. Validate| Contracts[I/O Contract Check]
+    Contracts -->|4. Execute| Action[Agent Action]
+    Action -->|5. Result| User
+```
+
+This "Zero-Tier" routing ensures your agents don't have to guess. By defining clear `## Trigger` sections in your harbor certified skills, the Beacon teaches the agent exactly when to engage.
+
+---
+
 <CardGroup cols={2}>
-  <Card title="⚓ Moor (Acquire)" icon="anchor">
+  <Card title="⚓ Mooring (Fetching)" icon="anchor">
     Registers and fetches raw skill repositories using `skill-harbor dock` and `up`.
   </Card>
-  <Card title="⚙️ Fitting Out (Process)" icon="gear">
-    Transpiles raw "lumber" into precision-engineered skills for specific agent platforms.
+  <Card title="⚙️ Outfitting (Processing)" icon="gear">
+    Adapts raw skills into precision-engineered skills for specific agent platforms.
   </Card>
   <Card title="🛳️ Berth (Distribute)" icon="ship">
     Automatically deploys processed cargo into hidden agent configuration folders (e.g., `.claude/skills`).
@@ -63,7 +95,7 @@ With Skill Harbor, they clone the repo and run one command:
 skill-harbor up
 ```
 
-That single command reads the committed `.harbor/harbor-manifest.json`, fetches the latest versions of every skill, transpiles them for each agent platform (Claude, Cursor, Codex), and berths them into the right configuration folders. Every developer on the team now has identical agent context.
+That single command reads the committed `.harbor/harbor-manifest.json`, fetches the latest versions of every skill, adapts them for each agent platform (Claude, Cursor, Codex), and berths them into the right configuration folders. Every developer on the team now has identical agent context.
 
 Later, a tech lead wants to verify the fleet before merging a PR that adds a new skill:
 
@@ -106,4 +138,4 @@ Skill Harbor is built for the **Solo Captain** and the **Full Fleet Command**.
 - **⚡ Parallel Synchronization**: Sync your entire fleet of skills concurrently for maximum performance.
 - **🌍 Global Fleet Control**: Manage personal and organization-wide skills across any project workspace.
 - **🛠️ Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
-- **🔌 Idempotent**: Run `skill-harbor up` safely to pull down the latest transpiled skill updates.
+- **🔌 Idempotent**: Run `skill-harbor up` safely to pull down the latest adapted skill updates.
