@@ -12,3 +12,14 @@ tsconfig.tsbuildinfo
 harbor-manifest.local.json
 harbor-compass.yaml
 *voyage-test.yaml
+
+# Turborepo
+.turbo
+
+# Next.js
+.next
+out
+
+# Unmint
+.unmint
+.source

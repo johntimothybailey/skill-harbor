@@ -1,61 +1,20 @@
 {
-  "name": "skill-harbor",
+  "name": "skill-harbor-monorepo",
   "version": "0.15.1",
-  "description": "The Declarative Skill Setup & Orchestration Engine — Standardize and prepare engineering context for your entire team.",
-  "author": "John Bailey",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/johntimothybailey/skill-harbor.git"
-  },
-  "homepage": "https://github.com/johntimothybailey/skill-harbor#readme",
-  "bugs": {
-    "url": "https://github.com/johntimothybailey/skill-harbor/issues"
-  },
-  "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "bin": {
-    "skill-harbor": "dist/index.js"
-  },
+  "private": true,
   "scripts": {
-    "start": "node dist/index.js",
-    "test": "vitest run",
-    "build": "mkdir -p dist && bun build ./src/index.ts --target node --outfile dist/index.js --external commander --external kleur --external spinnies --external ora --external fast-glob --external boxen",
-    "version": "changeset version",
-    "release": "npm run build && changeset publish",
-    "quartermaster": "bun ./scripts/quartermaster.ts",
-    "lint": "oxlint src"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
   },
-  "dependencies": {
-    "boxen": "^8.0.1",
-    "commander": "^11.1.0",
-    "fast-glob": "^3.3.2",
-    "gray-matter": "^4.0.3",
-    "js-tiktoken": "^1.0.21",
-    "js-yaml": "^4.1.1",
-    "kleur": "^4.1.5",
-    "ora": "^7.0.1",
-    "prompts": "^2.4.2",
-    "skill-porter": "github:jduncan-rva/skill-porter",
-    "skillfish": "1.0.30",
-    "spinnies": "^0.5.1"
-  },
+  "workspaces": [
+    "apps/*"
+  ],
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
-    "@changesets/get-github-info": "^0.8.0",
-    "@changesets/types": "^6.1.0",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.5.0",
-    "@types/prompts": "^2.4.9",
-    "@types/spinnies": "^0.5.3",
-    "bun-types": "latest",
-    "dotenv": "^17.3.1",
-    "oxlint": "^1.57.0",
-    "typescript": "^5.3.3",
-    "vitest": "^4.1.1"
+    "turbo": "^2.9.4",
+    "typescript": "^5.3.3"
   },
-  "volta": {
-    "node": "22.22.2"
-  }
+  "packageManager": "bun@1.2.19"
 }
