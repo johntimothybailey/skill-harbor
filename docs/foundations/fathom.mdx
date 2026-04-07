@@ -39,12 +39,16 @@ While Fathom leverages libraries like `js-tiktoken` for raw tokenization, the co
   </Step>
   <Step title="Normalization Formula">
     Raw heuristic scores are normalized to a 10-point scale:
-    $$Confidence_{Heuristic} = 11 - \max(1, \min(10, Score_{composite}))$$
+    ```text
+    Confidence_{Heuristic} = 11 - \max(1, \min(10, Score_{composite}))
+    ```
     *(Where 10 = **Glassy Water** (Optimal) and 1 = **Storm Surge** (Catastrophic Collision Risk))*
   </Step>
   <Step title="Context Saturation Math">
     Calculates cumulative fleet weight against fixed model limits:
-    $$Saturation = \left( \frac{\sum Tokens_{fleet}}{ContextLimit_{model}} \right) \times 100$$
+    ```text
+    Saturation = \left( \frac{\sum Tokens_{fleet}}{ContextLimit_{model}} \right) \times 100
+    ```
   </Step>
 </Steps>
 

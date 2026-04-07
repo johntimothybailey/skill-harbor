@@ -17,7 +17,7 @@ The manifest identifies which skills to pull and how to track them, while the `.
 Skill Harbor merges three manifest layers into a single resolved view every time you run `up`, `fathom`, or any command that reads the manifest. Later layers override earlier ones.
 
 ### 1. Global Manifest (`~/.harbor/harbor-manifest.json`)
-Your **personal fleet** — skills that follow you across every project on your machine. Registered with `skill-harbor dock <url> --global` and synced with `skill-harbor up --global`. See [Global Fleet](/concepts/global-fleet) for details.
+Your **personal fleet** — skills that follow you across every project on your machine. Registered with `skill-harbor dock <url> --global` and synced with `skill-harbor up --global`. See [Global Fleet](/docs/foundations/global-fleet) for details.
 
 ### 2. Project Manifest (`.harbor/harbor-manifest.json`)
 The **shared team configuration** for a specific repository. Committed to Git so every developer gets the same skills. Overrides any Global skill with the same name.
