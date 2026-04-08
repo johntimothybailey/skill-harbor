@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkAction } from './check';
+import { resolveCommandScope } from '../command-scope';
 import { Orchestrator } from '../orchestrator';
 import { getAgentBerths, getManifestManager, exists } from '../utils';
 import { printHeader, printInfo } from '../ui';
 import os from 'node:os';
 
+vi.mock('../command-scope');
 vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
@@ -31,8 +33,10 @@ describe('checkAction', () => {
                     'skill1': { name: 'skill1', source: 'source1', layer: 'shared' }
                 }
             }),
+            getSkillsCacheDir: vi.fn().mockReturnValue('/harbor'),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
         };
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: false, shouldStop: false });
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
         (getAgentBerths as any).mockResolvedValue([
@@ -67,5 +71,18 @@ describe('checkAction', () => {
         await checkAction(options, mockCommand);
 
         expect(printInfo).toHaveBeenCalledWith('Empty Harbor', expect.any(String));
+    });
+
+    it('should stop without checking when scope resolution says to stop', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: false, shouldStop: true });
+
+        await checkAction(options, mockCommand);
+
+        expect(mockManifestManager.readMerged).not.toHaveBeenCalled();
+        expect(mockOrchestrator.getMetadata).not.toHaveBeenCalled();
     });
 });

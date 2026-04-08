@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { listAction } from './list';
+import { resolveCommandScope } from '../command-scope';
 import { getManifestManager } from '../utils';
 import { printHeader, printError } from '../ui';
 import kleur from 'kleur';
 
+vi.mock('../command-scope');
 vi.mock('../utils');
 vi.mock('../ui');
 vi.mock('../manifest');
@@ -16,6 +18,7 @@ describe('listAction', () => {
         mockManifestManager = {
             read: vi.fn(),
         };
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: false, shouldStop: false });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
     });
 
@@ -48,12 +51,25 @@ describe('listAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: true, shouldStop: false });
         mockManifestManager.read.mockResolvedValue({ skills: {} });
         vi.spyOn(console, 'log').mockImplementation(() => {});
 
         await listAction(options, mockCommand);
 
         expect(printHeader).toHaveBeenCalledWith('Global Fleet Manifest');
+    });
+
+    it('should stop without reading when scope resolution says to stop', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: false, shouldStop: true });
+
+        await listAction(options, mockCommand);
+
+        expect(mockManifestManager.read).not.toHaveBeenCalled();
     });
 
     it('should show empty message when no skills are docked', async () => {

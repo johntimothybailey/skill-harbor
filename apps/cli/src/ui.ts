@@ -170,3 +170,33 @@ export const promptSelectTargets = async (availableTargets: AgentBerth[]): Promi
 
     return response.targets;
 };
+
+export const promptEmptyProjectHarborAction = async (): Promise<"global" | "initialize" | "cancel"> => {
+    console.log(boxen(`${kleur.bold().yellow('🧭  No project harbor manifest found.')}\n\n${kleur.gray('This workspace does not have a local Skill Harbor setup,\nbut a global harbor manifest is available.')}`, {
+        padding: 1,
+        margin: { top: 1, bottom: 0, left: 0, right: 0 },
+        borderStyle: 'round',
+        borderColor: 'yellow'
+    }));
+
+    const response = await prompts([
+        {
+            type: 'select',
+            name: 'action',
+            message: kleur.bold().cyan('What would you like to do?'),
+            choices: [
+                { title: kleur.bold().green('Use global harbor'), value: 'global', description: 'Sync skills from ~/.harbor into your global/home agent targets' },
+                { title: kleur.bold().blue('Initialize this project harbor'), value: 'initialize', description: 'Create a project manifest in .harbor/ so this workspace can manage its own skills' },
+                { title: kleur.gray('Cancel'), value: 'cancel', description: 'Exit without syncing' }
+            ],
+            initial: 0
+        }
+    ]);
+
+    if (!response.action || response.action === 'cancel') {
+        console.log(kleur.gray('\nOperation cancelled by user.\n'));
+        return 'cancel';
+    }
+
+    return response.action;
+};

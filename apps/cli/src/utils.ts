@@ -16,7 +16,10 @@ export async function exists(path: string): Promise<boolean> {
 
 export function getManifestManager(options: any) {
     if (options.global) {
-        return new ManifestManager({ customPath: ManifestManager.getGlobalPath() });
+        return new ManifestManager({
+            cwd: os.homedir(),
+            customPath: ManifestManager.getGlobalPath()
+        });
     }
     return new ManifestManager();
 }
@@ -38,6 +41,10 @@ export function getManagedAgentTargets(baseDir: string, includeRulesync = true):
     }
 
     return targets;
+}
+
+export function getSupportedTargetKeys(includeRulesync = true): string[] {
+    return getManagedAgentTargets("", includeRulesync).map(target => target.key);
 }
 
 /**

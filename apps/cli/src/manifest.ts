@@ -52,6 +52,23 @@ export class ManifestManager {
         return path.join(os.homedir(), ".harbor", "harbor-manifest.json");
     }
 
+    public static getGlobalHarborDir(): string {
+        return path.join(os.homedir(), ".harbor");
+    }
+
+    public static getGlobalSkillsCacheDir(): string {
+        return path.join(ManifestManager.getGlobalHarborDir(), "skills");
+    }
+
+    public static async globalManifestExists(): Promise<boolean> {
+        try {
+            await fs.access(ManifestManager.getGlobalPath());
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     public getLocalPath(): string {
         return this.localManifestPath;
     }
@@ -66,9 +83,6 @@ export class ManifestManager {
 
     public async init(): Promise<void> {
         if (this.initialized) return;
-
-        // Ensure .harbor/skills exists
-        await fs.mkdir(this.skillsDir, { recursive: true });
 
         // Resolve shared manifest location
         const preferredPath = path.join(this.harborDir, "harbor-manifest.json");
@@ -105,20 +119,6 @@ export class ManifestManager {
             this.localManifestPath = localPreferredPath;
         }
 
-        try {
-            await fs.access(this.manifestPath);
-        } catch {
-            // Only write a new manifest if we're not using a global or local-only layer
-            // For the shared (preferred) layer, create it if it doesn't exist
-            if (this.manifestPath.includes("harbor-manifest.json")) {
-                const initialManifest: HarborManifest = {
-                    version: "1.0",
-                    dependencies: {},
-                    skills: {}
-                };
-                await this.write(initialManifest);
-            }
-        }
         this.initialized = true;
     }
 
@@ -150,6 +150,12 @@ export class ManifestManager {
         } catch {
             return { version: "1.0", dependencies: {}, skills: {} };
         }
+    }
+
+    public async hasProjectManifestStack(): Promise<boolean> {
+        await this.init();
+
+        return (await this.pathExists(this.manifestPath)) || (await this.pathExists(this.localManifestPath));
     }
 
     /**
@@ -250,12 +256,16 @@ export class ManifestManager {
         await this.write(manifest, type);
     }
 
-    public getSkillsCacheDir(): string {
+    public getSkillsCacheDir(type: ManifestLayer = "shared"): string {
+        if (type === "global") {
+            return ManifestManager.getGlobalSkillsCacheDir();
+        }
+
         return this.skillsDir;
     }
 
     /** @deprecated Use getSkillsCacheDir() instead */
-    public getHarborDir(): string {
-        return this.skillsDir;
+    public getHarborDir(type: ManifestLayer = "shared"): string {
+        return this.getSkillsCacheDir(type);
     }
 }

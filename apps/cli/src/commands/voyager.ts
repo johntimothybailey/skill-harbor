@@ -4,11 +4,12 @@ import kleur from "kleur";
 import Spinnies from "spinnies";
 import yaml from "js-yaml";
 import matter from "gray-matter";
+import { resolveCommandScope } from "../command-scope";
 import { getManifestManager, getAgentBerths } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
 import { VoyagerTestDefinition } from "../types/voyager";
-import { printHeader, printError, printInfo, printSuccess } from "../ui";
+import { printHeader, printError, printSuccess } from "../ui";
 import { ask } from "../utils";
 import os from "node:os";
 
@@ -37,6 +38,10 @@ export async function voyagerAction(queryArg: string | undefined, options: any, 
             process.exit(1);
         }
 
+        const manifestManager = getManifestManager({ global: false });
+        const { useGlobalScope, shouldStop } = await resolveCommandScope({ global: false }, manifestManager, "skill-harbor voyager");
+        if (shouldStop) return;
+
         const configManager = ConfigManager.getInstance();
         const config = await configManager.loadConfig({
             model: opts.model,
@@ -50,16 +55,17 @@ export async function voyagerAction(queryArg: string | undefined, options: any, 
 
         spinnies.add("voyager-init", { text: "Discovering active berths and preparing fleet cargo..." });
 
-        const manifestManager = getManifestManager({ global: false });
         let manifest: any;
         try {
-            manifest = await manifestManager.readMerged();
+            manifest = useGlobalScope
+                ? await manifestManager.read("global")
+                : await manifestManager.readMerged();
         } catch {
             manifest = { targets: [] };
         }
 
         const profiler = new ProfilerService();
-        const baseDir = process.cwd();
+        const baseDir = useGlobalScope ? os.homedir() : process.cwd();
         const activeBerths = await getAgentBerths(baseDir, manifest.targets && manifest.targets.length > 0 ? manifest.targets : undefined);
 
         if (activeBerths.length === 0) {
@@ -107,20 +113,21 @@ export async function voyagerAction(queryArg: string | undefined, options: any, 
             spinnies.fail("voyager-init", { text: "No properly formatted skills found in active berths." });
             
             // Ghost Discovery Assistance
-            const ghosts = await profiler.findSkills(process.cwd());
-            const localGhosts = ghosts.filter(p => !p.includes(".harbor/skills"));
+            const ghosts = await profiler.findSkills(baseDir);
+            const unmanagedGhosts = ghosts.filter(p => !p.includes(".harbor/skills"));
 
-            if (localGhosts.length > 0) {
-                console.log(kleur.magenta(`\n👻  Ghost Alert: I found ${localGhosts.length} local skill(s) that aren't manifested.`));
-                if (await ask("Would you like to dock these to your local manifest now?", kleur)) {
-                    for (const ghostPath of localGhosts) {
+            if (unmanagedGhosts.length > 0) {
+                const scopeLabel = useGlobalScope ? "global" : "local";
+                console.log(kleur.magenta(`\n👻  Ghost Alert: I found ${unmanagedGhosts.length} ${scopeLabel} skill(s) that aren't manifested.`));
+                if (await ask(`Would you like to dock these to your ${scopeLabel} manifest now?`, kleur)) {
+                    for (const ghostPath of unmanagedGhosts) {
                         const name = path.basename(ghostPath);
                         await manifestManager.addSkill({
                             name,
                             source: ghostPath,
                             localPath: ""
-                        }, "local");
-                        console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
+                        }, useGlobalScope ? "global" : "local");
+                        console.log(kleur.green(`   ✓ Docked: ${name} (${useGlobalScope ? "Global" : "Local"})`));
                     }
                     printSuccess("All ghosts berthed. Run 'voyager' again to deploy them.");
                 }

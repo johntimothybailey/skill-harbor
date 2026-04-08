@@ -1,6 +1,7 @@
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
+import { resolveCommandScope } from "../command-scope";
 import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth, ask } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
@@ -24,6 +25,9 @@ export async function fathomAction(options: any, command: any) {
         if (!opts.format || opts.format === "pretty") {
             printHeader("Fathom: Skill Profiler");
         }
+
+        const { useGlobalScope, shouldStop } = await resolveCommandScope(opts, manifestManager, "skill-harbor fathom");
+        if (shouldStop) return;
         
         // 1. Load Configuration
         const config = await configManager.loadConfig({
@@ -31,7 +35,7 @@ export async function fathomAction(options: any, command: any) {
             baseUrl: baseUrlOverride
         });
 
-        const manifest = opts.global 
+        const manifest = useGlobalScope 
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
@@ -40,7 +44,7 @@ export async function fathomAction(options: any, command: any) {
         const ghostSkillPaths: string[] = [];
 
         // 2.5 Active Berths Discovery
-        const baseDir = opts.global ? os.homedir() : process.cwd();
+        const baseDir = useGlobalScope ? os.homedir() : process.cwd();
         const activeBerths = await getAgentBerths(baseDir, manifest.targets);
         const stowageBerths = await getStowageBerths(baseDir, manifest.targets);
 
@@ -80,7 +84,7 @@ export async function fathomAction(options: any, command: any) {
         }
 
         // 3. Override Warnings
-        if (!opts.global && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
+        if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
             console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
@@ -88,14 +92,25 @@ export async function fathomAction(options: any, command: any) {
 
         // --- Harbor Health Report ---
         if (showReport) {
-            const harborDir = manifestManager.getHarborDir();
             const format = opts.format ?? 'pretty';
+            const cacheDirs = [
+                ...new Set(
+                    skills
+                        .filter(skill => !skill.isGhost)
+                        .map(skill => manifestManager.getSkillsCacheDir(skill.layer || (useGlobalScope ? "global" : "shared")))
+                )
+            ];
             
             if (format === 'pretty') {
-                spinnies.add("harbor-scan", { text: `Scanning Harbor: ${kleur.cyan(harborDir)}` });
+                spinnies.add("harbor-scan", { text: `Scanning Harbor caches: ${kleur.cyan(cacheDirs.join(", "))}` });
             }
             
-            let skillPaths = await profiler.findSkills(harborDir);
+            let skillPaths = (
+                await Promise.all(
+                    cacheDirs.map(async (cacheDir) => profiler.findSkills(cacheDir))
+                )
+            ).flat();
+            skillPaths = [...new Set(skillPaths)];
             
             // Include ghosts in the report paths
             if (opts.ghosts) {
@@ -153,7 +168,10 @@ export async function fathomAction(options: any, command: any) {
         for (const skill of skills) {
             const cachedPath = skill.isGhost 
                 ? skill.path 
-                : path.join(manifestManager.getHarborDir(), skill.name);
+                : path.join(
+                    manifestManager.getSkillsCacheDir(skill.layer || (useGlobalScope ? "global" : "shared")),
+                    skill.name
+                );
             
             const vStatus = await getVesselStatus(skill.name, activeBerths, stowageBerths);
             let statusLabel = "";

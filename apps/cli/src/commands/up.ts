@@ -8,9 +8,10 @@ import crypto from "node:crypto";
 import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
+import { ManifestManager } from "../manifest";
 import { Orchestrator } from "../orchestrator";
-import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets } from "../utils";
-import { printHeader, printSuccess, printError, printInfo, promptSelectTargets } from "../ui";
+import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets, getSupportedTargetKeys } from "../utils";
+import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from "../ui";
 import { migrateAction } from "./migrate";
 
 const execAsync = promisify(exec);
@@ -131,17 +132,73 @@ async function getSourceHash(source: string): Promise<string> {
     }
 }
 
+function parseTargetOption(targetOption?: string | string[]): string[] | undefined {
+    if (!targetOption) return undefined;
+
+    const rawTargets = Array.isArray(targetOption) ? targetOption : [targetOption];
+
+    const targets = rawTargets
+        .flatMap(target => target.split(","))
+        .map(target => target.trim())
+        .filter(Boolean);
+
+    return targets.length > 0 ? [...new Set(targets)] : undefined;
+}
+
 export async function upAction(options: any, command: any) {
     const opts = command.opts();
     const manifestManager = getManifestManager(opts);
-    const baseDir = opts.global ? os.homedir() : process.cwd();
     const spinnies = new Spinnies();
 
     try {
         printHeader("Workspace Synchronization Initiated");
+
+        let useGlobalScope = opts.global ?? false;
+
+        if (!useGlobalScope) {
+            const hasProjectManifestStack = await manifestManager.hasProjectManifestStack();
+            const hasGlobalManifest = await ManifestManager.globalManifestExists();
+
+            if (!hasProjectManifestStack && hasGlobalManifest) {
+                if (!process.stdin.isTTY || !process.stdout.isTTY) {
+                    printInfo("Using Global Harbor", "No project harbor manifest was found, and interactive prompting is unavailable. Falling back to the global harbor manifest.");
+                    useGlobalScope = true;
+                } else {
+                const action = await promptEmptyProjectHarborAction();
+
+                    if (action === "cancel") {
+                        return;
+                    }
+
+                    if (action === "initialize") {
+                        await manifestManager.write({
+                            version: "1.0",
+                            dependencies: {},
+                            skills: {}
+                        }, "shared");
+                        printSuccess("Project harbor initialized at .harbor/harbor-manifest.json. Run 'skill-harbor dock <url>' to add skills, then run 'skill-harbor up' again.");
+                        return;
+                    }
+
+                    useGlobalScope = true;
+                }
+            }
+        }
+
+        const baseDir = useGlobalScope ? os.homedir() : process.cwd();
+        const requestedTargets = parseTargetOption(opts.target);
+
+        if (requestedTargets) {
+            const supportedTargets = getSupportedTargetKeys(true);
+            const invalidTargets = requestedTargets.filter(target => !supportedTargets.includes(target));
+            if (invalidTargets.length > 0) {
+                printError(`Unknown target(s): ${invalidTargets.join(", ")}. Supported targets: ${supportedTargets.join(", ")}`);
+                process.exit(1);
+            }
+        }
         
         // 1. Layered Manifest Loading
-        const manifest = opts.global 
+        const manifest = useGlobalScope 
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
@@ -167,24 +224,24 @@ export async function upAction(options: any, command: any) {
             }
         }
 
-        if (!opts.global && manifest.overrides && manifest.overrides.length > 0) {
+        if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0) {
             console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
 
         // 3. Gitignore Automation (Conditional)
-        if (!opts.global && opts.migrate) {
+        if (!useGlobalScope && opts.migrate) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
         
         // Always ensure basic local manifest ignore if it exists at root (for safety)
-        if (!opts.global && !opts.migrate && await exists(path.join(process.cwd(), "harbor-manifest.local.json"))) {
+        if (!useGlobalScope && !opts.migrate && await exists(path.join(process.cwd(), "harbor-manifest.local.json"))) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
 
         // --- Target Identification & Prompt ---
-        let effectiveTargets = opts.target ? [opts.target] : manifest.targets;
+        let effectiveTargets = requestedTargets ?? manifest.targets;
         let activeTargetConfigs = await getAgentBerths(baseDir, effectiveTargets);
 
         if (activeTargetConfigs.length === 0) {
@@ -206,7 +263,7 @@ export async function upAction(options: any, command: any) {
             for (const target of targetConfigs) {
                 const shouldLockdown = hasExplicitTargets 
                     ? effectiveTargets!.includes(target.key)
-                    : (target.key === "rulesync" ? await exists(rulesyncBase) : (opts.global ? await exists(target.path) : await exists(path.dirname(target.path))));
+                    : (target.key === "rulesync" ? await exists(rulesyncBase) : (useGlobalScope ? await exists(target.path) : await exists(path.dirname(target.path))));
 
                 if (shouldLockdown) {
                     const stowPath = path.join(stowageBase, target.label.toLowerCase());
@@ -226,9 +283,10 @@ export async function upAction(options: any, command: any) {
             
             try {
                 // 1. Change Detection
+                const skillLayer = skill.layer || (useGlobalScope ? "global" : "shared");
                 const currentSourceHash = await getSourceHash(skill.source);
                 const sourceChanged = currentSourceHash !== skill.lastSyncHash;
-                const harborDir = manifestManager.getHarborDir();
+                const harborDir = manifestManager.getSkillsCacheDir(skillLayer);
                 const cachedPath = path.join(harborDir, skill.name);
                 const cacheExists = await exists(cachedPath);
 
@@ -305,7 +363,7 @@ export async function upAction(options: any, command: any) {
                     localPath: cachedPath,
                     lastSyncHash: currentSourceHash,
                     lastSyncTargets: activeTargets
-                }, skill.layer || "shared");
+                }, skillLayer);
 
                 orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
             } catch (err: any) {
@@ -319,11 +377,12 @@ export async function upAction(options: any, command: any) {
 
         // --- Lighthouse: Automated Master Fleet Manifest ---
         console.log(kleur.yellow("\n  💡  Shining the Lighthouse..."));
-        const latestManifest = opts.global ? await manifestManager.read("global") : await manifestManager.readMerged();
+        const latestManifest = useGlobalScope ? await manifestManager.read("global") : await manifestManager.readMerged();
         const latestSkills = Object.values(latestManifest.skills);
         const metadataList = [];
         for (const skill of latestSkills) {
-            const cachedPath = path.join(manifestManager.getHarborDir(), skill.name);
+            const skillLayer = skill.layer || (useGlobalScope ? "global" : "shared");
+            const cachedPath = path.join(manifestManager.getSkillsCacheDir(skillLayer), skill.name);
             const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
             const meta = await orchestrator.getMetadata(cachedPath);
             if (meta) {
