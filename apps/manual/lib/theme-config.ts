@@ -5,7 +5,32 @@
  * All colors, branding, and styling can be adjusted here.
  */
 
-export const siteConfig = {
+type SiteConfig = {
+  name: string
+  description: string
+  url: string
+  logo: {
+    src: string
+    alt: string
+    width: number
+    height: number
+  }
+  links: {
+    github?: string
+    discord?: string
+    twitter?: string
+    support?: string
+  }
+  footer: {
+    copyright: string
+    links: Array<{
+      label: string
+      href: string
+    }>
+  }
+}
+
+export const siteConfig: SiteConfig = {
   // Site metadata
   name: 'Skill Harbor',
   description: 'Understanding and using Skill Harbor',
@@ -14,7 +39,7 @@ export const siteConfig = {
   // Logo configuration
   logo: {
     src: '/logo.svg',
-    alt: 'Unmint',
+    alt: 'skill-harbor',
     width: 40,
     height: 40,
   },
@@ -22,7 +47,8 @@ export const siteConfig = {
   // Navigation links
   links: {
     github: 'https://github.com/johntimothybailey/skill-harbor',
-    discord: 'https://discord.gg/zST7he9N'
+    discord: 'https://discord.gg/zST7he9N',
+    support: '',
   },
 
   // Footer configuration
