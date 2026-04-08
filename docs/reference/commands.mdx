@@ -31,10 +31,20 @@ skill-harbor dock https://github.com/skill-mill/react-hooks --global
 - `-l, --lockdown`: Enforces a strict, manifest-only environment. Moves non-manifested skills to stowage.
 - `-m, --migrate`: Triggers the migration engine if legacy manifests or structures are detected.
 - `-g, --global`: Targets the user-level global manifest instead of the local project manifest.
+- `-t, --target <name>`: Restrict sync to one or more specific target berths. Accepts a single key like `codex`, a comma-separated list like `codex,cursor`, or repeated flags like `--target codex --target cursor`.
 
 **Example:**
 ```bash
 skill-harbor up --lockdown
+
+# Sync only Codex
+skill-harbor up --target codex
+
+# Sync Codex and Cursor
+skill-harbor up --target codex,cursor
+
+# Also supported: repeat the flag
+skill-harbor up --target codex --target cursor
 ```
 
 ---

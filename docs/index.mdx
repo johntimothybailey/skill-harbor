@@ -4,76 +4,53 @@ description: "The Declarative Skill Setup & Orchestration Engine."
 icon: "anchor"
 ---
 
-![Skill Harbor Hero](/assets/header.png)
+![Skill Harbor Hero](./assets/hero.png)
 
 # ⚓ Skill Harbor ⚓
 
 Instead of manual skill installation or fragile global configurations, Skill Harbor uses a declarative manifest to manage your team's "Collective Intelligence." It enables individuals and teams to **gain deep insights** into their skills, **hone** them for specific projects, and **orchestrate** their distribution seamlessly.
 
-Welcome to **Skill Harbor**, the **Declarative Skill Setup & Orchestration Engine**. This tool is the **Sync, Insights & Governance Engine** designed to standardize engineering context, refine specialized skills, and manage project rules across your entire team.
-
 **It is the intelligence infrastructure layer for professional development workflows.**
 
----
-
-## 🏗️ The Harbor Lifecycle
-
-Skill Harbor coordinates the entire lifecycle of an AI skill through multiple nautical phases:
-
-```mermaid
-graph TD
-    ProjectNew([Project needs new skill]) -->|⚓ Mooring / dock| B(.harbor/manifest)
-    UserExist([User clones/syncs repo]) -->|⚙️ Outfitting / up| C{Processing}
-    B -->|Triggers| C
-    C -->|Adapt| D[Claude Code]
-    C -->|Adapt| E[Cursor]
-    C -->|Adapt| F[Antigravity]
-    D & E & F -->|🛳️ Berth| G[Agent Context Berth]
-    G -->|🕯️ Beacon| H[Fleet Intelligence]
-    H -->|📏 Survey| I[Fathom Audit]
-```
-
----
-
-## 🕯️ Entry Points & Discovery
-
-How does an agent know which tool to pull from the berth? Every Skill Harbor setup includes a **Lighthouse Beacon**—a dynamically generated intelligence layer that maps user intent to specific skill triggers.
-
-```mermaid
-graph TD
-    User([User Prompt]) -->|1. Analysis| Beacon{Fleet Intelligence}
-    Beacon -->|2. Matches Trigger| Skill[Target Skill Entry Point]
-    Skill -->|3. Validate| Contracts[I/O Contract Check]
-    Contracts -->|4. Execute| Action[Agent Action]
-    Action -->|5. Result| User
-```
-
-This "Zero-Tier" routing ensures your agents don't have to guess. By defining clear `## Trigger` sections in your harbor certified skills, the Beacon teaches the agent exactly when to engage.
-
----
-
 <CardGroup cols={2}>
-  <Card title="⚓ Mooring (Fetching)" icon="anchor">
-    Registers and fetches raw skill repositories using `skill-harbor dock` and `up`.
+  <Card title="🧭 Manifest-First" icon="book-open" href="/docs/foundations/manifest">
+    Skill Harbor is driven by a committed `.harbor/harbor-manifest.json` that defines which skills your project manages and where they should be berthed.
   </Card>
-  <Card title="⚙️ Outfitting (Processing)" icon="gear">
-    Adapts raw skills into precision-engineered skills for specific agent platforms.
+  <Card title="⚓ Dock + Up" icon="anchor" href="/docs/quickstart">
+    `skill-harbor dock` registers a skill source. `skill-harbor up` is the core engine that fetches sources, runs target-specific adaptation, and berths skills into agent folders.
   </Card>
-  <Card title="🛳️ Berth (Distribute)" icon="ship">
-    Automatically deploys processed cargo into hidden agent configuration folders (e.g., `.claude/skills`).
+  <Card title="🛳️ Multi-Target Berthing" icon="ship">
+    During `skill-harbor up`, one manifest can deploy consistent skill context to Claude, Cursor, Codex, Gemini, Windsurf, Copilot, and other supported targets.
   </Card>
-  <Card title="📏 Surveying (Insights)" icon="magnifying-glass">
-    Mathematically audits your fleet for token bloat and semantic collisions using **Fathom**.
+  <Card title="🛡️ Governance Controls" icon="shield" href="/docs/reference/commands">
+    Use `up --lockdown`, `stow`, `unstow`, `undock`, and `migrate` to control what agents can see and to safely manage state over time.
   </Card>
-  <Card title="⛵ Sea Trials (Verify)" icon="radar">
-    Simulates autonomous agent journeys (Voyager) and force-syncs updates (Freshen).
+  <Card title="📏 Analysis + Verification" icon="chart-bar" href="/docs/foundations/fathom">
+    `fathom` audits token load, contracts, and ghost skills. `voyager` simulates agent workflows. `check` validates berthed skill metadata.
   </Card>
-  <Card title="🕯️ Beacon (Discovery)" icon="lighthouse">
-    Generates a Master Fleet Intelligence manifest for zero-tier agent routing.
+  <Card title="🕯️ Agent Discovery" icon="lighthouse">
+    `lighthouse` generates a fleet-intelligence snippet for agents that do not natively discover berthed skills on their own.
   </Card>
 </CardGroup>
 
----
+
+## 🏗️ The Harbor Workflow
+
+Basic Workflow
+```mermaid
+graph TD
+    Workspace[Your Project] -. "Add new skill" .-> Dock[⚓ skill-harbor dock]
+    Workspace --> Up[⚙️ skill-harbor up]
+    
+    Dock --> Up
+    Up --> Use([Skills Available to Agents])
+    
+    subgraph "Intelligence & Verification"
+    Use --> Light[🕯️ skill-harbor lighthouse]
+    Use --> Fathom[📏 skill-harbor fathom]
+    Use --> Voyager[⛵ skill-harbor voyager]
+    end
+```
 
 ## 🏆 Skill Standards
 
@@ -83,7 +60,6 @@ At the heart of the harbor is the **[Skill Standard](/docs/skill-standards)**. W
 - **Semantic Contracts**: Optional `Requires` and `Produces` keys to allow for safe skill chaining.
 - **Displacement Math**: Automated token counting to keep your "context wake" small.
 
----
 
 ## 🔍 What This Looks Like in Practice
 
