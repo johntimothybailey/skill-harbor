@@ -11,6 +11,9 @@ on:
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  EXPECTED_VERCEL_ORG_ID: team_wRHFZd1jH5umsxLiR2L4Abdl
+  EXPECTED_VERCEL_PROJECT_ID: prj_0epyLZtsC026dEPcwdoGTn5TVgLf
+  EXPECTED_VERCEL_PROJECT_NAME: skill-harbor-manual
 
 jobs:
   Deploy-Production:
@@ -25,6 +28,34 @@ jobs:
 
       - name: Install dependencies
         run: bun install
+
+      - name: Verify Vercel project linkage
+        run: |
+          echo "Expected Vercel project: $EXPECTED_VERCEL_PROJECT_NAME"
+          echo "Expected org id: $EXPECTED_VERCEL_ORG_ID"
+          echo "Expected project id: $EXPECTED_VERCEL_PROJECT_ID"
+
+          if [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "❌ Missing Vercel project secrets."
+            echo "   Required: VERCEL_ORG_ID and VERCEL_PROJECT_ID"
+            exit 1
+          fi
+
+          if [ "$VERCEL_ORG_ID" != "$EXPECTED_VERCEL_ORG_ID" ]; then
+            echo "❌ VERCEL_ORG_ID does not match the linked apps/manual project."
+            echo "   Expected: $EXPECTED_VERCEL_ORG_ID"
+            echo "   Received: $VERCEL_ORG_ID"
+            exit 1
+          fi
+
+          if [ "$VERCEL_PROJECT_ID" != "$EXPECTED_VERCEL_PROJECT_ID" ]; then
+            echo "❌ VERCEL_PROJECT_ID does not match the linked apps/manual project."
+            echo "   Expected: $EXPECTED_VERCEL_PROJECT_ID"
+            echo "   Received: $VERCEL_PROJECT_ID"
+            exit 1
+          fi
+
+          echo "✅ Vercel project secrets match the linked manual app."
 
       - name: Build Next.js Documentation App
         run: bunx turbo run build --filter=manual
