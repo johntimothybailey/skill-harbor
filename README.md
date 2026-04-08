@@ -124,7 +124,7 @@ skill-harbor up --global
 | :--- | :--- | :--- |
 | **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
-| **`up --target <key>`** | **Targeted Sync.** Only berths to a specific agent. | You only want to sync to Gemini without affecting Cursor. |
+| **`up --target <key>`** | **Targeted Sync.** Only berths to one or more specific agents. | Use `--target codex`, `--target codex,cursor`, or `--target codex --target cursor` to limit sync to selected targets. |
 | **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |
 | **`up --lockdown`** | Enforces a strict, manifest-only environment. | Switching from a personal project to a client project with strict rules. |
 | **`stow`** | Safely backs up current agent context without deleting. | You need a clean slate for a few hours but want your old skills back later. |

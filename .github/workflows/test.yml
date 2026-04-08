@@ -54,8 +54,10 @@ jobs:
 
       - name: Package & Global Install Smoke Test
         run: |
+          cd apps/cli
           tarball=$(npm pack)
           npm install -g "$tarball"
+          cd ../..
           skill-harbor --help
           skill-harbor list
 

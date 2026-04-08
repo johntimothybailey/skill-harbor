@@ -25,16 +25,26 @@ skill-harbor dock https://github.com/skill-mill/react-hooks --global
 ---
 
 ## `up`
-**The Core Engine**. Synchronizes, transpiles, and berths skills into your agent's configuration folders.
+**The Core Engine**. Synchronizes, adapts, and berths skills into your agent's configuration folders.
 
 **Flags:**
 - `-l, --lockdown`: Enforces a strict, manifest-only environment. Moves non-manifested skills to stowage.
 - `-m, --migrate`: Triggers the migration engine if legacy manifests or structures are detected.
 - `-g, --global`: Targets the user-level global manifest instead of the local project manifest.
+- `-t, --target <name>`: Restrict sync to one or more specific target berths. Accepts a single key like `codex`, a comma-separated list like `codex,cursor`, or repeated flags like `--target codex --target cursor`.
 
 **Example:**
 ```bash
 skill-harbor up --lockdown
+
+# Sync only Codex
+skill-harbor up --target codex
+
+# Sync Codex and Cursor
+skill-harbor up --target codex,cursor
+
+# Also supported: repeat the flag
+skill-harbor up --target codex --target cursor
 ```
 
 ---
@@ -57,7 +67,7 @@ The skill intelligence and profiling engine. Measures token saturation, quality 
 - `--contracts`: Audits semantic I/O contract alignment between fleet members.
 - `--ghosts`: Scans agent folders for unregistered "Ghost" skills and offers to dock them.
 
-*For more details on the science behind Fathom, see the [Fathom Deep Dive](/concepts/fathom).*
+*For more details on the science behind Fathom, see the [Fathom Deep Dive](/docs/foundations/fathom).*
 
 ---
 
@@ -69,7 +79,7 @@ End-to-end integration testing suite for agent-skill loops.
 - `--query <text>`: Run an ad-hoc query simulation.
 - `--model <name>`: Override the model used for the simulation.
 
-*For more details on integration testing, see the [Voyager Deep Dive](/concepts/voyager).*
+*For more details on integration testing, see the [Voyager Deep Dive](/docs/foundations/voyager).*
 
 ---
 
@@ -118,4 +128,4 @@ Every step is interactive — nothing moves without confirmation.
 You can also trigger migration during sync with `skill-harbor up --migrate`.
 </Tip>
 
-*For context on why the `.harbor/` layout exists, see [The Manifest & .harbor](/concepts/manifest#-migrating-from-root-level-manifests).*
+*For context on why the `.harbor/` layout exists, see [The Manifest & .harbor](/docs/foundations/manifest#-migrating-from-root-level-manifests).*

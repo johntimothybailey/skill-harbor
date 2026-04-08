@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'src/**'
+      - 'apps/cli/src/**'
       - 'scripts/**'
-      - 'package.json'
+      - 'apps/cli/package.json'
 
 permissions:
   contents: write
