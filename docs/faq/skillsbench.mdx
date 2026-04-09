@@ -1,0 +1,97 @@
+---
+title: "How does Skill Harbor align with SkillsBench?"
+description: "Where Skill Harbor already aligns with the SkillsBench research, and where the benchmark points us next."
+icon: "circle-question"
+---
+
+# How does Skill Harbor align with SkillsBench?
+
+**Short answer:** Skill Harbor and SkillsBench are complementary.
+
+- **SkillsBench** helps evaluate whether skills improve agent outcomes.
+- **Skill Harbor** helps teams **source, govern, distribute, and standardize** those skills across agents and repositories.
+
+In other words: SkillsBench is a research and evaluation lens. Skill Harbor is the operational system that makes high-quality skills usable in the real world.
+
+---
+
+## Where Skill Harbor is already winning
+
+### 1. Preventing runtime improvisation from becoming your skill strategy
+
+One of the clearest SkillsBench findings is that models are poor at inventing their own procedural scaffolding at runtime. In the paper's evaluation, **self-generated skills produced a negligible or negative effect on average, roughly -1.3 percentage points**.
+
+The real implication is not just “self-generated skills are bad.” It is that teams should not treat last-second model improvisation as a substitute for shared operational knowledge.
+
+That is exactly where Skill Harbor is strongest:
+
+- skills are selected deliberately instead of invented in the moment
+- provenance is visible
+- the same vetted workflows can be reused across the team
+
+So the advantage is not merely curation in the abstract. The advantage is that Skill Harbor turns procedural knowledge into a **managed asset** instead of a runtime guess.
+
+### 2. Converting a noisy public ecosystem into a trustworthy internal fleet
+
+The SkillsBench research also suggests that the broader public skill ecosystem has a quality problem: many skills are vague, bloated, or operationally weak. In the paper's scoring, the public ecosystem averaged only **6.2 out of 12**.
+
+That creates a very practical team problem: even if great skills exist somewhere, most organizations still need a way to decide which ones deserve to become part of their standard operating context.
+
+Skill Harbor addresses that by giving teams a place to:
+
+- track provenance
+- standardize what is actually in use
+- validate and profile the fleet with tools like Fathom and Voyager
+- keep strong skills in circulation while keeping weak or noisy ones out
+
+So the win is not just “quality matters.” The win is that Skill Harbor gives a team the operational layer needed to turn a noisy public ecosystem into a **trusted internal skill supply chain**.
+
+### 3. Turning portability into something teams can actually operate
+
+The important takeaway is not just that file-based skills *can* travel across different harnesses. The stronger point is that portability only becomes valuable when a team can distribute, adapt, and govern those same artifacts consistently.
+
+That aligns directly with Skill Harbor's architecture:
+
+- Harbor treats `SKILL.md`-style artifacts as portable cargo in a shared manifest-driven system
+- Harbor adapts and distributes the same skill set across multiple berths
+- Harbor preserves one source of truth while still handling platform-specific differences and governance controls
+
+So the win is not merely “skills are portable.” The win is that Skill Harbor turns portability into an **operational capability**: one governed fleet, many agent runtimes, consistent deployment.
+
+---
+
+## What SkillsBench reinforces about Skill Harbor's product direction
+
+The SkillsBench findings do **not** suggest that Skill Harbor should become a benchmark site.
+
+They *do* reinforce several directions that fit Harbor well:
+
+1. **Voyager compare mode**  
+   Run the same scenario with and without skills to measure actual uplift.
+
+2. **Portable benchmark packs**  
+   Create local, self-contained scenario packs that teams can run in CI.
+
+3. **Fathom usefulness heuristics**  
+   Score compactness, overlap risk, and the presence of examples/resources, not just raw token size.
+
+In practice, that means:
+
+- **Skill Harbor** manages and governs the fleet
+- **Voyager** measures whether the fleet helps
+- **Fathom** predicts where the fleet is likely to help or hurt
+
+---
+
+## So is Skill Harbor trying to replace SkillsBench?
+
+No.
+
+Skill Harbor is better understood as the system that makes SkillsBench-style lessons **actionable inside a team workflow**:
+
+- choose better skills
+- distribute them consistently
+- validate them across agents
+- measure whether they are actually helping
+
+That is why we treat SkillsBench as an important research input and evaluation model, while Skill Harbor remains focused on **governance, portability, and operational deployment**.

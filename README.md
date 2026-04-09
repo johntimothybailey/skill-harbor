@@ -24,6 +24,21 @@ Instead of manual skill installation or fragile global configurations, Skill Har
 
 **It is the intelligence infrastructure layer for professional AI agent workflows.**
 
+## 🧠 SkillsBench Alignment
+
+Skill Harbor and **SkillsBench** are complementary:
+
+- **SkillsBench** is a research and evaluation lens for understanding whether skills improve agent outcomes.
+- **Skill Harbor** is the operational system that governs, distributes, and standardizes those skills across teams and agent platforms.
+
+The SkillsBench research reinforces several places where Skill Harbor is already strong:
+
+- **Preventing self-generated workflow hallucinations**: if models are poor at inventing their own procedural skills on the fly, a curated Harbor registry is a safer operating model.
+- **Filtering a noisy public ecosystem**: if the broader skill ecosystem has uneven quality, Harbor's provenance, governance, and team curation become more important.
+- **Turning portability into operations**: if `SKILL.md`-style artifacts can work across multiple agent harnesses, Harbor is the layer that actually distributes, adapts, and governs them consistently.
+
+If you want the deeper write-up, including the specific SkillsBench findings and how they map to Voyager and Fathom, see the docs FAQ: **[How does Skill Harbor align with SkillsBench?](https://docs.skill-harbor.app/docs/faq/skillsbench)**.
+
 ## 🛠️ The Architecture: How It Works
 
 Skill Harbor is designed as the **Commander of your Skill Sync Engine**. Instead of reinventing the wheel, it acts as a high-level orchestrator that tightly integrates two incredibly powerful underlying tools from the agent ecosystem.
