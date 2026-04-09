@@ -64,8 +64,15 @@ skill-harbor unstow
 1.  **Consistency**: One developer adding a 10,000-token skill can ruin the token economy for the whole team. Lockdown prevents this.
 2.  **Context Hygiene**: Agents perform better when their context is "right-sized." Governance helps you keep the "displacement" (token usage) low.
 3.  **Auditability**: By using a declarative manifest and --lockdown, you can audit exactly what logic was available to an agent during any specific development phase.
+4.  **Quality & Governance**: The broader public skill ecosystem currently suffers from low average quality (6.2/12 in the SkillsBench scoring). Skill Harbor's provenance and governance tracking is critical for enterprise deployment to ensure agents only utilize vetted, verified skills.
 
 ```bash
 # Combining global and local governance
 skill-harbor up --global --lockdown
 ```
+
+---
+
+*Reference: Li, X., et al. (2026). SkillsBench: Benchmarking How Well Agent Skills Work Across Diverse Tasks. https://www.skillsbench.ai/skillsbench.pdf*
+
+For the broader product comparison, see **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**.

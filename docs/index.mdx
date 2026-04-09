@@ -61,6 +61,12 @@ At the heart of the harbor is the **[Skill Standard](/docs/skill-standards)**. W
 - **Displacement Math**: Automated token counting to keep your "context wake" small.
 
 
+## 🧠 The Necessity of Curated Registries
+
+Empirical research suggests that LLMs cannot reliably self-generate procedural knowledge on the fly. In the SkillsBench evaluation, self-generated skills produced negligible or negative benefit on average. Skill Harbor addresses that failure mode by providing a vetted catalog of strategic skills, making a curated registry a safer operating model for reliable agent success.
+
+If you want the deeper comparison, see the FAQ entry: **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**.
+
 ## 🔍 What This Looks Like in Practice
 
 A new developer joins your team. Without Skill Harbor, they spend time manually copying prompt files into `.claude/skills/`, hoping they grabbed the right versions, and have no idea which skills their teammates are using.
@@ -115,3 +121,14 @@ Skill Harbor is built for the **Solo Captain** and the **Full Fleet Command**.
 - **🌍 Global Fleet Control**: Manage personal and organization-wide skills across any project workspace.
 - **🛠️ Cross-Platform Transpilation**: Powered by `skill-porter` to convert skill formats between Gemini and Claude seamlessly.
 - **🔌 Idempotent**: Run `skill-harbor up` safely to pull down the latest adapted skill updates.
+
+---
+
+## ❓ Related FAQ
+
+- **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**
+- **[Why Not Skills.sh?](/docs/faq/comparison)**
+
+---
+
+*Reference: Li, X., et al. (2026). SkillsBench: Benchmarking How Well Agent Skills Work Across Diverse Tasks. https://www.skillsbench.ai/skillsbench.pdf*

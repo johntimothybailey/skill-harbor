@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
+import matter from "gray-matter";
 import { voyagerAction } from "./voyager";
 import { resolveCommandScope } from "../command-scope";
-import { getAgentBerths, getManifestManager, ask } from "../utils";
+import { ask, getAgentBerths, getManifestManager } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
 import { printSuccess } from "../ui";
@@ -15,7 +16,16 @@ vi.mock("../utils");
 vi.mock("../services/config");
 vi.mock("../services/profiler");
 vi.mock("../ui");
-vi.mock("spinnies");
+vi.mock("spinnies", () => ({
+    default: class MockSpinnies {
+        add = vi.fn();
+        update = vi.fn();
+        succeed = vi.fn();
+        fail = vi.fn();
+        remove = vi.fn();
+        hasActiveSpinners = vi.fn().mockReturnValue(false);
+    }
+}));
 vi.mock("js-yaml", () => ({
     default: {
         load: vi.fn()
@@ -29,9 +39,11 @@ describe("voyagerAction", () => {
     let mockManifestManager: any;
     let mockProfiler: any;
     let mockConfigManager: any;
+    let consoleSpy: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.unstubAllGlobals();
 
         mockManifestManager = {
             read: vi.fn().mockResolvedValue({ targets: [], skills: {} }),
@@ -58,9 +70,18 @@ describe("voyagerAction", () => {
         });
         (ask as any).mockResolvedValue(false);
         (os.homedir as any).mockReturnValue("/home/user");
-        vi.spyOn(process, "exit").mockImplementation(() => {
+        (fs.readFile as any).mockResolvedValue("");
+        (fs.mkdir as any).mockResolvedValue(undefined);
+        (fs.writeFile as any).mockResolvedValue(undefined);
+        (matter as any).mockReturnValue({ data: {} });
+        consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        vi.spyOn(process, "exit").mockImplementation((() => {
             throw new Error("exit");
-        });
+        }) as any);
+    });
+
+    afterEach(() => {
+        consoleSpy.mockRestore();
     });
 
     it("uses the global manifest when scope resolution selects global", async () => {
@@ -105,4 +126,68 @@ describe("voyagerAction", () => {
         );
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining("All ghosts berthed"));
     });
+
+    it("runs compare mode, emits json, avoids ghost prompts for the no-skills branch, and saves traces", async () => {
+        const options = { compare: true, format: "json", saveTrace: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        (getAgentBerths as any).mockResolvedValue([{ path: "/workspace/.agents/skills", label: "Codex", key: "codex" }]);
+        mockProfiler.findSkills.mockResolvedValue(["/workspace/.agents/skills/tool-a"]);
+        (fs.readFile as any).mockImplementation(async (filePath: string) => {
+            if (filePath.endsWith("SKILL.md")) {
+                return "---\nname: Tool A\ndescription: Helpful tool description that is definitely long enough.\n---";
+            }
+            return "";
+        });
+        (matter as any).mockReturnValue({
+            data: {
+                name: "Tool A",
+                description: "Helpful tool description that is definitely long enough."
+            }
+        });
+
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(makeFetchResponse({
+                role: "assistant",
+                content: "",
+                tool_calls: [{ id: "call-1", function: { name: "ToolA", arguments: "{}" } }]
+            }))
+            .mockResolvedValueOnce(makeFetchResponse({
+                role: "assistant",
+                content: "completed with skills"
+            }))
+            .mockResolvedValueOnce(makeFetchResponse({
+                role: "assistant",
+                content: "completed without skills"
+            }));
+        vi.stubGlobal("fetch", fetchMock);
+
+        await voyagerAction("test query", options, mockCommand);
+
+        expect(ask).not.toHaveBeenCalled();
+        expect(fs.mkdir).toHaveBeenCalledTimes(1);
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("with-skills.json"), expect.any(String), "utf-8");
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("without-skills.json"), expect.any(String), "utf-8");
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("summary.json"), expect.any(String), "utf-8");
+
+        const jsonOutput = JSON.parse(consoleSpy.mock.calls.at(-1)[0]);
+        expect(jsonOutput.with_skills.toolCallCount).toBe(1);
+        expect(jsonOutput.without_skills.toolCallCount).toBe(0);
+        expect(jsonOutput.delta.tool_count_delta).toBe(1);
+
+        const withSkillsBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+        const withoutSkillsBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+        expect(withSkillsBody.tools).toHaveLength(1);
+        expect(withoutSkillsBody.tools).toBeUndefined();
+        expect(withoutSkillsBody.tool_choice).toBeUndefined();
+    });
 });
+
+function makeFetchResponse(message: any) {
+    return {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+            choices: [{ message }]
+        })
+    };
+}

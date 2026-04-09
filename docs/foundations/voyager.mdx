@@ -10,6 +10,12 @@ While Fathom provides fast heuristic and single-skill probabilistic checks, **Vo
 
 Voyager reads your active agent berths, constructs JSON Schema tool definitions, and passes mock context payloads to ensure your "fleet" is ready for real-world deployment.
 
+**At a high level, Voyager:**
+- loads active skills from berths
+- exposes them as tools
+- runs a model loop
+- validates expected tool usage sequence
+
 ## ⚓ Voyager TL;DR
 
 ```bash
@@ -67,3 +73,9 @@ Voyager is designed to be a **Pull Request Gate**. If the agent deviates from th
 # Run Voyager with a specific model override
 skill-harbor voyager -f harbor-voyager-test.yaml --model gpt-4o
 ```
+
+---
+
+*Reference: Li, X., et al. (2026). SkillsBench: Benchmarking How Well Agent Skills Work Across Diverse Tasks. https://www.skillsbench.ai/skillsbench.pdf*
+
+For the broader alignment story, see **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**.

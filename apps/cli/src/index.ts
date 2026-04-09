@@ -113,8 +113,11 @@ program
     .command("voyager [query]")
     .description("End-to-end integration testing suite to simulate agentic workflows.")
     .option("-f, --file <path>", "Path to a YAML test definition file (e.g., harbor-voyager-test.yaml)")
+    .option("-c, --compare", "Run paired simulations with and without skills, then report the delta.")
+    .option("--format <type>", "Output format ('pretty' | 'json'). Default: 'pretty'.")
     .option("-m, --model <name>", "Override the default LLM model for the voyager.")
     .option("-b, --baseUrl <url>", "Override the default API base URL for the voyager.")
+    .option("--save-trace [dir]", "Persist Voyager run artifacts. Optional directory override.")
     .action(voyagerAction);
 
 await program.parseAsync(process.argv);
