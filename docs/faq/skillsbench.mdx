@@ -6,12 +6,12 @@ icon: "circle-question"
 
 # How does Skill Harbor align with SkillsBench?
 
-**Short answer:** Skill Harbor and SkillsBench are complementary.
+**Short answer:** Skill Harbor and SkillsBench are complementary.[^paper]
 
 - **SkillsBench** helps evaluate whether skills improve agent outcomes.
 - **Skill Harbor** helps teams **source, govern, distribute, and standardize** those skills across agents and repositories.
 
-In other words: SkillsBench is a research and evaluation lens. Skill Harbor is the operational system that makes high-quality skills usable in the real world.
+In other words: SkillsBench is a research and evaluation lens. Skill Harbor is the operational system that makes high-quality skills usable in the real world.[^blog]
 
 ---
 
@@ -19,7 +19,7 @@ In other words: SkillsBench is a research and evaluation lens. Skill Harbor is t
 
 ### 1. Preventing runtime improvisation from becoming your skill strategy
 
-One of the clearest SkillsBench findings is that models are poor at inventing their own procedural scaffolding at runtime. In the paper's evaluation, **self-generated skills produced a negligible or negative effect on average, roughly -1.3 percentage points**.
+One of the clearest SkillsBench findings is that models are poor at inventing their own procedural scaffolding at runtime. In the paper's evaluation, **self-generated skills produced a negligible or negative effect on average, roughly -1.3 percentage points**.[^blog][^paper]
 
 The real implication is not just “self-generated skills are bad.” It is that teams should not treat last-second model improvisation as a substitute for shared operational knowledge.
 
@@ -33,7 +33,7 @@ So the advantage is not merely curation in the abstract. The advantage is that S
 
 ### 2. Converting a noisy public ecosystem into a trustworthy internal fleet
 
-The SkillsBench research also suggests that the broader public skill ecosystem has a quality problem: many skills are vague, bloated, or operationally weak. In the paper's scoring, the public ecosystem averaged only **6.2 out of 12**.
+The SkillsBench research also suggests that the broader public skill ecosystem has a quality problem: many skills are vague, bloated, or operationally weak. In the paper's scoring, the public ecosystem averaged only **6.2 out of 12**.[^paper]
 
 That creates a very practical team problem: even if great skills exist somewhere, most organizations still need a way to decide which ones deserve to become part of their standard operating context.
 
@@ -48,7 +48,7 @@ So the win is not just “quality matters.” The win is that Skill Harbor gives
 
 ### 3. Turning portability into something teams can actually operate
 
-The important takeaway is not just that file-based skills *can* travel across different harnesses. The stronger point is that portability only becomes valuable when a team can distribute, adapt, and govern those same artifacts consistently.
+The important takeaway is not just that file-based skills *can* travel across different harnesses. The stronger point is that portability only becomes valuable when a team can distribute, adapt, and govern those same artifacts consistently.[^paper][^contrib]
 
 That aligns directly with Skill Harbor's architecture:
 
@@ -62,7 +62,7 @@ So the win is not merely “skills are portable.” The win is that Skill Harbor
 
 ## What SkillsBench reinforces about Skill Harbor's product direction
 
-The SkillsBench findings do **not** suggest that Skill Harbor should become a benchmark site.
+The SkillsBench findings do **not** suggest that Skill Harbor should become a benchmark site.[^paper]
 
 They *do* reinforce several directions that fit Harbor well:
 
@@ -95,3 +95,13 @@ Skill Harbor is better understood as the system that makes SkillsBench-style les
 - measure whether they are actually helping
 
 That is why we treat SkillsBench as an important research input and evaluation model, while Skill Harbor remains focused on **governance, portability, and operational deployment**.
+
+---
+
+## References
+
+[^paper]: Li, X., et al. (2026). *SkillsBench: Benchmarking How Well Agent Skills Work Across Diverse Tasks*. SkillsBench paper: https://www.skillsbench.ai/skillsbench.pdf
+
+[^blog]: *Introducing SkillsBench: The First Benchmark for Agent Skills*. SkillsBench blog, February 10, 2026: https://www.skillsbench.ai/blogs/introducing-skillsbench
+
+[^contrib]: *Contributing | SkillsBench* — overview of SkillsBench's task model, skill composition goals, and the open skill standard context: https://www.skillsbench.ai/docs/contributing
