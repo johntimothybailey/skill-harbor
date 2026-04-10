@@ -6,13 +6,27 @@ import { printHeader, printSuccess, printError, promptEmptyProjectHarborAction, 
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
+const spinniesCtor = vi.fn();
+
 vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
 vi.mock('node:fs/promises');
 vi.mock('node:fs');
 vi.mock('node:os');
-vi.mock('spinnies');
+vi.mock('spinnies', () => ({
+    default: class MockSpinnies {
+        constructor(...args: any[]) {
+            spinniesCtor(...args);
+        }
+        add = vi.fn();
+        update = vi.fn();
+        succeed = vi.fn();
+        fail = vi.fn();
+        remove = vi.fn();
+        pick = vi.fn();
+    }
+}));
 vi.mock('fast-glob');
 vi.mock('node:child_process', () => ({
     exec: vi.fn(),
@@ -97,6 +111,17 @@ describe('upAction', () => {
         expect(mockOrchestrator.berth).toHaveBeenCalled();
         expect(mockManifestManager.addSkill).toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete.'));
+    });
+
+    it('should disable spinner animation for concurrent sync output', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+
+        await upAction(options, mockCommand);
+
+        expect(spinniesCtor).toHaveBeenCalledWith({ disableSpins: true });
     });
 
     it('should skip sync if no changes are detected', async () => {
