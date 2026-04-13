@@ -30,6 +30,8 @@ While both tools deal with "Agent Skills," their core purposes, target audiences
 *   **How it works**: A repository maintains a declarative `harbor-manifest.json`. Developers run a single `skill-harbor up` command. Harbor then fetches the exact skills defined in the manifest, cross-compiles them for the developer's specific agent (Claude, Cursor, Gemini), safely stows away any conflicting personal skills, and automatically generates a "Lighthouse" system prompt to teach the agent how to use its new capabilities.
 *   **Best for**: Team workspaces. If your goal is: *"I need all 50 engineers on my team to share the exact same custom AI coding standards, strictly locked down, and cross-compiled for 4 different IDEs without manual configuration,"* then you need Skill Harbor.
 
+Harbor is intentionally **skills-first**, not a general-purpose synchronizer for every AI config artifact. For that product boundary, see **[Architecture & Product Boundary](/docs/foundations/architecture)**.
+
 ---
 
 ## Why I didn't use Skills.sh inside of Skill Harbor
@@ -63,4 +65,5 @@ If `skills.sh` handles the fetching and installation independently, Skill Harbor
 
 ## Related FAQ
 
-If you're specifically evaluating Skill Harbor against the newer SkillsBench research, see **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**.
+- If you're specifically evaluating Skill Harbor against the newer SkillsBench research, see **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**.
+- If you're comparing catalog/governance platforms versus runtime delivery, see **[Why Not Agent Skill Harbor?](/docs/faq/agent-skill-harbor)**.

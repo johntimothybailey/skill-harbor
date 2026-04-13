@@ -1,0 +1,240 @@
+---
+title: "Why Not Agent Skill Harbor?"
+description: "How Skill Harbor differs from Agent Skill Harbor, where they overlap, and when it makes sense to use both"
+icon: "anchor"
+---
+
+# Why Not Agent Skill Harbor?
+
+This question comes up because both projects use the word **Harbor**, both are about **agent skills**, and both help teams standardize AI context. The short answer is:
+
+> **Agent Skill Harbor is primarily a catalog and governance layer. Skill Harbor is primarily a sync, conversion, and runtime delivery layer.**
+
+They overlap, but they are not the same product.
+
+> **Positioning answer:** If someone asks *"Why not just use Agent Skill Harbor?"*, the cleanest answer is: **because a catalog is not the same thing as a deployment engine**. Agent Skill Harbor helps teams organize and govern skills across repositories. Skill Harbor helps teams actually fetch, convert, berth, isolate, and restore those skills in live agent runtimes.
+
+---
+
+## The shortest answer
+
+If your question is:
+
+- *"How do we collect, review, classify, and publish skills across a team or org?"* → **Agent Skill Harbor** is aimed more directly at that problem.
+- *"How do we make sure the right skills actually land in Claude, Cursor, Codex, Gemini, Continue, Windsurf, Copilot, or Rulesync on developer machines?"* → **Skill Harbor** is aimed more directly at that problem.
+
+A useful mental model is:
+
+- **Agent Skill Harbor** = **catalog / governance / marketplace**
+- **Skill Harbor** = **delivery engine / orchestrator / berth manager**
+
+---
+
+## Quick comparison
+
+| Area | Agent Skill Harbor | Skill Harbor |
+| --- | --- | --- |
+| Primary role | Catalog and governance layer | Sync and runtime delivery layer |
+| Main operating model | Separate control-plane repo for collecting and publishing skills | Repo-adjacent manifests plus live target synchronization |
+| Best for | Org-wide discovery, provenance, approval, publication | Installing the right skills into real agent targets |
+| Works across many repos | Yes, as a catalog/control plane | Yes, via manifests and global fleet sync |
+| Lives alongside a working repo | Not as its main identity | Yes, explicitly |
+| Converts skills for targets | Not its primary value proposition | Yes |
+| Manages live root skill folders | Not as its primary surface | Yes |
+| Cleanup / restore operations | Not clearly a first-class workflow | Yes: `stow`, `unstow`, `undock`, `--lockdown` |
+
+---
+
+## When should I use which?
+
+Use **Agent Skill Harbor** when your main need is:
+
+- building a browsable internal skill catalog
+- collecting skills from many repositories
+- tracking provenance, approval, and publication
+- managing skill discovery at the organization level
+
+Use **Skill Harbor** when your main need is:
+
+- declaring the skill fleet a repo should use
+- syncing skills into real agent runtimes
+- converting skills for different targets
+- isolating workspace state with manifests and lockdown
+- cleaning up, restoring, or auditing installed skill folders
+
+Use **both** when you want:
+
+- a central system of record for what is approved
+- plus a deterministic way to install that approved fleet into live developer environments
+
+---
+
+## Where they overlap
+
+Both projects help with:
+
+- organizing agent skills for teams
+- sharing skills through Git and repository workflows
+- improving consistency across developers
+- making governance and standardization more explicit
+
+If all you need is a broad answer to *"Do these repos live in the same space?"* the answer is **yes**.
+
+---
+
+## Where Skill Harbor is different
+
+Skill Harbor is built around the operational workflow of:
+
+1. **declaring skills in a manifest**
+2. **fetching them into harbor-controlled staging**
+3. **processing or converting them for the target runtime**
+4. **berthing them into real agent directories**
+5. **checking, stowing, restoring, and governing that installed state**
+
+That is why the center of Skill Harbor is commands like:
+
+- `dock`
+- `up`
+- `check`
+- `fathom`
+- `stow`
+- `unstow`
+- `undock`
+
+This is a strong fit when you care about:
+
+- deterministic rollout into live agent environments
+- one-command workspace synchronization
+- multi-target delivery
+- target-aware conversion between agent ecosystems
+- local, project, and global harbor layering
+- install-time governance and workspace isolation
+
+---
+
+## Where Agent Skill Harbor appears stronger
+
+At a high level, Agent Skill Harbor appears more focused on:
+
+- cataloging skills across repositories
+- provenance and publication
+- approval/governance workflows
+- organization-level browsing and discovery
+- marketplace-style visibility into what skills exist
+
+That is a different value proposition from *"take this declared fleet and install it into my actual agent berths."*
+
+---
+
+## Why not just use Agent Skill Harbor?
+
+Because a **catalog** is not the same thing as a **deployment engine**.
+
+Knowing that a skill exists, is approved, or is recommended is valuable. But a team still has to answer questions like:
+
+- How does that skill get onto a developer's machine?
+- How does it get transformed for Claude vs. Gemini vs. Codex?
+- How do we keep project-specific skills from bleeding across client workspaces?
+- How do we detect missing berths or drift in installed state?
+- How do we restore or lock down the environment safely?
+
+Those are the kinds of problems Skill Harbor is designed to solve directly.
+
+---
+
+## Can both make sense together?
+
+Yes — and this is often the best way to think about them.
+
+A practical split is:
+
+- use **Agent Skill Harbor** as the **system of record** for cataloging, provenance, review, and approval
+- use **Skill Harbor** as the **runtime delivery engine** that syncs the approved fleet into actual agent targets
+
+In that model, the two projects are **complementary** rather than redundant.
+
+---
+
+## Do both help manage or clean up user root skills?
+
+Not in the same way.
+
+### Skill Harbor: yes, explicitly
+
+Skill Harbor directly manages the **installed state** in real agent roots and project berths.
+
+That includes things like:
+
+- a project manifest at `.harbor/harbor-manifest.json`
+- a global manifest at `~/.harbor/harbor-manifest.json`
+- syncing into active agent targets with `up`
+- cleaning and restoring state with `stow`, `unstow`, and `undock`
+- isolating sensitive workspaces with `up --lockdown`
+
+So if your question is *"Can this tool help me control what is actually sitting in `.claude/skills`, `.agents/skills`, or similar folders?"* the answer for Skill Harbor is **yes**.
+
+### Agent Skill Harbor: not as its primary surface
+
+Agent Skill Harbor appears stronger as a **catalog, provenance, and governance layer** than as a direct manager of live root skill folders.
+
+From its public documentation, it clearly supports:
+
+- collection
+- cataloging
+- governance labels
+- post-collect analysis plugins
+- drift-oriented auditing in the catalog pipeline
+
+But it does **not** present itself primarily as a tool for:
+
+- stowing and restoring local root skills
+- purging live agent berths
+- managing installed skills directly inside local runtime folders
+
+So the practical distinction is:
+
+> **Skill Harbor manages live installed skill state. Agent Skill Harbor manages catalog and governance state.**
+
+---
+
+## Which one is more mature?
+
+That depends on **which layer** you mean.
+
+- If you mean **catalog, governance, and publication UX**, Agent Skill Harbor may be the more natural comparison point.
+- If you mean **multi-target sync, target conversion, and live workspace delivery**, Skill Harbor is solving a more specific operational problem.
+
+So the better question is usually not *"Which one wins?"* but *"Which layer of the workflow do we need to own?"*
+
+---
+
+## Another important comparison area
+
+One of the most important comparison areas is **install-time policy enforcement**.
+
+Not just:
+
+- *Can we mark skills as approved or discouraged?*
+
+But also:
+
+- *Can we prevent prohibited skills from being installed?*
+- *Can we detect drift between approved state and installed state?*
+- *Can we revoke or replace installed skills reliably?*
+
+That is where catalog tooling and delivery tooling usually diverge the most.
+
+---
+
+## Bottom line
+
+If someone says **"Why not just use Agent Skill Harbor?"**, the most accurate short answer is:
+
+> Because Agent Skill Harbor helps you manage and publish a skill catalog, while Skill Harbor helps you actually sync, convert, berth, and govern those skills in live agent runtimes.
+
+Use **Agent Skill Harbor** when your primary problem is **cataloging and governance**.
+
+Use **Skill Harbor** when your primary problem is **operational rollout into real agent targets**.
+
+Use **both** when you want a catalog **and** a deterministic delivery path.

@@ -22,6 +22,9 @@ Instead of manual skill installation or fragile global configurations, Skill Har
   <Card title="🛳️ Multi-Target Berthing" icon="ship">
     During `skill-harbor up`, one manifest can deploy consistent skill context to Claude, Cursor, Codex, Gemini, Windsurf, Copilot, and other supported targets.
   </Card>
+  <Card title="🧱 Skills-First Architecture" icon="waypoints" href="/docs/foundations/architecture">
+    Skill Harbor stays focused on skills: fetch, refine, govern, and berth them well without expanding into every other config surface.
+  </Card>
   <Card title="🛡️ Governance Controls" icon="shield" href="/docs/reference/commands">
     Use `up --lockdown`, `stow`, `unstow`, `undock`, and `migrate` to control what agents can see and to safely manage state over time.
   </Card>
@@ -59,6 +62,8 @@ At the heart of the harbor is the **[Skill Standard](/docs/skill-standards)**. W
 - **Strategic Headers**: `Purpose`, `Trigger`, and `Guidelines` for deterministic routing.
 - **Semantic Contracts**: Optional `Requires` and `Produces` keys to allow for safe skill chaining.
 - **Displacement Math**: Automated token counting to keep your "context wake" small.
+
+Harbor is intentionally **skills-first**. For the architectural boundary behind that decision, see **[Architecture & Product Boundary](/docs/foundations/architecture)**.
 
 
 ## 🧠 The Necessity of Curated Registries
@@ -128,6 +133,7 @@ Skill Harbor is built for the **Solo Captain** and the **Full Fleet Command**.
 
 - **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**
 - **[Why Not Skills.sh?](/docs/faq/comparison)**
+- **[Why Not Agent Skill Harbor?](/docs/faq/agent-skill-harbor)**
 
 ---
 
