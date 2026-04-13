@@ -2,14 +2,18 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline/promises';
+import { fileURLToPath } from 'node:url';
 import kleur from 'kleur';
 import ora from 'ora';
 import dotenv from 'dotenv';
 import boxen from 'boxen';
 
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..');
+
 // Load .env and .env.local
 dotenv.config();
-dotenv.config({ path: path.join(process.cwd(), '.env.local'), override: true });
+dotenv.config({ path: path.join(repoRoot, '.env.local'), override: true });
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL = "llama-3.3-70b-versatile";
@@ -19,7 +23,7 @@ async function getDiff() {
         // Find the base branch (defaulting to main)
         const baseBranch = 'main';
         // Use 'git diff baseBranch' to include committed + staged + unstaged changes
-        return execSync(`git diff ${baseBranch}`, { encoding: 'utf-8' });
+        return execSync(`git diff ${baseBranch}`, { encoding: 'utf-8', cwd: repoRoot });
     } catch (error) {
         console.error(kleur.red('The Quartermaster is lost! Failed to get git diff.'));
         process.exit(1);
@@ -138,7 +142,7 @@ async function run() {
 
     // Create the changeset file
     const changesetName = `quartermaster-${Date.now().toString(36)}`;
-    const changesetPath = path.join(process.cwd(), '.changeset', `${changesetName}.md`);
+    const changesetPath = path.join(repoRoot, '.changeset', `${changesetName}.md`);
     
     const content = `---
 "skill-harbor": ${suggestion.bump}
@@ -161,5 +165,4 @@ run().catch(err => {
     console.error(kleur.red(`\nIncident at sea: ${err.message}`));
     process.exit(1);
 });
-
 

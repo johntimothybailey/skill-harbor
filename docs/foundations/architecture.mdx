@@ -1,0 +1,135 @@
+---
+title: Architecture & Product Boundary
+description: "What Skill Harbor is, what it is not, and how that shapes the system."
+icon: "waypoints"
+---
+
+# ⚓ Architecture & Product Boundary
+
+Skill Harbor works best when its scope stays sharp.
+
+This page defines what Skill Harbor **is**, what it **is not**, and how that boundary shapes the architecture of the system.
+
+---
+
+## What Skill Harbor is
+
+Skill Harbor is a **skills-first orchestration and governance system** for engineers and engineering teams.
+
+More specifically, it is:
+
+- a **trusted internal skill supply chain**
+- a **skills refinement and distribution engine**
+- a **team standardization layer** for `SKILL.md`-style artifacts
+- a place to **learn better skill technique** through curation, validation, profiling, and authoring guidance
+
+That means Harbor is not just a place to copy files. It is the layer that helps teams:
+
+- fetch the right skills
+- adapt them for different agent environments
+- berth them consistently
+- validate them
+- profile their quality and cost
+- keep strong skills in circulation
+
+---
+
+## What Skill Harbor is not
+
+Skill Harbor is **not**:
+
+- a general-purpose rules engine
+- a subagent-management framework
+- a broad workspace configuration synchronizer
+- a replacement for every downstream tool's full ecosystem model
+
+Harbor may integrate with tools that support those broader surfaces, but Harbor itself remains centered on **skills**.
+
+That distinction matters because product sprawl would weaken the thing Harbor is trying to be best at: helping individuals and teams use skills well.
+
+---
+
+## The architectural consequence
+
+Because Harbor is skills-first, the architecture should preserve a strict boundary:
+
+1. **Moor** — fetch raw skill cargo
+2. **Process** — refine/adapt skill cargo for a target environment
+3. **Berth** — place the adapted skill cargo into the right destination
+
+Harbor stays the system that owns that flow.
+
+External tools may help with part of the pipeline, but they should not erase Harbor's responsibility for:
+
+- skill orchestration
+- skill refinement
+- skill validation
+- skill governance
+- skill education and documentation
+
+If an integration makes Harbor less authoritative about skills, it is probably the wrong integration shape.
+
+---
+
+## Why this matters for RuleSync
+
+RuleSync is useful, but Harbor should only adopt it in ways that remain **skills-only**.
+
+That means the important question is not:
+
+> "Should Harbor become a full RuleSync-style context orchestrator?"
+
+It is:
+
+> "Should Harbor support a skills-only RuleSync integration path where that improves skill delivery without weakening Harbor's refinement and governance role?"
+
+Within that boundary, Harbor can support three increasingly strong shapes:
+
+### 1. Target-only support
+
+Harbor berths processed skills into RuleSync-managed skill locations such as `~/.rulesync/skills`.
+
+### 2. Skills-only RuleSync-backed processing
+
+Harbor may optionally support a more explicit RuleSync-backed skills path, but only if the implementation still preserves Harbor's ownership of skill refinement and verification.
+
+### 3. Optional bridge behavior
+
+Harbor may optionally trigger a post-`up` RuleSync command, but only as an opt-in workflow enhancement and not as a default behavior for all users.
+
+---
+
+## What Harbor should explicitly reject
+
+Even if a downstream tool supports them, Harbor should reject scope creep into:
+
+- general rules distribution
+- subagent synchronization
+- non-skill workspace config management
+- broad "one tool for every AI config artifact" positioning
+
+Those capabilities may be useful elsewhere, but they are not Harbor's center of gravity.
+
+---
+
+## Harbor's long-term differentiation
+
+The strongest version of Skill Harbor is not "the tool that touches the most artifact types."
+
+It is:
+
+- the tool that understands **skills** best
+- the tool that helps teams **govern** skills
+- the tool that helps engineers **learn better skill technique**
+- the tool that turns a pile of prompt files into a **portable, auditable, high-signal skill fleet**
+
+That is the product boundary this architecture should protect.
+
+---
+
+## Related reading
+
+- [Manifest & `.harbor` Folder](/docs/foundations/manifest)
+- [Governance](/docs/foundations/governance)
+- [The Toolkit (Meta-Skills)](/docs/foundations/toolkit)
+- [Why Not Skills.sh?](/docs/faq/comparison)

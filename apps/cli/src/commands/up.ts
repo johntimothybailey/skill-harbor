@@ -148,7 +148,9 @@ function parseTargetOption(targetOption?: string | string[]): string[] | undefin
 export async function upAction(options: any, command: any) {
     const opts = command.opts();
     const manifestManager = getManifestManager(opts);
-    const spinnies = new Spinnies();
+    // Concurrent sync is easier to read as deterministic line updates than as
+    // animated multi-spinner rendering, especially in mixed success/failure runs.
+    const spinnies = new Spinnies({ disableSpins: true });
 
     try {
         printHeader("Workspace Synchronization Initiated");
