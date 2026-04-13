@@ -6,7 +6,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
-    "lint": "turbo run lint"
+    "lint": "turbo run lint",
+    "quartermaster": "bun ./scripts/quartermaster.ts"
   },
   "workspaces": [
     "apps/*"
