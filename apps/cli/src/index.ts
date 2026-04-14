@@ -32,10 +32,10 @@ program
 
 
 program
-    .command("dock <url>")
+    .command("dock <source>")
     .description("Register a skill's source in the manifest.")
     .option("-g, --global", "Register the skill in the global manifest (~/.harbor)")
-    .option("-l, --local <path>", "Register a local project-specific skill from a file path")
+    .option("-o, --override", "Register the skill in the project overrides manifest (.harbor/harbor-manifest.overrides.json)")
     .action(dockAction);
 
 program

@@ -85,7 +85,7 @@ export async function fathomAction(options: any, command: any) {
 
         // 3. Override Warnings
         if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
-            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
@@ -189,7 +189,7 @@ export async function fathomAction(options: any, command: any) {
             }
 
             let layerLabel = "";
-            if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
+            if (skill.layer === "local") layerLabel = kleur.yellow(" [Override]");
             else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
             else if (skill.layer === "ghost") layerLabel = kleur.magenta(" [Ghost]");
 

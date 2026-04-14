@@ -62,4 +62,44 @@ describe("ManifestManager", () => {
         expect(manager.getSkillsCacheDir("local")).toBe(path.join(workspaceDir, ".harbor", "skills"));
         expect(manager.getSkillsCacheDir("global")).toBe(path.join(homeDir, ".harbor", "skills"));
     });
+
+    it("prefers the overrides manifest path for the project-personal layer", async () => {
+        const manager = new ManifestManager({ cwd: workspaceDir });
+
+        await manager.init();
+
+        expect(manager.getOverridesPath()).toBe(path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json"));
+        expect(manager.getLocalPath()).toBe(path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json"));
+    });
+
+    it("migrates a legacy local manifest filename to the overrides manifest path", async () => {
+        const legacyPath = path.join(workspaceDir, "harbor-manifest.local.json");
+        const preferredPath = path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json");
+        await fs.writeFile(
+            legacyPath,
+            JSON.stringify({
+                version: "1.0",
+                dependencies: {},
+                skills: {
+                    localSkill: {
+                        name: "localSkill",
+                        source: "./skill",
+                        localPath: ""
+                    }
+                }
+            }),
+            "utf-8"
+        );
+
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        const messages: string[] = [];
+
+        const migrated = await manager.migrateLegacyOverrides((message) => messages.push(message));
+
+        expect(migrated).toBe(true);
+        expect(await pathExists(legacyPath)).toBe(false);
+        expect(await pathExists(preferredPath)).toBe(true);
+        expect(messages[0]).toContain("harbor-manifest.overrides.json");
+        expect(messages[0]).toContain("local filesystem skill sources");
+    });
 });

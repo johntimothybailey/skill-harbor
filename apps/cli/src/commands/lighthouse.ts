@@ -27,7 +27,7 @@ export async function lighthouseAction(options: any, command: any) {
 
         // 2. Override Warnings
         if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0) {
-            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
@@ -44,7 +44,7 @@ export async function lighthouseAction(options: any, command: any) {
 
         let snippet = `${kleur.yellow("Available specialized skills in this workspace stack:")}\n`;
         for (const meta of metadataList) {
-            const layerTag = meta.layer === 'local' ? kleur.yellow(' [Local Override]') : '';
+            const layerTag = meta.layer === 'local' ? kleur.yellow(' [Override]') : '';
             snippet += `\n- ${kleur.bold(meta.name)}${layerTag}: ${meta.description}`;
             if (meta.triggers && meta.triggers.length > 0) {
                 snippet += `\n  Triggers: ${meta.triggers.join(", ")}`;

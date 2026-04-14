@@ -22,7 +22,7 @@ const execAsync = promisify(exec);
 async function ensureHarborIgnoreCorrect(cwd: string) {
     const gitignorePath = path.join(cwd, ".gitignore");
     const requiredIgnores = [
-        "harbor-manifest.local.json",
+        ".harbor/harbor-manifest.overrides.json",
         "harbor-compass.yaml",
         ".harbor/skills/",
         ".harbor/stowage/"
@@ -45,6 +45,12 @@ async function ensureHarborIgnoreCorrect(cwd: string) {
         const legacyIndex = lines.findIndex(l => l.trim() === ".harbor" || l.trim() === ".harbor/");
         if (legacyIndex !== -1) {
             lines[legacyIndex] = ".harbor/skills/";
+            updated = true;
+        }
+
+        const legacyOverridesIgnoreIndex = lines.findIndex(l => l.trim() === "harbor-manifest.local.json" || l.trim() === ".harbor/harbor-manifest.local.json");
+        if (legacyOverridesIgnoreIndex !== -1) {
+            lines[legacyOverridesIgnoreIndex] = ".harbor/harbor-manifest.overrides.json";
             updated = true;
         }
 
@@ -158,6 +164,13 @@ export async function upAction(options: any, command: any) {
         let useGlobalScope = opts.global ?? false;
 
         if (!useGlobalScope) {
+            await manifestManager.init();
+            await manifestManager.migrateLegacyOverrides((message: string) => {
+                printInfo("Overrides Manifest Updated", message);
+            });
+        }
+
+        if (!useGlobalScope) {
             const hasProjectManifestStack = await manifestManager.hasProjectManifestStack();
             const hasGlobalManifest = await ManifestManager.globalManifestExists();
 
@@ -178,7 +191,7 @@ export async function upAction(options: any, command: any) {
                             dependencies: {},
                             skills: {}
                         }, "shared");
-                        printSuccess("Project harbor initialized at .harbor/harbor-manifest.json. Run 'skill-harbor dock <url>' to add skills, then run 'skill-harbor up' again.");
+                        printSuccess("Project harbor initialized at .harbor/harbor-manifest.json. Run 'skill-harbor dock <source>' to add skills, then run 'skill-harbor up' again.");
                         return;
                     }
 
@@ -221,13 +234,13 @@ export async function upAction(options: any, command: any) {
             }
 
             if (manifestManager.isLocalMigrationRecommended) {
-                console.log(kleur.yellow(`\n💡  Recommendation: Found harbor-manifest.local.json at project root.`));
-                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.\n`));
+                console.log(kleur.yellow(`\n💡  Recommendation: Found a legacy overrides manifest filename.`));
+                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to rename it to harbor-manifest.overrides.json.\n`));
             }
         }
 
         if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0) {
-            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
@@ -237,8 +250,8 @@ export async function upAction(options: any, command: any) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
         
-        // Always ensure basic local manifest ignore if it exists at root (for safety)
-        if (!useGlobalScope && !opts.migrate && await exists(path.join(process.cwd(), "harbor-manifest.local.json"))) {
+        // Always ensure basic overrides manifest ignore if the project uses it (for safety)
+        if (!useGlobalScope && !opts.migrate && await exists(ManifestManager.getProjectOverridesPath(process.cwd()))) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
 
@@ -393,7 +406,7 @@ export async function upAction(options: any, command: any) {
         }
 
         if (metadataList.length > 0) {
-            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agent skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Local Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
+            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agent skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
             const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";

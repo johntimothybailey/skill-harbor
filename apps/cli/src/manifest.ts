@@ -4,6 +4,11 @@ import os from "node:os";
 
 export type ManifestLayer = "global" | "shared" | "local";
 
+export const SHARED_MANIFEST_FILENAME = "harbor-manifest.json";
+export const OVERRIDES_MANIFEST_FILENAME = "harbor-manifest.overrides.json";
+export const LEGACY_LOCAL_MANIFEST_FILENAME = "harbor-manifest.local.json";
+export const OVERRIDES_RENAME_EXPLANATION = "Skill Harbor now uses 'overrides' terminology so this file is easier to distinguish from local filesystem skill sources.";
+
 export interface SkillEntry {
     name: string;
     version?: string;
@@ -40,20 +45,40 @@ export class ManifestManager {
 
         if (options?.customPath) {
             this.manifestPath = options.customPath;
-            this.localManifestPath = path.join(this.cwd, "harbor-manifest.local.json"); // Default fallback
+            this.localManifestPath = path.join(this.cwd, OVERRIDES_MANIFEST_FILENAME); // Default fallback
         } else {
             // Defaults, paths will be refined in init()
-            this.manifestPath = path.join(this.cwd, "harbor-manifest.json");
-            this.localManifestPath = path.join(this.cwd, "harbor-manifest.local.json");
+            this.manifestPath = path.join(this.cwd, SHARED_MANIFEST_FILENAME);
+            this.localManifestPath = path.join(this.cwd, OVERRIDES_MANIFEST_FILENAME);
         }
     }
 
     public static getGlobalPath(): string {
-        return path.join(os.homedir(), ".harbor", "harbor-manifest.json");
+        return path.join(os.homedir(), ".harbor", SHARED_MANIFEST_FILENAME);
     }
 
     public static getGlobalHarborDir(): string {
         return path.join(os.homedir(), ".harbor");
+    }
+
+    public static getProjectSharedPath(cwd: string): string {
+        return path.join(cwd, ".harbor", SHARED_MANIFEST_FILENAME);
+    }
+
+    public static getProjectLegacySharedPath(cwd: string): string {
+        return path.join(cwd, SHARED_MANIFEST_FILENAME);
+    }
+
+    public static getProjectOverridesPath(cwd: string): string {
+        return path.join(cwd, ".harbor", OVERRIDES_MANIFEST_FILENAME);
+    }
+
+    public static getProjectLegacyOverridesPath(cwd: string): string {
+        return path.join(cwd, LEGACY_LOCAL_MANIFEST_FILENAME);
+    }
+
+    public static getProjectLegacyHarborLocalPath(cwd: string): string {
+        return path.join(cwd, ".harbor", LEGACY_LOCAL_MANIFEST_FILENAME);
     }
 
     public static getGlobalSkillsCacheDir(): string {
@@ -73,6 +98,10 @@ export class ManifestManager {
         return this.localManifestPath;
     }
 
+    public getOverridesPath(): string {
+        return path.join(this.harborDir, OVERRIDES_MANIFEST_FILENAME);
+    }
+
     public get isMigrationRecommended(): boolean {
         return this.migrationRecommended;
     }
@@ -85,8 +114,8 @@ export class ManifestManager {
         if (this.initialized) return;
 
         // Resolve shared manifest location
-        const preferredPath = path.join(this.harborDir, "harbor-manifest.json");
-        const legacyPath = path.join(this.cwd, "harbor-manifest.json");
+        const preferredPath = ManifestManager.getProjectSharedPath(this.cwd);
+        const legacyPath = ManifestManager.getProjectLegacySharedPath(this.cwd);
 
         // If not using a custom path or haven't resolved yet
         if (this.manifestPath === legacyPath || this.manifestPath === preferredPath) {
@@ -103,15 +132,20 @@ export class ManifestManager {
             }
         }
 
-        // Resolve local manifest location
-        const localPreferredPath = path.join(this.harborDir, "harbor-manifest.local.json");
-        const localLegacyPath = path.join(this.cwd, "harbor-manifest.local.json");
+        // Resolve overrides manifest location
+        const localPreferredPath = ManifestManager.getProjectOverridesPath(this.cwd);
+        const localLegacyHarborPath = ManifestManager.getProjectLegacyHarborLocalPath(this.cwd);
+        const localLegacyPath = ManifestManager.getProjectLegacyOverridesPath(this.cwd);
 
         const hasLocalPreferred = await this.pathExists(localPreferredPath);
+        const hasLocalLegacyHarbor = await this.pathExists(localLegacyHarborPath);
         const hasLocalLegacy = await this.pathExists(localLegacyPath);
 
         if (hasLocalPreferred) {
             this.localManifestPath = localPreferredPath;
+        } else if (hasLocalLegacyHarbor) {
+            this.localManifestPath = localLegacyHarborPath;
+            this.localMigrationRecommended = true;
         } else if (hasLocalLegacy) {
             this.localManifestPath = localLegacyPath;
             this.localMigrationRecommended = true;
@@ -120,6 +154,39 @@ export class ManifestManager {
         }
 
         this.initialized = true;
+    }
+
+    public async migrateLegacyOverrides(notify?: (message: string) => void): Promise<boolean> {
+        await this.init();
+
+        const preferredPath = ManifestManager.getProjectOverridesPath(this.cwd);
+        const legacyCandidates = [
+            ManifestManager.getProjectLegacyHarborLocalPath(this.cwd),
+            ManifestManager.getProjectLegacyOverridesPath(this.cwd)
+        ];
+
+        if (await this.pathExists(preferredPath)) {
+            this.localManifestPath = preferredPath;
+            this.localMigrationRecommended = false;
+            return false;
+        }
+
+        for (const legacyPath of legacyCandidates) {
+            if (!(await this.pathExists(legacyPath))) {
+                continue;
+            }
+
+            await fs.mkdir(path.dirname(preferredPath), { recursive: true });
+            await fs.rename(legacyPath, preferredPath);
+            this.localManifestPath = preferredPath;
+            this.localMigrationRecommended = false;
+            notify?.(
+                `Renamed ${path.basename(legacyPath)} to ${OVERRIDES_MANIFEST_FILENAME} so override-layer config is easier to distinguish from local filesystem skill sources.`
+            );
+            return true;
+        }
+
+        return false;
     }
 
     private async pathExists(p: string): Promise<boolean> {
@@ -203,7 +270,7 @@ export class ManifestManager {
         ]);
 
         // Normalize local paths relative to manifest location
-        for (const [name, skill] of Object.entries(mergedSkills)) {
+        for (const skill of Object.values(mergedSkills)) {
             if (skill.source.startsWith('.') || skill.source.startsWith('file://.')) {
                 let manifestDir = this.cwd;
                 if (skill.layer === "global") manifestDir = path.dirname(ManifestManager.getGlobalPath());

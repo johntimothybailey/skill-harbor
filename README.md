@@ -137,7 +137,7 @@ skill-harbor up --global
 
 | Command | Why it exists | Typical Use Case |
 | :--- | :--- | :--- |
-| **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
+| **`dock <source>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
 | **`up --target <key>`** | **Targeted Sync.** Only berths to one or more specific agents. | Use `--target codex`, `--target codex,cursor`, or `--target codex --target cursor` to limit sync to selected targets. |
 | **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |

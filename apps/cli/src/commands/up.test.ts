@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { upAction } from './up';
 import { Orchestrator } from '../orchestrator';
 import { getAgentBerths, getManagedAgentTargets, getManifestManager, exists, getSupportedTargetKeys } from '../utils';
-import { printHeader, printSuccess, printError, promptEmptyProjectHarborAction, promptSelectTargets } from '../ui';
+import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from '../ui';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
@@ -54,6 +54,7 @@ describe('upAction', () => {
             getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc', triggers: [] }),
         };
         mockManifestManager = {
+            init: vi.fn().mockResolvedValue(undefined),
             read: vi.fn().mockResolvedValue({
                 skills: {
                     'skill1': { name: 'skill1', source: 'source1' }
@@ -67,6 +68,7 @@ describe('upAction', () => {
             hasProjectManifestStack: vi.fn().mockResolvedValue(true),
             getSkillsCacheDir: vi.fn().mockImplementation((layer?: string) => layer === 'global' ? '/home/user/.harbor/skills' : '/harbor'),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
+            migrateLegacyOverrides: vi.fn().mockResolvedValue(false),
             write: vi.fn().mockResolvedValue(undefined),
             addSkill: vi.fn().mockResolvedValue(undefined),
         };
@@ -106,6 +108,7 @@ describe('upAction', () => {
         await upAction(options, mockCommand);
 
         expect(printHeader).toHaveBeenCalledWith('Workspace Synchronization Initiated');
+        expect(mockManifestManager.migrateLegacyOverrides).toHaveBeenCalled();
         expect(mockOrchestrator.moor).toHaveBeenCalledWith('source1');
         expect(mockOrchestrator.processCargo).toHaveBeenCalled();
         expect(mockOrchestrator.berth).toHaveBeenCalled();
@@ -264,6 +267,24 @@ describe('upAction', () => {
         );
         expect(mockOrchestrator.moor).not.toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Project harbor initialized'));
+    });
+
+    it('should surface a migration notice when a legacy overrides manifest is renamed automatically', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.migrateLegacyOverrides.mockImplementation(async (notify: (message: string) => void) => {
+            notify("Renamed harbor-manifest.local.json to harbor-manifest.overrides.json so override-layer config is easier to distinguish from local filesystem skill sources.");
+            return true;
+        });
+
+        await upAction(options, mockCommand);
+
+        expect(printInfo).toHaveBeenCalledWith(
+            'Overrides Manifest Updated',
+            expect.stringContaining('harbor-manifest.overrides.json')
+        );
     });
 
     it('should cancel without syncing when the user cancels the empty-project prompt', async () => {

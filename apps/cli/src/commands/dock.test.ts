@@ -14,6 +14,7 @@ describe('dockAction', () => {
         vi.clearAllMocks();
         mockManifestManager = {
             init: vi.fn().mockResolvedValue(undefined),
+            migrateLegacyOverrides: vi.fn().mockResolvedValue(false),
             addSkill: vi.fn().mockResolvedValue(undefined),
         };
         (getManifestManager as any).mockReturnValue(mockManifestManager);
@@ -38,15 +39,16 @@ describe('dockAction', () => {
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Skill successfully manifested!'));
     });
 
-    it('should generate a skill name if the URL is empty or invalid', async () => {
+    it('should register override docks in the overrides manifest layer', async () => {
         const url = '';
-        const options = { local: true };
+        const options = { override: true };
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
 
         await dockAction(url, options, mockCommand);
 
+        expect(mockManifestManager.migrateLegacyOverrides).toHaveBeenCalled();
         expect(mockManifestManager.addSkill).toHaveBeenCalledWith(expect.objectContaining({
             source: url,
             localPath: '',

@@ -93,16 +93,16 @@ Ghosts are included in the individual skill analysis output, tagged with a `[Gho
 
 ### Interactive Docking
 
-After the scan, if ghosts are found, Fathom prompts you to **dock them** into your local manifest:
+After the scan, if ghosts are found, Fathom prompts you to **dock them** into your overrides manifest:
 
 ```bash
 skill-harbor fathom --ghosts
 
 # 👻 Ghost Alert: Found 2 unregistered local skills.
-# 🤔 Would you like to dock these to your local manifest now? (y/N)
+# 🤔 Would you like to dock these to your overrides manifest now? (y/N)
 ```
 
-Selecting `y` registers each ghost as a local override in `harbor-manifest.local.json`.
+Selecting `y` registers each ghost as an override entry in `harbor-manifest.overrides.json`.
 
 <Note>
 `skill-harbor voyager` also performs ghost discovery automatically when no properly formatted skills are found in active berths, offering the same interactive docking prompt.

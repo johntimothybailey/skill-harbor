@@ -10,16 +10,22 @@ Explore the full suite of **Skill Harbor** commands designed for skill orchestra
 
 ---
 
-## `dock <url>`
+## `dock <source>`
 Register a skill's source in the manifest.
 
 **Flags:**
 - `-g, --global`: Register the skill in the global manifest (`~/.harbor/harbor-manifest.json`).
-- `-l, --local <path>`: Register a local project-specific skill from a file path.
+- `-o, --override`: Register the skill in the project overrides manifest (`.harbor/harbor-manifest.overrides.json`).
 
 **Example:**
 ```bash
 skill-harbor dock https://github.com/skill-mill/react-hooks --global
+
+# Local filesystem source
+skill-harbor dock ./skills/my-local-skill
+
+# Project-only override entry
+skill-harbor dock ./skills/my-debug-skill --override
 ```
 
 ---
@@ -118,7 +124,7 @@ Shows a breakdown of all skills currently tracked by Skill Harbor, including the
 Interactive migration engine that modernizes a project from the legacy root-level layout to the consolidated `.harbor/` standard.
 
 The engine detects and offers to move:
-1. **Root manifests** — `harbor-manifest.json` and `harbor-manifest.local.json` from the project root into `.harbor/`.
+1. **Root manifests** — `harbor-manifest.json` plus any legacy `harbor-manifest.local.json` files are moved into `.harbor/`, with the legacy local filename renamed to `harbor-manifest.overrides.json`.
 2. **Loose skill caches** — Skill directories sitting directly in `.harbor/` are relocated to `.harbor/skills/`.
 3. **Broad gitignore rules** — A blanket `.harbor/` ignore is replaced with granular rules (`.harbor/skills/`, `.harbor/stowage/`) so that manifests and hooks can be committed.
 
