@@ -1,5 +1,50 @@
 # skill-harbor
 
+## 0.18.0
+
+### Minor Changes
+
+## ⚓ Charting Clearer Waters
+
+Captain's Briefing: The harbor's charts are sharper and the rigging is tighter. This release adds stronger Voyager tooling, manual clarifications for a similiar project, and explanations for product boundaries.
+
+## ✨ New Cargo
+
+- **Voyager Comparison Mode**: Added `skill-harbor voyager --compare` to assess skill impact on agent performance, now found in `apps/cli/src/index.ts` and `apps/cli/src/commands/voyager.ts`.
+- **Structured Voyager Results**: Introduced result models in `apps/cli/src/types/voyager.ts` for better comparison and analysis.
+- **Dedicated Manual Documentation App**: Launched `apps/manual`, a Next.js site for our manual, enhancing navigation, search, and documentation structure.
+
+## 🛡️ Hardened Hull
+
+- **Monorepo Verification**: Updated `turbo.json` to include the `test` task, ensuring `bun run test` covers the entire workspace.
+- **CI/CD Enhancements**: Adjusted GitHub Actions for monorepo support and dedicated manual deployment.
+
+## 🛠️ Barnacle Scraping
+
+- **Refactored Voyager Command**: Broken down `apps/cli/src/commands/voyager.ts` into smaller helpers for easier maintenance and future additions.
+- **Improved Cache Handling**: Enhanced manifest and cache handling in `apps/cli/src/manifest.ts` to prevent global and project cache mix-ups.
+- **Version Alignment**: Ensured `skill-harbor --version` reflects the package version in `apps/cli/package.json`, now covered by integration tests.
+
+### Patch Changes
+
+## ⚓ The Chart Room Corrected
+
+The docs deployment route was steering Vercel into the wrong berth. This patch corrects the GitHub Actions workflow so the documentation build uses the project's configured root directory instead of doubling the `apps/manual` path, and it renames the deployment task to better reflect its real purpose.
+
+## 🛠️ Barnacle Scraping
+
+- Fixed `.github/workflows/deploy-docs.yml` by removing the extra `working-directory` overrides from the Vercel pull/build/deploy steps so the workflow no longer resolves `apps/manual/apps/manual/package.json`.
+- Renamed the workflow job from `Deploy-Production` to `Deploy Documentation` for clearer GitHub Actions status output.
+
+## ⚓ Calm Seas for Concurrent Sync
+
+The fleet no longer tries to animate its way through parallel sync work. This patch switches concurrent workspace synchronization to deterministic spinner output so mixed success, skip, cache-reuse, and failure states stay readable without fragile multi-spinner animation.
+
+## 🛠️ Barnacle Scraping
+
+- Updated `apps/cli/src/commands/up.ts` to create `Spinnies` with `disableSpins: true` for the concurrent sync path, trading animation for clearer, more stable terminal output.
+- Added regression coverage in `apps/cli/src/commands/up.test.ts` to ensure the concurrent sync flow keeps spinner animation disabled.
+
 ## 0.17.0
 
 ### Minor Changes
