@@ -5,6 +5,7 @@ import { resolveCommandScope } from "../command-scope";
 import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth, ask } from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
+import { discoverGhosts, summarizeGhosts } from "../services/ghosts";
 import { printHeader, printError, printInfo, printHarborHealthReport, printSuccess } from "../ui";
 import os from "node:os";
 
@@ -40,8 +41,8 @@ export async function fathomAction(options: any, command: any) {
             : await manifestManager.readMerged();
 
         let skills: any[] = manifestManager.materializeSkills(manifest);
-        const manifestSkillNames = new Set(skills.map(s => s.name));
         const ghostSkillPaths: string[] = [];
+        let friendlyGhostCount = 0;
 
         // 2.5 Active Berths Discovery
         const baseDir = useGlobalScope ? os.homedir() : process.cwd();
@@ -50,35 +51,23 @@ export async function fathomAction(options: any, command: any) {
 
         // 2.6 Ghost Skill Discovery (Active Berths)
         if (opts.ghosts) {
-            for (const berth of activeBerths) {
-                const foundPaths = await profiler.findSkills(berth.path);
-                for (const skillPath of foundPaths) {
-                    const name = path.basename(skillPath);
-                    if (!manifestSkillNames.has(name)) {
-                        ghostSkillPaths.push(skillPath);
-                        if (!showReport) {
-                            skills.push({ name, layer: "ghost" as any, isGhost: true, path: skillPath });
-                        }
-                    }
-                }
-            }
-            
-            // 2.7 Ghost Skill Discovery (Stowage Berths)
-            for (const berth of stowageBerths) {
-                const foundPaths = await profiler.findSkills(berth.path);
-                for (const skillPath of foundPaths) {
-                    const name = path.basename(skillPath);
-                    if (!manifestSkillNames.has(name) && !ghostSkillPaths.includes(skillPath)) {
-                        ghostSkillPaths.push(skillPath);
-                        if (!showReport) {
-                            skills.push({ name, layer: "ghost" as any, isGhost: true, path: skillPath });
-                        }
-                    }
+            const ghosts = await discoverGhosts({
+                baseDir,
+                manifestManager,
+                manifest,
+                profiler
+            });
+            const { active, friendly } = summarizeGhosts(ghosts);
+            friendlyGhostCount = friendly.length;
+            for (const ghost of active) {
+                ghostSkillPaths.push(ghost.path);
+                if (!showReport) {
+                    skills.push({ name: ghost.name, layer: "ghost" as any, isGhost: true, path: ghost.path });
                 }
             }
         }
 
-        if (skills.length === 0 && ghostSkillPaths.length === 0) {
+        if (skills.length === 0 && ghostSkillPaths.length === 0 && friendlyGhostCount === 0) {
             printInfo("Empty Harbor", "No skills found in the manifest or agent berths to fathom.");
             return;
         }
@@ -88,6 +77,9 @@ export async function fathomAction(options: any, command: any) {
             console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
+        }
+        if (opts.ghosts && friendlyGhostCount > 0 && (!opts.format || opts.format === "pretty")) {
+            console.log(kleur.cyan(`\n💡 ${friendlyGhostCount} friendly ghost${friendlyGhostCount === 1 ? "" : "s"} hidden from the main ghost list. Use 'skill-harbor ghosts --friendly' for details.`));
         }
 
         // --- Harbor Health Report ---

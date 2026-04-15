@@ -9,6 +9,7 @@ import { undockAction } from "./commands/undock";
 import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
+import { ghostsAction } from "./commands/ghosts";
 import { fathomAction } from "./commands/fathom";
 import { voyagerAction } from "./commands/voyager";
 import { migrateAction } from "./commands/migrate";
@@ -91,6 +92,13 @@ program
     .description("Generates a fleet intelligence prompt snippet.")
     .option("-g, --global", "Include global manifest skills in the master manifest")
     .action(lighthouseAction);
+
+program
+    .command("ghosts")
+    .description("Inspect unmanaged ghost skills and mark known ones as friendly.")
+    .option("-g, --global", "Inspect ghosts against the global manifest (~/.harbor).")
+    .option("--friendly", "Show the separate friendly-ghost section.")
+    .action(ghostsAction);
 
 program
     .command("fathom")

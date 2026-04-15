@@ -114,6 +114,7 @@ export async function migrateAction(_options: any) {
                 
                 if (await ask("Switch to granular ignores for .harbor/skills/ and .harbor/stowage/?")) {
                     const newIgnores = [
+                        ".harbor/ghosts.json",
                         ".harbor/skills/",
                         ".harbor/stowage/",
                         ".harbor/harbor-manifest.overrides.json",

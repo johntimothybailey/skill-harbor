@@ -91,6 +91,22 @@ The skill intelligence and profiling engine. Measures token saturation, quality 
 
 ---
 
+## `ghosts`
+Primary ghost inspection workflow for unmanaged skills discovered in active berths and stowage.
+
+**Flags:**
+- `-g, --global`: Inspect ghosts against the global manifest.
+- `--friendly`: Reveal the separate friendly-ghost section instead of only showing the summary count.
+
+**Notes:**
+- Default output shows active ghosts and summarizes friendly ghosts by count.
+- Friendly ghosts are a non-destructive classification; they are **not** docked, removed, or mutated by being marked friendly.
+- `fathom --ghosts` still exists as the ghost-aware inspection mode inside Fathom.
+
+*For the conceptual model, see [Ghosts](/docs/foundations/ghosts).*
+
+---
+
 ## `voyager`
 End-to-end integration testing suite for agent-skill loops.
 

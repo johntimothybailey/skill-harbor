@@ -76,6 +76,8 @@ If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill
 
 ## 👻 Ghost Skill Discovery
 
+For the broader mental model behind ghosts, friendly ghosts, and when to use the primary `skill-harbor ghosts` workflow versus `fathom --ghosts`, see [Ghosts](/docs/foundations/ghosts).
+
 A **Ghost** is any skill folder containing a valid `SKILL.md` that exists inside your agent berths (e.g., `.claude/skills/`, `.cursor/skills/`) or stowage but is **not registered** in your harbor manifest.
 
 Ghosts appear when skills are manually copied into agent folders, left behind after an undock, or created outside of the `dock` workflow. They represent untracked context that can affect agent behavior without being governed by your manifest.

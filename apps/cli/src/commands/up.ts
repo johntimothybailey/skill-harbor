@@ -24,6 +24,7 @@ async function ensureHarborIgnoreCorrect(cwd: string) {
     const gitignorePath = path.join(cwd, ".gitignore");
     const requiredIgnores = [
         ".harbor/harbor-manifest.overrides.json",
+        ".harbor/ghosts.json",
         "harbor-compass.yaml",
         ".harbor/skills/",
         ".harbor/stowage/"

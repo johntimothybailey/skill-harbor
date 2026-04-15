@@ -3,6 +3,7 @@
   "pages": [
     "global-fleet",
     "sources-and-targets",
+    "ghosts",
     "fathom",
     "voyager",
     "manifest",
