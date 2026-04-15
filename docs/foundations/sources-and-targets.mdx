@@ -1,0 +1,190 @@
+---
+title: Sources & Targets
+description: "Understand where skills come from, where Harbor generates them to, and how folder-backed sources work."
+icon: "route"
+---
+
+# 🧭 Sources vs Targets
+
+Skill Harbor works best when two ideas stay distinct:
+
+- **Source** = where a skill comes from
+- **Target** = where Skill Harbor generates or berths that skill for an agent
+
+This distinction matters because Harbor can manage the same source for multiple targets, and a single target can receive skills from many different sources.
+
+---
+
+## Source
+
+A **source** is the origin Harbor reads from.
+
+Examples:
+
+- a GitHub repository
+- a local single-skill folder
+- a local **folder-backed source** containing many child skills
+
+Examples:
+
+```bash
+# GitHub source
+skill-harbor dock https://github.com/my-org/react-skills
+
+# Local single-skill source
+skill-harbor dock ./skills/my-local-skill
+
+# Folder-backed source
+skill-harbor dock ~/.rulesync/skills
+```
+
+When you dock a folder-backed source, Harbor treats that folder as a collection source and discovers nested child skills under it.
+
+---
+
+## Target
+
+A **target** is the destination Harbor generates or berths skills into for a specific agent/runtime.
+
+Examples:
+
+- Codex → `.agents/skills`
+- Claude → `.claude/skills`
+- Cursor → `.cursor/skills`
+- RuleSync berth target → `~/.rulesync/skills`
+
+Targets are what `up` syncs **into**.
+
+So in one sentence:
+
+> Harbor reads from **sources** and generates/berths into **targets**.
+
+---
+
+## RuleSync example
+
+For teams using RuleSync, these two ideas often get conflated:
+
+- `~/.rulesync/skills` can be a **target berth**
+- and it can also be used as a **source folder**
+
+Those are different workflows.
+
+### RuleSync as a target
+
+If Harbor is syncing **to** RuleSync, then `~/.rulesync/skills` is a target berth.
+
+### RuleSync as a source
+
+If your team already keeps skills in `~/.rulesync/skills` and wants to use Harbor for Fathom, Voyager, and related workflows, then you can dock that folder as a **source**:
+
+```bash
+skill-harbor dock ~/.rulesync/skills
+```
+
+Harbor then treats it as a folder-backed source and rescans it during normal Harbor flows.
+
+---
+
+## Folder-backed sources
+
+A **folder-backed source** is a local directory that contains child skill folders with `SKILL.md` files inside them.
+
+For example:
+
+```text
+~/.rulesync/skills/
+  team-a/
+    SKILL.md
+  team-b/
+    SKILL.md
+```
+
+When that folder is docked:
+
+- Harbor records the folder as the authoritative manifest source
+- Harbor discovers the child skills under it
+- `up` rescans it during normal sync
+- `freshen` force-refreshes it
+
+This helps teams avoid drift between the folder they actually maintain and the skills Harbor analyzes and syncs.
+
+---
+
+## When to use folder-backed sources vs ghost docking
+
+### Prefer a folder-backed source when
+
+- the directory is a real ongoing source of truth
+- you want Harbor to keep rescanning it
+- you want `up` / `freshen` to refresh it automatically
+
+### Prefer `fathom --ghosts` when
+
+- skills are already sitting in berths but are not manifested yet
+- you need a quick one-time interactive discovery path
+- you are cleaning up unmanaged local skill state
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+`voyager` can also trigger ghost docking when it discovers unmanaged skills.
+
+---
+
+## Refresh behavior
+
+Folder-backed sources are designed to reduce drift:
+
+- **`up`** → rescans the folder during normal sync
+- **`freshen`** → forces a refresh of that rescan path
+
+That means Harbor can keep following the folder as it changes over time, instead of treating it like a one-time import.
+
+---
+
+## v1 safety boundaries
+
+Folder-backed sources are intentionally conservative.
+
+Version 1 should **not**:
+
+- mutate RuleSync config itself
+- import non-skill files
+- auto-delete manually added manifest entries
+- auto-resolve conflicts silently
+
+The goal is to make refresh safe and explicit, not magical or destructive.
+
+---
+
+## Practical mental model
+
+Use this mental model when explaining Harbor to a team:
+
+1. **Dock a source**
+2. **Run `up` to sync into targets**
+3. **Use Fathom / Voyager / Lighthouse on the resulting fleet**
+
+For RuleSync-backed teams:
+
+```bash
+# Dock the source folder
+skill-harbor dock ~/.rulesync/skills
+
+# Sync to your chosen agent targets
+skill-harbor up
+
+# Analyze and validate
+skill-harbor fathom --report
+skill-harbor voyager -f harbor-voyager-test.yaml
+```
+
+If the folder was not docked yet and skills are just sitting around locally, use:
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+as the quickest discovery-and-dock fallback.
