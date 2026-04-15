@@ -8,7 +8,7 @@ import crypto from "node:crypto";
 import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { GeneratedSkillEntry, ManifestManager, SkillEntry } from "../manifest";
+import { GeneratedSkillEntry, ManifestLayer, ManifestManager, SkillEntry } from "../manifest";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets, getSupportedTargetKeys } from "../utils";
 import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from "../ui";
@@ -400,7 +400,7 @@ export async function upAction(options: any, command: any) {
         }
 
         const failures: { skill: string; error: string }[] = [];
-        const manifestUpdates: Array<{ skill: SkillEntry; layer: string }> = [];
+        const manifestUpdates: Array<{ skill: SkillEntry; layer: ManifestLayer }> = [];
         const profiler = new ProfilerService();
         const syncPromises = skills.map(async (skill) => {
             try {
