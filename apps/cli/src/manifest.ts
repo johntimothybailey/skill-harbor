@@ -3,21 +3,35 @@ import path from "node:path";
 import os from "node:os";
 
 export type ManifestLayer = "global" | "shared" | "local";
+export type SkillSourceType = "single" | "folder";
 
 export const SHARED_MANIFEST_FILENAME = "harbor-manifest.json";
 export const OVERRIDES_MANIFEST_FILENAME = "harbor-manifest.overrides.json";
 export const LEGACY_LOCAL_MANIFEST_FILENAME = "harbor-manifest.local.json";
 export const OVERRIDES_RENAME_EXPLANATION = "Skill Harbor now uses 'overrides' terminology so this file is easier to distinguish from local filesystem skill sources.";
 
+export interface GeneratedSkillEntry {
+    name: string;
+    source: string;
+    localPath: string;
+    lastSyncHash?: string;
+    lastSyncTargets?: string[];
+}
+
 export interface SkillEntry {
     name: string;
     version?: string;
     description?: string;
     source: string; // URL, git, or local path
+    sourceType?: SkillSourceType;
     localPath: string; // Path within .harbor
     lastSyncHash?: string; // Cache the source string to detect changes
     lastSyncTargets?: string[]; // Cache the successful berthing targets
+    generatedChildren?: GeneratedSkillEntry[];
     layer?: ManifestLayer; // Tracks which manifest file this was defined in
+    generated?: boolean; // Expanded runtime-only child marker
+    managedBy?: string; // Expanded runtime-only parent collection name
+    collectionRoot?: string; // Expanded runtime-only folder root
 }
 
 export interface HarborManifest {
@@ -293,6 +307,35 @@ export class ManifestManager {
             skills: mergedSkills,
             overrides
         };
+    }
+
+    public materializeSkills(manifest: HarborManifest, options?: { includeFolderSources?: boolean }): SkillEntry[] {
+        const includeFolderSources = options?.includeFolderSources ?? false;
+        const materialized: SkillEntry[] = [];
+
+        for (const skill of Object.values(manifest.skills || {})) {
+            if (skill.sourceType === "folder") {
+                if (includeFolderSources) {
+                    materialized.push(skill);
+                }
+
+                for (const child of skill.generatedChildren || []) {
+                    materialized.push({
+                        ...child,
+                        sourceType: "single",
+                        layer: skill.layer,
+                        generated: true,
+                        managedBy: skill.name,
+                        collectionRoot: skill.source
+                    });
+                }
+                continue;
+            }
+
+            materialized.push(skill);
+        }
+
+        return materialized;
     }
 
     public async write(manifest: HarborManifest, type: ManifestLayer = "shared"): Promise<void> {

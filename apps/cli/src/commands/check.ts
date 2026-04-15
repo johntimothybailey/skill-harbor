@@ -24,7 +24,7 @@ export async function checkAction(options: any, command: any) {
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
-        const skills = Object.values(manifest.skills);
+        const skills = manifestManager.materializeSkills(manifest);
 
         if (skills.length === 0) {
             printInfo("Empty Harbor", "No skills found in the manifest stack to check.");

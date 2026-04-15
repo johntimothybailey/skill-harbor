@@ -13,6 +13,13 @@ Explore the full suite of **Skill Harbor** commands designed for skill orchestra
 ## `dock <source>`
 Register a skill's source in the manifest.
 
+`<source>` may be:
+- a GitHub repository
+- a local single-skill path
+- a local folder-backed source containing nested child skills
+
+If a docked local folder contains child `SKILL.md` directories, Skill Harbor treats it as a collection source and rescans it during `up`. `freshen` forces a refresh of that rescan path.
+
 **Flags:**
 - `-g, --global`: Register the skill in the global manifest (`~/.harbor/harbor-manifest.json`).
 - `-o, --override`: Register the skill in the project overrides manifest (`.harbor/harbor-manifest.overrides.json`).
@@ -24,9 +31,14 @@ skill-harbor dock https://github.com/skill-mill/react-hooks --global
 # Local filesystem source
 skill-harbor dock ./skills/my-local-skill
 
+# Folder-backed local source
+skill-harbor dock ~/.rulesync/skills
+
 # Project-only override entry
 skill-harbor dock ./skills/my-debug-skill --override
 ```
+
+> Already have unmanaged skills living in active berths? `skill-harbor fathom --ghosts` remains the quickest way to discover and dock them interactively.
 
 ---
 

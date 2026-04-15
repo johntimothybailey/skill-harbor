@@ -102,4 +102,39 @@ describe("ManifestManager", () => {
         expect(messages[0]).toContain("harbor-manifest.overrides.json");
         expect(messages[0]).toContain("local filesystem skill sources");
     });
+
+    it("materializes generated children from folder-backed sources for operational commands", () => {
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        const manifest = {
+            version: "1.0",
+            dependencies: {},
+            skills: {
+                rulesyncFolder: {
+                    name: "rulesyncFolder",
+                    source: "./.rulesync/skills",
+                    sourceType: "folder" as const,
+                    localPath: "",
+                    layer: "shared" as const,
+                    generatedChildren: [
+                        {
+                            name: "team-skill",
+                            source: "/workspace/.rulesync/skills/team-skill",
+                            localPath: "/workspace/.harbor/skills/team-skill",
+                        }
+                    ]
+                }
+            }
+        };
+
+        const materialized = manager.materializeSkills(manifest as any);
+
+        expect(materialized).toHaveLength(1);
+        expect(materialized[0]).toMatchObject({
+            name: "team-skill",
+            source: "/workspace/.rulesync/skills/team-skill",
+            managedBy: "rulesyncFolder",
+            collectionRoot: "./.rulesync/skills",
+            generated: true
+        });
+    });
 });

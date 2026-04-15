@@ -20,7 +20,10 @@ export async function listAction(options: any, command: any) {
             console.log(kleur.yellow("  No skills are currently docked in this workspace.\n"));
         } else {
             for (const skill of skills) {
-                console.log(`  ${kleur.green("✓")} ${kleur.bold(skill.name)} - ${kleur.gray(skill.source)}`);
+                const folderLabel = skill.sourceType === "folder"
+                    ? kleur.cyan(` [Folder Source${skill.generatedChildren?.length ? `: ${skill.generatedChildren.length} child skill${skill.generatedChildren.length === 1 ? "" : "s"}` : ""}]`)
+                    : "";
+                console.log(`  ${kleur.green("✓")} ${kleur.bold(skill.name)}${folderLabel} - ${kleur.gray(skill.source)}`);
             }
             console.log();
         }

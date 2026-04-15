@@ -22,7 +22,7 @@ export async function lighthouseAction(options: any, command: any) {
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
-        const skills = Object.values(manifest.skills);
+        const skills = manifestManager.materializeSkills(manifest);
         const metadataList = [];
 
         // 2. Override Warnings

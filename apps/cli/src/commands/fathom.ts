@@ -39,7 +39,7 @@ export async function fathomAction(options: any, command: any) {
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
-        let skills: any[] = Object.values(manifest.skills);
+        let skills: any[] = manifestManager.materializeSkills(manifest);
         const manifestSkillNames = new Set(skills.map(s => s.name));
         const ghostSkillPaths: string[] = [];
 

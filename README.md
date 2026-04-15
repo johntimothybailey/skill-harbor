@@ -98,12 +98,17 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 ```
 
 ### 2. Dock Your First Skill Source
-Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo or local path) to register it in your `harbor-manifest.json`:
+Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo, local skill path, or local folder of child skills) to register it in your `harbor-manifest.json`:
 
 ```bash
 # Example: Adding a community React Hooks skill
 skill-harbor dock https://github.com/my-org/react-skills
+
+# Example: Docking a local folder-backed source (rescanned on `up`, force-refreshed on `freshen`)
+skill-harbor dock ~/.rulesync/skills
 ```
+
+> If the skills are already berthed somewhere locally but not manifested yet, `skill-harbor fathom --ghosts` is still the quickest interactive discovery-and-dock path.
 
 ### 3. Synchronize Your Space (The "Up")
 Run the core engine to fetch, transpile, and berth your skills. 

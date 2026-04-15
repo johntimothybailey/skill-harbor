@@ -30,6 +30,7 @@ describe("fathomAction", () => {
                     skill1: { name: "skill1", source: "source1", layer: "shared" }
                 }
             }),
+            materializeSkills: vi.fn().mockImplementation((manifest: any) => Object.values(manifest.skills || {})),
             getSkillsCacheDir: vi.fn().mockReturnValue("/harbor")
         };
 

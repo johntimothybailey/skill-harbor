@@ -3,6 +3,7 @@ import { upAction } from './up';
 import { Orchestrator } from '../orchestrator';
 import { getAgentBerths, getManagedAgentTargets, getManifestManager, exists, getSupportedTargetKeys } from '../utils';
 import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from '../ui';
+import { ProfilerService } from '../services/profiler';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
@@ -11,6 +12,7 @@ const spinniesCtor = vi.fn();
 vi.mock('../orchestrator');
 vi.mock('../utils');
 vi.mock('../ui');
+vi.mock('../services/profiler');
 vi.mock('node:fs/promises');
 vi.mock('node:fs');
 vi.mock('node:os');
@@ -39,6 +41,7 @@ import glob from 'fast-glob';
 describe('upAction', () => {
     let mockOrchestrator: any;
     let mockManifestManager: any;
+    let mockProfiler: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -52,6 +55,9 @@ describe('upAction', () => {
             cleanup: vi.fn().mockResolvedValue(undefined),
             finalize: vi.fn(),
             getMetadata: vi.fn().mockResolvedValue({ name: 'skill1', description: 'desc', triggers: [] }),
+        };
+        mockProfiler = {
+            findSkills: vi.fn().mockResolvedValue([])
         };
         mockManifestManager = {
             init: vi.fn().mockResolvedValue(undefined),
@@ -69,10 +75,24 @@ describe('upAction', () => {
             getSkillsCacheDir: vi.fn().mockImplementation((layer?: string) => layer === 'global' ? '/home/user/.harbor/skills' : '/harbor'),
             getHarborDir: vi.fn().mockReturnValue('/harbor'),
             migrateLegacyOverrides: vi.fn().mockResolvedValue(false),
+            materializeSkills: vi.fn().mockImplementation((manifest: any) =>
+                Object.values(manifest.skills || {}).flatMap((skill: any) =>
+                    skill.sourceType === 'folder'
+                        ? (skill.generatedChildren || []).map((child: any) => ({
+                            ...child,
+                            layer: skill.layer,
+                            generated: true,
+                            managedBy: skill.name,
+                            collectionRoot: skill.source
+                        }))
+                        : [skill]
+                )
+            ),
             write: vi.fn().mockResolvedValue(undefined),
             addSkill: vi.fn().mockResolvedValue(undefined),
         };
         (Orchestrator as any).mockImplementation(function() { return mockOrchestrator; });
+        (ProfilerService as any).mockImplementation(function() { return mockProfiler; });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
         (getManagedAgentTargets as any).mockReturnValue([
             { path: '/app/.claude/skills', label: 'Claude', key: 'claude' },
@@ -169,6 +189,28 @@ describe('upAction', () => {
 
         expect(mockOrchestrator.moor).toHaveBeenCalled();
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Workspace Sync complete.'));
+    });
+
+    it('should honor force passed via options even when command opts omit it', async () => {
+        const options = { force: true };
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue({}),
+        };
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                'skill1': {
+                    name: 'skill1',
+                    source: 'source1',
+                    lastSyncHash: 'source1',
+                    lastSyncTargets: ['claude']
+                }
+            }
+        });
+        (exists as any).mockResolvedValue(true);
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.moor).toHaveBeenCalled();
     });
 
     it('should perform sync if a skill is missing from an active target destination', async () => {
@@ -518,5 +560,45 @@ describe('upAction', () => {
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('incident(s)'));
         expect(printError).toHaveBeenCalledWith(expect.stringContaining('Moor failed'));
         expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    it('should rescan and sync generated child skills from a folder-backed source', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        process.cwd = vi.fn().mockReturnValue('/app');
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                'rulesync-skills': {
+                    name: 'rulesync-skills',
+                    source: './.rulesync/skills',
+                    sourceType: 'folder',
+                    generatedChildren: [],
+                    lastSyncHash: 'old-hash'
+                }
+            }
+        });
+        mockProfiler.findSkills.mockResolvedValue([
+            '/app/.rulesync/skills/team-a',
+            '/app/.rulesync/skills/team-b'
+        ]);
+
+        await upAction(options, mockCommand);
+
+        expect(mockProfiler.findSkills).toHaveBeenCalledWith('/app/.rulesync/skills');
+        expect(mockOrchestrator.moor).toHaveBeenCalledWith('/app/.rulesync/skills/team-a');
+        expect(mockOrchestrator.moor).toHaveBeenCalledWith('/app/.rulesync/skills/team-b');
+        expect(mockManifestManager.addSkill).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'rulesync-skills',
+                sourceType: 'folder',
+                generatedChildren: [
+                    expect.objectContaining({ name: 'team-a' }),
+                    expect.objectContaining({ name: 'team-b' })
+                ]
+            }),
+            'shared'
+        );
     });
 });
