@@ -88,23 +88,41 @@ When you run `skill-harbor fathom --ghosts`, Fathom:
 
 1. Scans all **active agent berths** (Claude, Cursor, Codex, etc.) for directories containing a `SKILL.md`.
 2. Scans **stowage berths** (`.harbor/stowage/`) for the same.
-3. Compares discovered skill names against the merged manifest (Global + Shared + Local).
+3. Compares discovered skill names against the selected manifest scope (merged local scope by default, or the global manifest with `--global`).
 4. Any skill found in a berth but **not** in the manifest is flagged as a Ghost.
 
 Ghosts are included in the individual skill analysis output, tagged with a `[Ghost]` label. If `--report` is also active, ghost skill paths are merged into the health report scan.
 
+Berth and stowage status now use the same concise location-aware style throughout Fathom, for example:
+
+- `Berthed: Codex | .codex`
+- `Stowed: Codex | .stowage/codex`
+
+### Scan mode
+
+`fathom --ghosts` supports the same ghost scan modes as `skill-harbor ghosts`:
+
+```bash
+skill-harbor fathom --ghosts --scan-mode targets-only
+```
+
+- `autodetect` is the default and scans every detected berth/stowage location in the selected scope
+- `targets-only` restricts discovery to the selected manifest's resolved `targets`
+- `targets-only` with no declared targets performs **no scan**
+- `--scan-mode` is only meaningful when `--ghosts` is enabled
+
 ### Interactive Docking
 
-After the scan, if ghosts are found, Fathom prompts you to **dock them** into your overrides manifest:
+After the scan, if ghosts are found, Fathom can prompt you to **dock them** into the selected manifest scope:
 
 ```bash
 skill-harbor fathom --ghosts
 
-# 👻 Ghost Alert: Found 2 unregistered local skills.
-# 🤔 Would you like to dock these to your overrides manifest now? (y/N)
+# 👻 Ghost Alert: Found 2 unregistered ghost skills in the local scope.
+# 🤔 Would you like to dock these to your local manifest now? (y/N)
 ```
 
-Selecting `y` registers each ghost as an override entry in `harbor-manifest.overrides.json`.
+Selecting `y` registers each ghost in the currently selected manifest scope (`local` by default, `global` with `--global`).
 
 <Note>
 `skill-harbor voyager` also performs ghost discovery automatically when no properly formatted skills are found in active berths, offering the same interactive docking prompt.
@@ -136,9 +154,21 @@ skill-harbor fathom --report
 
 When combined with `--details`, the report is printed first followed by the individual skill breakdowns.
 
+The pretty report also includes a bounded **Vessel Placements** section so you can see concise berth/stowage placement detail without losing the overall fleet counts.
+
 ### `--format json`
 
 Outputs all data as machine-parsable JSON instead of the styled terminal output. Works with both default and `--report` modes. Useful for piping into dashboards or CI scripts.
+
+Report JSON now includes an additive `vesselPlacements` field with structured berth/stowage detail:
+
+```json
+{
+  "name": "voice-to-structured-data",
+  "berthed": [{ "label": "Codex", "location": ".agents" }],
+  "stowed": []
+}
+```
 
 ```bash
 # JSON output for CI consumption

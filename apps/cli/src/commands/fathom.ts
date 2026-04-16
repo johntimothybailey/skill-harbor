@@ -2,12 +2,38 @@ import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
 import { resolveCommandScope } from "../command-scope";
-import { getManifestManager, exists, getAgentBerths, getStowageBerths, AgentBerth, ask } from "../utils";
+import {
+    getManifestManager,
+    exists,
+    getAgentBerths,
+    getStowageBerths,
+    AgentBerth,
+    ask,
+    formatBerthDetail,
+    getAgentBerthLocation
+} from "../utils";
 import { ProfilerService } from "../services/profiler";
 import { ConfigManager } from "../services/config";
-import { discoverGhosts, summarizeGhosts } from "../services/ghosts";
+import {
+    discoverGhosts,
+    resolveGhostScanContext,
+    resolveGhostScanMode,
+    summarizeGhosts
+} from "../services/ghosts";
+import type { GhostScanContext } from "../services/ghosts";
+import type { BerthDetail } from "../utils";
 import { printHeader, printError, printInfo, printHarborHealthReport, printSuccess } from "../ui";
 import os from "node:os";
+
+type VesselPlacement = {
+    name: string;
+    berthed: BerthDetail[];
+    stowed: BerthDetail[];
+};
+
+function formatStatusEntries(entries: BerthDetail[]): string {
+    return entries.map(formatBerthDetail).join(", ");
+}
 
 export async function fathomAction(options: any, command: any) {
     const opts = command.opts();
@@ -43,6 +69,8 @@ export async function fathomAction(options: any, command: any) {
         let skills: any[] = manifestManager.materializeSkills(manifest);
         const ghostSkillPaths: string[] = [];
         let friendlyGhostCount = 0;
+        let ghostSkillNames = new Set<string>();
+        let ghostScanContext: GhostScanContext | null = null;
 
         // 2.5 Active Berths Discovery
         const baseDir = useGlobalScope ? os.homedir() : process.cwd();
@@ -51,14 +79,22 @@ export async function fathomAction(options: any, command: any) {
 
         // 2.6 Ghost Skill Discovery (Active Berths)
         if (opts.ghosts) {
+            const ghostScanMode = resolveGhostScanMode(opts.scanMode);
+            ghostScanContext = await resolveGhostScanContext({
+                baseDir,
+                targets: manifest.targets,
+                scanMode: ghostScanMode
+            });
             const ghosts = await discoverGhosts({
                 baseDir,
                 manifestManager,
                 manifest,
+                scanContext: ghostScanContext,
                 profiler
             });
             const { active, friendly } = summarizeGhosts(ghosts);
             friendlyGhostCount = friendly.length;
+            ghostSkillNames = new Set(active.map(ghost => ghost.name));
             for (const ghost of active) {
                 ghostSkillPaths.push(ghost.path);
                 if (!showReport) {
@@ -130,15 +166,27 @@ export async function fathomAction(options: any, command: any) {
             
             // Calculate Fleet Status for the report
             const fleetStatus = { berthed: 0, stowed: 0, dryDock: 0 };
+            const vesselPlacements: VesselPlacement[] = [];
             const allPossibleVessels = [...new Set([...skills.map(s => s.name), ...skillPaths.map(p => path.basename(p))])];
             
             for (const name of allPossibleVessels) {
-                const status = await getVesselStatus(name, activeBerths, stowageBerths);
+                const berthContext = ghostSkillNames.has(name) && ghostScanContext
+                    ? ghostScanContext
+                    : { activeBerths, stowageBerths };
+                const status = await getVesselStatus(name, berthContext.activeBerths, berthContext.stowageBerths);
+                if (status.berthed.length > 0 || status.stowed.length > 0) {
+                    vesselPlacements.push({
+                        name,
+                        berthed: status.berthed,
+                        stowed: status.stowed
+                    });
+                }
                 if (status.berthed.length > 0) fleetStatus.berthed++;
                 else if (status.stowed.length > 0) fleetStatus.stowed++;
                 else fleetStatus.dryDock++;
             }
             report.fleetStatus = fleetStatus;
+            report.vesselPlacements = vesselPlacements;
 
             if (format === 'pretty') {
                 spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
@@ -165,15 +213,18 @@ export async function fathomAction(options: any, command: any) {
                     skill.name
                 );
             
-            const vStatus = await getVesselStatus(skill.name, activeBerths, stowageBerths);
+            const berthContext = skill.isGhost && ghostScanContext
+                ? ghostScanContext
+                : { activeBerths, stowageBerths };
+            const vStatus = await getVesselStatus(skill.name, berthContext.activeBerths, berthContext.stowageBerths);
             let statusLabel = "";
             let statusColor = kleur.gray;
 
             if (vStatus.berthed.length > 0) {
-                statusLabel = ` [Berthed: ${vStatus.berthed.join(", ")}]`;
+                statusLabel = ` [Berthed: ${formatStatusEntries(vStatus.berthed)}]`;
                 statusColor = kleur.cyan;
             } else if (vStatus.stowed.length > 0) {
-                statusLabel = ` [Stowed: ${vStatus.stowed.join(", ")}]`;
+                statusLabel = ` [Stowed: ${formatStatusEntries(vStatus.stowed)}]`;
                 statusColor = kleur.yellow;
             } else {
                 statusLabel = " [Dry Dock]";
@@ -313,17 +364,23 @@ export async function fathomAction(options: any, command: any) {
 
         // 5. Interactive Ghost Docking
         if (opts.ghosts && ghostSkillPaths.length > 0 && (!opts.format || opts.format === "pretty")) {
-            console.log(kleur.magenta(`\n👻  Ghost Alert: Found ${ghostSkillPaths.length} unregistered local skills.`));
-            if (await ask(`Would you like to dock these to your local manifest now?`, kleur)) {
+            const targetLayer = useGlobalScope ? "global" : "local";
+            const scopeLabel = useGlobalScope ? "global" : "local";
+
+            console.log(kleur.magenta(`\n👻  Ghost Alert: Found ${ghostSkillPaths.length} unregistered ghost skill${ghostSkillPaths.length === 1 ? "" : "s"} in the ${scopeLabel} scope.`));
+            if (
+                process.stdin.isTTY
+                && process.stdout.isTTY
+                && await ask(`Would you like to dock these to your ${scopeLabel} manifest now?`, kleur)
+            ) {
                 for (const ghostPath of ghostSkillPaths) {
                     const name = path.basename(ghostPath);
-                    // Dock as local override
                     await manifestManager.addSkill({
                         name: name,
                         source: ghostPath,
                         localPath: ""
-                    }, "local");
-                    console.log(kleur.green(`   ✓ Docked: ${name} (Local)`));
+                    }, targetLayer);
+                    console.log(kleur.green(`   ✓ Docked: ${name} (${kleur.bold(scopeLabel)})`));
                 }
                 printSuccess("All ghosts have been successfully berthed to your harbor manifest.");
             }
@@ -346,19 +403,25 @@ function getRatingAdvice(score: number): string {
     return "High false-positive risk. The LLM may invoke this skill incorrectly. Needs significant metadata improvements.";
 }
 
-async function getVesselStatus(name: string, activeBerths: AgentBerth[], stowageBerths: AgentBerth[]): Promise<{ berthed: string[], stowed: string[] }> {
-    const berthed: string[] = [];
-    const stowed: string[] = [];
+async function getVesselStatus(name: string, activeBerths: AgentBerth[], stowageBerths: AgentBerth[]): Promise<{ berthed: BerthDetail[], stowed: BerthDetail[] }> {
+    const berthed: BerthDetail[] = [];
+    const stowed: BerthDetail[] = [];
     
     for (const berth of activeBerths) {
         if (await exists(path.join(berth.path, name))) {
-            berthed.push(berth.label);
+            berthed.push({
+                label: berth.label,
+                location: getAgentBerthLocation(berth)
+            });
         }
     }
     
     for (const berth of stowageBerths) {
         if (await exists(path.join(berth.path, name))) {
-            stowed.push(berth.label);
+            stowed.push({
+                label: berth.label,
+                location: getAgentBerthLocation(berth)
+            });
         }
     }
     

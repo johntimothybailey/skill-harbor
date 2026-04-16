@@ -94,7 +94,7 @@ Fathom:
 
 1. scans active agent berths
 2. scans stowage berths
-3. compares discovered skill names against the merged manifest
+3. compares discovered skill names against the selected manifest scope
 4. flags anything unmanaged as a ghost
 
 That means Fathom’s ghost model is berth-oriented and governance-oriented.
@@ -105,12 +105,16 @@ Fathom checks:
 
 - active berths such as Claude, Cursor, Codex, Gemini, RuleSync, etc.
 - stowage under `.harbor/stowage/`
+- by default, every detected berth in the selected local or global scope (`autodetect`)
+- or only the selected manifest's declared `targets` when you pass `--scan-mode targets-only`
+
+If you choose `targets-only` and the selected manifest has no targets, Harbor performs **no ghost scan** instead of widening back to autodetect.
 
 ### Fathom output behavior
 
 - ghosts appear in individual analysis output tagged as `[Ghost]`
 - if `--report` is also enabled, ghost paths are merged into the health report scan
-- Fathom can then prompt you to dock them into your overrides manifest
+- in interactive TTY runs, Fathom can then prompt you to dock them into the selected local or global manifest
 
 This makes Fathom the best explicit “show me unmanaged skill context” command in Harbor today.
 
@@ -135,6 +139,23 @@ By default, `skill-harbor ghosts`:
 - shows active ghosts in the main section
 - shows a summary count of friendly ghosts
 - stays interactive and non-destructive
+- uses `--scan-mode autodetect`, which scans every detected berth/stowage location in the selected scope
+- shows berth/stowage placement in the same concise style used by Fathom, for example `berth: Codex | .codex`
+
+### `--scan-mode`
+
+Use:
+
+```bash
+skill-harbor ghosts --scan-mode targets-only
+```
+
+to limit ghost discovery to the selected manifest's declared `targets`.
+
+- `autodetect` is the default
+- `targets-only` uses the selected manifest's resolved `targets` exactly
+- if there are no declared targets, `targets-only` performs no scan
+- non-interactive runs never prompt for scan mode; use the default or pass the flag explicitly
 
 ### `--friendly`
 
@@ -148,9 +169,26 @@ to reveal a separate friendly-ghost section with calmer/checkmark-style presenta
 
 Friendly ghosts are still known to Harbor, but they are not docked, deleted, or mutated just because they were marked friendly.
 
+When a ghost is in stowage, Harbor keeps that semantic explicit in the display, for example `stowage: Codex | .stowage/codex`.
+
+### `--details`
+
+Use:
+
+```bash
+skill-harbor ghosts --details
+```
+
+to expand each displayed ghost with:
+
+- its full filesystem path
+- parsed `SKILL.md` frontmatter metadata when present
+
+If no frontmatter metadata is present, Harbor shows `metadata: none`.
+
 ### Relationship to Fathom
 
-`skill-harbor fathom --ghosts` still exists.
+`skill-harbor fathom --ghosts` still exists and follows the same scan-mode rules.
 
 Use it when you want ghost inspection inside a Fathom profiling run.
 
@@ -195,7 +233,7 @@ Once ghosts are found, Harbor can offer to dock them.
 skill-harbor fathom --ghosts
 ```
 
-If you accept the prompt, Harbor docks each discovered ghost into the **overrides manifest**.
+If you accept the prompt, Harbor docks each discovered ghost into the currently selected manifest scope.
 
 ### Voyager ghost docking
 
@@ -217,7 +255,7 @@ Once a ghost is docked, it stops being stray unmanaged context and becomes part 
 
 Depending on scope, Harbor may write the resulting entry into:
 
-- the project/overrides manifest
+- the local project manifest
 - the global manifest
 
 That is why ghost docking is not just discovery — it is the step that converts a haunted berth into governed Harbor state.

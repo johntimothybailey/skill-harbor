@@ -40,7 +40,7 @@ skill-harbor dock ~/.rulesync/skills
 skill-harbor dock ./skills/my-debug-skill --override
 ```
 
-> Already have unmanaged skills living in active berths? `skill-harbor fathom --ghosts` remains the quickest way to discover and dock them interactively.
+> Already have unmanaged skills living in active berths? `skill-harbor fathom --ghosts` and `skill-harbor ghosts` can discover them with the default `autodetect` scan mode or the narrower `--scan-mode targets-only` mode.
 
 ---
 
@@ -86,8 +86,11 @@ The skill intelligence and profiling engine. Measures token saturation, quality 
 - `--query <text>`: Conducts a probabilistic **Sonar** audit using the configured LLM provider.
 - `--contracts`: Audits semantic I/O contract alignment between fleet members.
 - `--ghosts`: Scans agent folders for unregistered "Ghost" skills and offers to dock them.
+- `--scan-mode <mode>`: Ghost-only scan mode for `--ghosts`. `autodetect` is the default; `targets-only` uses the selected manifest's declared targets exactly.
 
 *For more details on the science behind Fathom, see the [Fathom Deep Dive](/docs/foundations/fathom).*
+
+**Status formatting note:** Fathom renders berth/stowage placement in the concise form `Label | .folder`, and report JSON includes additive placement detail under `vesselPlacements`.
 
 ---
 
@@ -97,11 +100,17 @@ Primary ghost inspection workflow for unmanaged skills discovered in active bert
 **Flags:**
 - `-g, --global`: Inspect ghosts against the global manifest.
 - `--friendly`: Reveal the separate friendly-ghost section instead of only showing the summary count.
+- `-d, --details`: Show the full ghost path and parsed `SKILL.md` frontmatter metadata when available.
+- `--scan-mode <mode>`: Choose `autodetect` (default) or `targets-only`.
 
 **Notes:**
 - Default output shows active ghosts and summarizes friendly ghosts by count.
+- `autodetect` scans every detected berth/stowage location in the selected scope.
+- `targets-only` scans only the selected manifest's resolved `targets`; with no targets, it performs no scan.
+- Non-interactive runs never prompt for scan mode; use the default or pass the flag explicitly.
 - Friendly ghosts are a non-destructive classification; they are **not** docked, removed, or mutated by being marked friendly.
-- `fathom --ghosts` still exists as the ghost-aware inspection mode inside Fathom.
+- `fathom --ghosts` still exists as the ghost-aware inspection mode inside Fathom and follows the same scan-mode rules.
+- Ghost rows use the same concise placement format as Fathom while still distinguishing berth vs stowage.
 
 *For the conceptual model, see [Ghosts](/docs/foundations/ghosts).*
 

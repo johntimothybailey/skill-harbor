@@ -4,6 +4,7 @@ import os from "node:os";
 import { ManifestManager } from "./manifest";
 
 export type AgentBerth = { path: string; label: string; key: string };
+export type BerthDetail = { label: string; location?: string };
 
 export async function exists(path: string): Promise<boolean> {
     try {
@@ -12,6 +13,42 @@ export async function exists(path: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+export function getAgentBerthLocation(berth: AgentBerth): string | undefined {
+    const normalizedPath = berth.path.split(path.sep).join("/");
+
+    if (normalizedPath.includes("/.harbor/stowage/")) {
+        return `.stowage/${berth.key}`;
+    }
+
+    if (normalizedPath.includes("/.gemini/antigravity/")) {
+        return ".gemini/antigravity";
+    }
+
+    const knownRoots = [
+        ".agents",
+        ".codex",
+        ".claude",
+        ".cursor",
+        ".gemini",
+        ".rulesync",
+        ".windsurf",
+        ".continue",
+        ".github"
+    ];
+
+    for (const root of knownRoots) {
+        if (normalizedPath.includes(`/${root}/`)) {
+            return root;
+        }
+    }
+
+    return undefined;
+}
+
+export function formatBerthDetail(detail: BerthDetail): string {
+    return detail.location ? `${detail.label} | ${detail.location}` : detail.label;
 }
 
 export function getManifestManager(options: any) {
@@ -33,7 +70,7 @@ export function getManagedAgentTargets(baseDir: string, includeRulesync = true):
         { path: path.join(baseDir, ".windsurf", "rules"), label: "Windsurf", key: "windsurf" },
         { path: path.join(baseDir, ".continue", "rules"), label: "Continue", key: "continue" },
         { path: path.join(baseDir, ".github", "instructions"), label: "Copilot", key: "copilot" },
-        { path: path.join(baseDir, ".agents", "skills"), label: "Codex", key: "codex" }
+        { path: path.join(baseDir, ".codex", "skills"), label: "Codex", key: "codex" }
     ];
 
     if (includeRulesync) {
@@ -47,6 +84,43 @@ export function getSupportedTargetKeys(includeRulesync = true): string[] {
     return getManagedAgentTargets("", includeRulesync).map(target => target.key);
 }
 
+function getCodexSkillDirCandidates(baseDir: string): string[] {
+    return [
+        path.join(baseDir, ".codex", "skills"),
+        path.join(baseDir, ".agents", "skills")
+    ];
+}
+
+async function resolveCodexSkillDir(baseDir: string): Promise<string> {
+    const candidates = getCodexSkillDirCandidates(baseDir);
+
+    for (const candidate of candidates) {
+        if (await exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    for (const candidate of candidates) {
+        if (await exists(path.dirname(candidate))) {
+            return candidate;
+        }
+    }
+
+    return candidates[0];
+}
+
+async function hasActiveCodexBerth(baseDir: string): Promise<boolean> {
+    const candidates = getCodexSkillDirCandidates(baseDir);
+
+    for (const candidate of candidates) {
+        if (await exists(path.dirname(candidate)) || await exists(candidate)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * Returns a list of active agent skill directories.
  */
@@ -58,12 +132,19 @@ export async function getAgentBerths(baseDir: string, targets?: string[]): Promi
     const activeTargets: AgentBerth[] = [];
     for (const target of targetConfigs) {
         let isActive = false;
+        let targetPath = target.path;
+
+        if (target.key === "codex") {
+            targetPath = await resolveCodexSkillDir(baseDir);
+        }
         
         if (hasExplicitTargets) {
             isActive = targets!.includes(target.key);
         } else {
             if (target.key === "rulesync") {
                 isActive = await exists(rulesyncBase);
+            } else if (target.key === "codex") {
+                isActive = await hasActiveCodexBerth(baseDir);
             } else {
                 // If baseDir is home, we check parent of path
                 const parentDir = path.dirname(target.path);
@@ -72,7 +153,10 @@ export async function getAgentBerths(baseDir: string, targets?: string[]): Promi
         }
         
         if (isActive) {
-            activeTargets.push(target);
+            activeTargets.push({
+                ...target,
+                path: targetPath
+            });
         }
     }
     

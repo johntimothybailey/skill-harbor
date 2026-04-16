@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { exists, getAgentBerths, getStowageBerths } from "../utils";
+import matter from "gray-matter";
+import { AgentBerth, exists, getAgentBerths, getAgentBerthLocation, getStowageBerths } from "../utils";
 import { HarborManifest, ManifestManager } from "../manifest";
 import { ProfilerService } from "./profiler";
 
@@ -9,7 +10,16 @@ export type GhostRecord = {
     path: string;
     location: "berth" | "stowage";
     berthLabel: string;
+    berthLocation?: string;
     friendly: boolean;
+};
+
+export type GhostScanMode = "autodetect" | "targets-only";
+
+export type GhostScanContext = {
+    activeBerths: AgentBerth[];
+    stowageBerths: AgentBerth[];
+    scanMode: GhostScanMode;
 };
 
 type FriendlyGhostState = {
@@ -22,6 +32,32 @@ function getGhostsStatePath(cwd: string): string {
 
 function ghostKey(ghostPath: string): string {
     return path.resolve(ghostPath);
+}
+
+async function collectLegacyCodexGhostBerths(baseDir: string, existingBerths: AgentBerth[]): Promise<AgentBerth[]> {
+    const legacyCandidates = [
+        path.join(baseDir, ".codex", "skills"),
+        path.join(baseDir, ".agents", "skills")
+    ];
+
+    const knownPaths = new Set(existingBerths.map(berth => berth.path));
+    const additionalBerths: AgentBerth[] = [];
+
+    for (const candidate of legacyCandidates) {
+        if (knownPaths.has(candidate)) {
+            continue;
+        }
+
+        if (await exists(candidate) || await exists(path.dirname(candidate))) {
+            additionalBerths.push({
+                path: candidate,
+                label: "Codex",
+                key: "codex"
+            });
+        }
+    }
+
+    return additionalBerths;
 }
 
 export async function readFriendlyGhostState(cwd: string): Promise<FriendlyGhostState> {
@@ -62,10 +98,63 @@ export async function markGhostsFriendly(cwd: string, ghosts: Array<{ name: stri
     await writeFriendlyGhostState(cwd, state);
 }
 
+export async function readGhostMetadata(ghostPath: string): Promise<Record<string, unknown>> {
+    try {
+        const rawContent = await fs.readFile(path.join(ghostPath, "SKILL.md"), "utf-8");
+        const { data } = matter(rawContent);
+        return data && typeof data === "object" ? data : {};
+    } catch {
+        return {};
+    }
+}
+
+export function resolveGhostScanMode(rawMode?: string): GhostScanMode {
+    if (!rawMode) {
+        return "autodetect";
+    }
+
+    if (rawMode === "autodetect" || rawMode === "targets-only") {
+        return rawMode;
+    }
+
+    throw new Error(`Invalid ghost scan mode '${rawMode}'. Use 'autodetect' or 'targets-only'.`);
+}
+
+export async function resolveGhostScanContext(params: {
+    baseDir: string;
+    targets?: string[];
+    scanMode: GhostScanMode;
+}): Promise<GhostScanContext> {
+    const { baseDir, targets, scanMode } = params;
+
+    if (scanMode === "targets-only" && (!Array.isArray(targets) || targets.length === 0)) {
+        return {
+            activeBerths: [],
+            stowageBerths: [],
+            scanMode
+        };
+    }
+
+    const scopedTargets = scanMode === "targets-only" ? targets : undefined;
+
+    const activeBerths = await getAgentBerths(baseDir, scopedTargets);
+    const codexSelected = !Array.isArray(targets) || targets.includes("codex");
+    const expandedActiveBerths = codexSelected
+        ? [...activeBerths, ...await collectLegacyCodexGhostBerths(baseDir, activeBerths)]
+        : activeBerths;
+
+    return {
+        activeBerths: expandedActiveBerths,
+        stowageBerths: await getStowageBerths(baseDir, scopedTargets),
+        scanMode
+    };
+}
+
 export async function discoverGhosts(params: {
     baseDir: string;
     manifestManager: ManifestManager;
     manifest: HarborManifest;
+    scanContext?: GhostScanContext;
     profiler?: ProfilerService;
 }): Promise<GhostRecord[]> {
     const { baseDir, manifestManager, manifest } = params;
@@ -74,11 +163,15 @@ export async function discoverGhosts(params: {
     const manifestSkillNames = new Set(skills.map(skill => skill.name));
     const state = await readFriendlyGhostState(baseDir);
     const ghosts: GhostRecord[] = [];
+    const scanContext = params.scanContext
+        ?? await resolveGhostScanContext({
+            baseDir,
+            targets: manifest.targets,
+            scanMode: "autodetect"
+        });
+    const { activeBerths, stowageBerths } = scanContext;
 
-    const activeBerths = await getAgentBerths(baseDir, manifest.targets);
-    const stowageBerths = await getStowageBerths(baseDir, manifest.targets);
-
-    const registerGhost = (ghostPath: string, berthLabel: string, location: "berth" | "stowage") => {
+    const registerGhost = (ghostPath: string, berth: AgentBerth, location: "berth" | "stowage") => {
         const name = path.basename(ghostPath);
         if (manifestSkillNames.has(name)) {
             return;
@@ -90,7 +183,8 @@ export async function discoverGhosts(params: {
         ghosts.push({
             name,
             path: ghostPath,
-            berthLabel,
+            berthLabel: berth.label,
+            berthLocation: getAgentBerthLocation(berth),
             location,
             friendly: Boolean(state.friendlyGhosts[ghostKey(ghostPath)])
         });
@@ -99,14 +193,14 @@ export async function discoverGhosts(params: {
     for (const berth of activeBerths) {
         const foundPaths = await profiler.findSkills(berth.path);
         for (const skillPath of foundPaths) {
-            registerGhost(skillPath, berth.label, "berth");
+            registerGhost(skillPath, berth, "berth");
         }
     }
 
     for (const berth of stowageBerths) {
         const foundPaths = await profiler.findSkills(berth.path);
         for (const skillPath of foundPaths) {
-            registerGhost(skillPath, berth.label, "stowage");
+            registerGhost(skillPath, berth, "stowage");
         }
     }
 

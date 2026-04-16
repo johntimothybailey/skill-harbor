@@ -98,6 +98,8 @@ program
     .description("Inspect unmanaged ghost skills and mark known ones as friendly.")
     .option("-g, --global", "Inspect ghosts against the global manifest (~/.harbor).")
     .option("--friendly", "Show the separate friendly-ghost section.")
+    .option("-d, --details", "Show full path and parsed metadata for each displayed ghost.")
+    .option("--scan-mode <mode>", "Ghost scan mode ('autodetect' | 'targets-only'). Default: 'autodetect'.")
     .action(ghostsAction);
 
 program
@@ -110,6 +112,7 @@ program
     .option("-m, --model <name>", "Override the default LLM model for Sonar auditing.")
     .option("-b, --baseUrl <url>", "Override the default API base URL for Sonar auditing (e.g., local Ollama).")
     .option("-u, --ghosts", "Scan agent berths for unregistered 'ghost' skills.")
+    .option("--scan-mode <mode>", "Ghost scan mode for --ghosts ('autodetect' | 'targets-only'). Default: 'autodetect'.")
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")

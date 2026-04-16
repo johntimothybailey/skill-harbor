@@ -2,9 +2,51 @@ import os from "node:os";
 import kleur from "kleur";
 import prompts from "prompts";
 import { resolveCommandScope } from "../command-scope";
-import { getManifestManager } from "../utils";
+import { formatBerthDetail, getManifestManager } from "../utils";
 import { printError, printHeader, printInfo, printSuccess } from "../ui";
-import { discoverGhosts, markGhostsFriendly, summarizeGhosts } from "../services/ghosts";
+import {
+    discoverGhosts,
+    markGhostsFriendly,
+    GhostRecord,
+    readGhostMetadata,
+    resolveGhostScanContext,
+    resolveGhostScanMode,
+    summarizeGhosts
+} from "../services/ghosts";
+
+function formatGhostContext(ghost: GhostRecord): string {
+    return `(${ghost.location}: ${formatBerthDetail({
+        label: ghost.berthLabel,
+        location: ghost.berthLocation
+    })})`;
+}
+
+function formatGhostName(ghost: GhostRecord): string {
+    return ghost.friendly
+        ? kleur.bold().green(ghost.name)
+        : kleur.bold().white(ghost.name);
+}
+
+function formatMetadataValue(key: string, value: unknown): string {
+    const formattedValue = typeof value === "string" ? value : JSON.stringify(value);
+    return key === "description" ? kleur.gray(formattedValue) : kleur.white(formattedValue);
+}
+
+async function printGhostDetails(ghost: GhostRecord): Promise<void> {
+    console.log(`    ${kleur.bold().cyan("path:")} ${kleur.white(ghost.path)}`);
+    const metadata = await readGhostMetadata(ghost.path);
+    const entries = Object.entries(metadata);
+
+    if (entries.length === 0) {
+        console.log(`    ${kleur.bold().cyan("metadata:")} ${kleur.gray("none")}`);
+        return;
+    }
+
+    console.log(`    ${kleur.bold().cyan("metadata:")}`);
+    for (const [key, value] of entries) {
+        console.log(`      ${kleur.bold().cyan(`${key}:`)} ${formatMetadataValue(key, value)}`);
+    }
+}
 
 export async function ghostsAction(options: any, command: any) {
     const opts = command.opts();
@@ -21,10 +63,17 @@ export async function ghostsAction(options: any, command: any) {
             : await manifestManager.readMerged();
 
         const baseDir = useGlobalScope ? os.homedir() : process.cwd();
+        const scanMode = resolveGhostScanMode(opts.scanMode);
+        const scanContext = await resolveGhostScanContext({
+            baseDir,
+            targets: manifest.targets,
+            scanMode
+        });
         const ghosts = await discoverGhosts({
             baseDir,
             manifestManager,
-            manifest
+            manifest,
+            scanContext
         });
         const { active, friendly } = summarizeGhosts(ghosts);
 
@@ -36,7 +85,11 @@ export async function ghostsAction(options: any, command: any) {
         if (active.length > 0) {
             console.log(kleur.magenta(`\n👻 Active Ghosts (${active.length})`));
             for (const ghost of active) {
-                console.log(`  ${kleur.red("•")} ${kleur.bold(ghost.name)} ${kleur.gray(`(${ghost.location}: ${ghost.berthLabel})`)}`);
+                console.log(`  ${kleur.red("•")} ${formatGhostName(ghost)} ${kleur.yellow(formatGhostContext(ghost))}`);
+                if (opts.details) {
+                    await printGhostDetails(ghost);
+                    console.log("");
+                }
             }
         } else {
             console.log(kleur.green(`\n✅ No active ghosts found.`));
@@ -49,7 +102,11 @@ export async function ghostsAction(options: any, command: any) {
         if (opts.friendly && friendly.length > 0) {
             console.log(kleur.cyan(`\n✅ Friendly Ghosts (${friendly.length})`));
             for (const ghost of friendly) {
-                console.log(`  ${kleur.green("✓")} ${kleur.bold(ghost.name)} ${kleur.gray(`(${ghost.location}: ${ghost.berthLabel})`)}`);
+                console.log(`  ${kleur.green("✓")} ${formatGhostName(ghost)} ${kleur.yellow(formatGhostContext(ghost))}`);
+                if (opts.details) {
+                    await printGhostDetails(ghost);
+                    console.log("");
+                }
             }
         }
 
@@ -80,7 +137,7 @@ export async function ghostsAction(options: any, command: any) {
                 name: "selected",
                 message: kleur.bold().cyan("Select ghosts to mark as friendly:"),
                 choices: active.map(ghost => ({
-                    title: `${ghost.name} (${ghost.location}: ${ghost.berthLabel})`,
+                    title: `${ghost.name} ${formatGhostContext(ghost)}`,
                     value: ghost.path
                 })),
                 instructions: false,

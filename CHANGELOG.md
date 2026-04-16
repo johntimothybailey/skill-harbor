@@ -1,5 +1,15 @@
 # skill-harbor
 
+## Unreleased
+
+### Patch Changes
+
+## ⚓ Clearer Berth Placement Reporting
+
+- **Fathom status labels** now use concise berth/stowage formatting such as `Codex | .codex` and `Codex | .stowage/codex` across individual output and report views.
+- **Fathom report JSON** now exposes additive structured placement detail under `vesselPlacements` while keeping `fleetStatus` count-only.
+- **Ghosts output** now aligns with the same concise placement style while preserving berth vs stowage semantics.
+
 ## 0.15.1
 
 ### Patch Changes

@@ -421,11 +421,21 @@ Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. I
 - **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
 
 ### 👻 Interactive Ghost Docking
-When running `fathom --ghosts` or `voyager`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+When running `fathom --ghosts`, `ghosts`, or `voyager`, Skill Harbor can surface unmanaged **"Ghost"** skills.
+
+- Ghost discovery defaults to `autodetect`, which scans every detected berth/stowage location in the selected scope.
+- Pass `--scan-mode targets-only` to limit discovery to the selected manifest's declared targets.
+- If `targets-only` is selected and the manifest has no targets, Harbor performs no ghost scan.
+- Non-interactive runs never prompt for scan mode or docking decisions.
+- `ghosts --details` shows the full path for each ghost plus parsed `SKILL.md` frontmatter metadata when available.
+- Ghost and Fathom berth output now use concise placement formatting like `Codex | .codex` and `Codex | .stowage/codex`.
 
 ```bash
 # Scan for ghosts and dock them interactively
 skill-harbor fathom --ghosts
+
+# Limit discovery to the selected manifest targets
+skill-harbor ghosts --scan-mode targets-only
 ```
 
 ---
