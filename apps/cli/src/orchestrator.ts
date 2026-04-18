@@ -15,20 +15,44 @@ export class Orchestrator {
     constructor(options: { 
         skillName: string, 
         spinnies: Spinnies, 
-        debug?: boolean 
+        debug?: boolean,
+        packageRoot?: string
     }) {
         this.tempDir = path.join(os.tmpdir(), `skill-harbor-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
         this.debugMode = options?.debug ?? false;
         this.spinnies = options.spinnies;
         this.skillName = options.skillName;
 
-        // Resolve package root (one level up from src/)
-        const currentFile = new URL(import.meta.url).pathname;
-        this.packageRoot = path.join(path.dirname(currentFile), "..");
+        if (options.packageRoot) {
+            this.packageRoot = options.packageRoot;
+        } else {
+            // Resolve package root (one level up from src/)
+            const currentFile = new URL(import.meta.url).pathname;
+            this.packageRoot = path.join(path.dirname(currentFile), "..");
+        }
     }
 
     private get spinnerId(): string {
         return `sync-${this.skillName}`;
+    }
+
+    private async resolveLocalBin(binaryName: string): Promise<string> {
+        const executableName = process.platform === "win32" ? `${binaryName}.cmd` : binaryName;
+        let currentDir = path.resolve(this.packageRoot);
+
+        while (true) {
+            const candidate = path.join(currentDir, "node_modules", ".bin", executableName);
+            try {
+                await fs.access(candidate);
+                return candidate;
+            } catch {
+                const parentDir = path.dirname(currentDir);
+                if (parentDir === currentDir) {
+                    throw new Error(`Unable to locate '${binaryName}' in node_modules/.bin from ${this.packageRoot} upward.`);
+                }
+                currentDir = parentDir;
+            }
+        }
     }
 
     async moor(url: string): Promise<string> {
@@ -74,7 +98,7 @@ export class Orchestrator {
                 }
             }
 
-            const binPath = path.join(this.packageRoot, "node_modules", ".bin", "skillfish");
+            const binPath = await this.resolveLocalBin("skillfish");
             const args = ["add", repo];
             if (skillName) args.push(skillName);
             args.push("--project");
@@ -134,7 +158,7 @@ export class Orchestrator {
             const outputPath = path.join(this.tempDir, "processed", targetAgent);
             await fs.mkdir(outputPath, { recursive: true });
 
-            const binPath = path.join(this.packageRoot, "node_modules", ".bin", "skill-porter");
+            const binPath = await this.resolveLocalBin("skill-porter");
             const args = ["convert", cargoPath, "-t", targetAgent, "-o", outputPath];
 
             const child = spawn(binPath, args, {

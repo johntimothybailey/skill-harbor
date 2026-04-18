@@ -61,6 +61,28 @@ describe('Orchestrator Unit Tests', () => {
         await expect(fs.access(path.join(cargoPath, '.claude'))).rejects.toThrow();
     });
 
+    it('should resolve helper binaries by walking up to the workspace root', async () => {
+        const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-harbor-workspace-'));
+        const nestedPackageRoot = path.join(workspaceRoot, 'apps', 'cli');
+        const binaryName = process.platform === 'win32' ? 'skillfish.cmd' : 'skillfish';
+        const expectedPath = path.join(workspaceRoot, 'node_modules', '.bin', binaryName);
+
+        await fs.mkdir(path.dirname(expectedPath), { recursive: true });
+        await fs.writeFile(expectedPath, '');
+        await fs.mkdir(nestedPackageRoot, { recursive: true });
+
+        const nestedOrchestrator = new Orchestrator({
+            skillName: 'test-skill',
+            spinnies,
+            packageRoot: nestedPackageRoot
+        });
+
+        await expect((nestedOrchestrator as any).resolveLocalBin('skillfish')).resolves.toBe(expectedPath);
+
+        await nestedOrchestrator.cleanup();
+        await fs.rm(workspaceRoot, { recursive: true, force: true });
+    });
+
     // We can also test the private exists method by calling getMetadata on a path
     // which delegates to exists internally, allowing us to hit that branch.
 });
