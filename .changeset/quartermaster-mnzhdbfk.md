@@ -19,6 +19,8 @@ Captain's Briefing: The harbor now charts ghostly drift as clearly as it charts 
 - **Safer folder-source reconciliation**: Folder-source sync keeps the folder as the authoritative manifest object, records generated child-skill provenance, skips/warns on collisions, and avoids mutating RuleSync config or auto-deleting manual entries in v1.
 - **Manual app alignment**: The generated manual now includes a dedicated foundations page and navigation links that explain sources, targets, folder-backed sources, ghost docking, and RuleSync-backed team workflows.
 - **Quartermaster as a Harbor skill**: Added a shared `.harbor/skills/quartermaster` skill and wired it into the project manifest so contributors can use Quartermaster through Harbor instead of only through `bun run quartermaster`.
+
+## 🔧 Repaired Ships
 - **Shared ghost discovery logic**: Fathom now reuses the same underlying ghost-discovery path as the new Ghosts workflow, so ghost inspection stays consistent while Fathom remains the ghost-aware analysis surface.
 - **Headless-safe review flows**: Local `skill-harbor list` now reflects the merged manifest stack, and `voyager` only offers ghost docking in interactive terminals while reusing the scoped ghost-discovery path.
 - **Cleaner npm cargo**: The published CLI package now whitelists the real distribution files and avoids shipping stale tarballs or extra workspace artifacts in `npm pack`.
