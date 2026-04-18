@@ -12,7 +12,7 @@ export async function listAction(options: any, command: any) {
 
         const manifest = useGlobalScope
             ? await manifestManager.read("global")
-            : await manifestManager.read();
+            : await manifestManager.readMerged();
         const skills = Object.values(manifest.skills);
 
         printHeader(`${useGlobalScope ? "Global" : "Local"} Fleet Manifest`);
@@ -27,7 +27,7 @@ export async function listAction(options: any, command: any) {
             }
             console.log();
         }
-    } catch (error: any) {
+    } catch {
         printError(`Cannot read manifest. Run 'dock' first to initialize.`);
     }
 }

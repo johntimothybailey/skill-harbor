@@ -10,6 +10,7 @@ tsconfig.tsbuildinfo
 .harbor/stowage/
 .env*
 .npmrc
+*.tgz
 harbor-manifest.local.json
 harbor-compass.yaml
 *voyage-test.yaml

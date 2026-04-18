@@ -10,6 +10,12 @@ import { ask, getAgentBerths, getManifestManager } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
 import {
+    discoverGhosts,
+    resolveGhostScanContext,
+    summarizeGhosts,
+    type GhostRecord
+} from "../services/ghosts";
+import {
     VoyagerAssertionSummary,
     VoyagerCompareResult,
     VoyagerRunResult,
@@ -98,12 +104,17 @@ export async function voyagerAction(queryArg: string | undefined, options: any, 
             if (pretty) {
                 spinnies.fail("voyager-init", { text: "No properly formatted skills found in active berths." });
             }
-            await maybeOfferGhostDocking({
+            const ghosts = await discoverVoyagerGhosts({
                 baseDir,
+                manifestManager,
+                manifest,
+                profiler
+            });
+            await maybeOfferGhostDocking({
                 useGlobalScope,
                 manifestManager,
-                profiler,
-                allowPrompt: true
+                ghosts,
+                allowPrompt: Boolean(process.stdin.isTTY && process.stdout.isTTY)
             });
             process.exit(1);
         }
@@ -266,37 +277,58 @@ async function discoverVoyagerTools(activeBerths: Array<{ path: string }>, profi
     return tools;
 }
 
-async function maybeOfferGhostDocking({
+async function discoverVoyagerGhosts({
     baseDir,
-    useGlobalScope,
     manifestManager,
-    profiler,
-    allowPrompt
+    manifest,
+    profiler
 }: {
     baseDir: string;
+    manifestManager: any;
+    manifest: any;
+    profiler: ProfilerService;
+}): Promise<GhostRecord[]> {
+    const scanContext = await resolveGhostScanContext({
+        baseDir,
+        targets: manifest.targets,
+        scanMode: "autodetect"
+    });
+    const ghosts = await discoverGhosts({
+        baseDir,
+        manifestManager,
+        manifest,
+        scanContext,
+        profiler
+    });
+
+    return summarizeGhosts(ghosts).active;
+}
+
+async function maybeOfferGhostDocking({
+    useGlobalScope,
+    manifestManager,
+    ghosts,
+    allowPrompt
+}: {
     useGlobalScope: boolean;
     manifestManager: any;
-    profiler: ProfilerService;
+    ghosts: GhostRecord[];
     allowPrompt: boolean;
 }) {
     if (!allowPrompt) return;
-
-    const ghosts = await profiler.findSkills(baseDir);
-    const unmanagedGhosts = ghosts.filter(p => !p.includes(".harbor/skills"));
-
-    if (unmanagedGhosts.length === 0) return;
+    if (ghosts.length === 0) return;
 
     const scopeLabel = useGlobalScope ? "global" : "local";
-    console.log(kleur.magenta(`\n👻  Ghost Alert: I found ${unmanagedGhosts.length} ${scopeLabel} skill(s) that aren't manifested.`));
+    console.log(kleur.magenta(`\n👻  Ghost Alert: I found ${ghosts.length} ${scopeLabel} skill(s) that aren't manifested.`));
     if (!(await ask(`Would you like to dock these to your ${scopeLabel} manifest now?`, kleur))) {
         return;
     }
 
-    for (const ghostPath of unmanagedGhosts) {
-        const name = path.basename(ghostPath);
+    for (const ghost of ghosts) {
+        const name = ghost.name || path.basename(ghost.path);
         await manifestManager.addSkill({
             name,
-            source: ghostPath,
+            source: ghost.path,
             localPath: ""
         }, useGlobalScope ? "global" : "local");
         console.log(kleur.green(`   ✓ Docked: ${name} (${useGlobalScope ? "Global" : "Local"})`));
