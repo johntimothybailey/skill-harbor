@@ -39,9 +39,14 @@ Use this structure unless the user explicitly asks for a different shape:
 - `## ✨ New Cargo`
 - `## 🛡️ Hardened Hull`
 - `## 🛠️ Barnacle Scraping`
+- `## 🔧 Repaired Ships`
 - `## 🔭 New Skill Discovery` only if relevant
 
 Omit any section that has no real content.
+
+Section intent:
+- `## 🔧 Repaired Ships` is for **user-visible repairs**: fixes to CLI behavior, docs/manual behavior, distribution/packaging/install flows, or any other bug/repair a user would directly notice.
+- `## 🛠️ Barnacle Scraping` is for **non-user-facing cleanup and maintenance**: refactors, migrations, naming cleanups, internal plumbing fixes, and other maintenance work that is not primarily a user-noticeable repair.
 
 ## Hard Rules
 - Every bullet must reference a **specific file, command, function, module, behavior, or user-visible change**.
@@ -73,6 +78,9 @@ Captain's Briefing: ...
 - ...
 
 ## 🛠️ Barnacle Scraping
+- ...
+
+## 🔧 Repaired Ships
 - ...
 ```
 
