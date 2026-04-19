@@ -2,7 +2,7 @@
   "version": "1.0",
   "dependencies": {
     "scryer": "https://github.com/johntimothybailey/sia/skills/scryer",
-    "quartermaster": "./.harbor/skills/quartermaster"
+    "quartermaster": "./skills/quartermaster"
   },
   "skills": {
     "scryer": {
@@ -22,7 +22,7 @@
     },
     "quartermaster": {
       "name": "quartermaster",
-      "source": "./.harbor/skills/quartermaster",
+      "source": "./skills/quartermaster",
       "localPath": ""
     }
   }
