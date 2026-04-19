@@ -7,6 +7,7 @@ import { resolveCommandScope } from "../command-scope";
 import { ask, getAgentBerths, getManifestManager } from "../utils";
 import { ConfigManager } from "../services/config";
 import { ProfilerService } from "../services/profiler";
+import { discoverGhosts, resolveGhostScanContext, summarizeGhosts } from "../services/ghosts";
 import { printSuccess } from "../ui";
 
 vi.mock("node:fs/promises");
@@ -15,6 +16,7 @@ vi.mock("../command-scope");
 vi.mock("../utils");
 vi.mock("../services/config");
 vi.mock("../services/profiler");
+vi.mock("../services/ghosts");
 vi.mock("../ui");
 vi.mock("spinnies", () => ({
     default: class MockSpinnies {
@@ -68,7 +70,15 @@ describe("voyagerAction", () => {
         (ProfilerService as any).mockImplementation(function() {
             return mockProfiler;
         });
+        (resolveGhostScanContext as any).mockResolvedValue({ activeBerths: [], stowageBerths: [], scanMode: "autodetect" });
+        (discoverGhosts as any).mockResolvedValue([]);
+        (summarizeGhosts as any).mockImplementation((ghosts: any[]) => ({
+            active: ghosts.filter(ghost => !ghost.friendly),
+            friendly: ghosts.filter(ghost => ghost.friendly)
+        }));
         (ask as any).mockResolvedValue(false);
+        Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
+        Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
         (os.homedir as any).mockReturnValue("/home/user");
         (fs.readFile as any).mockResolvedValue("");
         (fs.mkdir as any).mockResolvedValue(undefined);
@@ -113,9 +123,10 @@ describe("voyagerAction", () => {
         (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: true, shouldStop: false });
         mockManifestManager.read.mockResolvedValue({ targets: ["codex"], skills: {} });
         (getAgentBerths as any).mockResolvedValue([{ path: "/home/user/.agents/skills", label: "Codex", key: "codex" }]);
-        mockProfiler.findSkills
-            .mockResolvedValueOnce([])
-            .mockResolvedValueOnce(["/home/user/manual-skill"]);
+        mockProfiler.findSkills.mockResolvedValue([]);
+        (discoverGhosts as any).mockResolvedValue([
+            { name: "manual-skill", path: "/home/user/manual-skill", friendly: false }
+        ]);
         (ask as any).mockResolvedValue(true);
 
         await expect(voyagerAction("test query", options, mockCommand)).rejects.toThrow("exit");
@@ -125,6 +136,25 @@ describe("voyagerAction", () => {
             "global"
         );
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining("All ghosts berthed"));
+    });
+
+    it("does not prompt for ghost docking in non-interactive mode", async () => {
+        const options = {};
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        Object.defineProperty(process.stdin, "isTTY", { value: false, configurable: true });
+        Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+
+        (getAgentBerths as any).mockResolvedValue([{ path: "/workspace/.agents/skills", label: "Codex", key: "codex" }]);
+        mockProfiler.findSkills.mockResolvedValue([]);
+        (discoverGhosts as any).mockResolvedValue([
+            { name: "manual-skill", path: "/workspace/manual-skill", friendly: false }
+        ]);
+
+        await expect(voyagerAction("test query", options, mockCommand)).rejects.toThrow("exit");
+
+        expect(ask).not.toHaveBeenCalled();
+        expect(mockManifestManager.addSkill).not.toHaveBeenCalled();
     });
 
     it("runs compare mode, emits json, avoids ghost prompts for the no-skills branch, and saves traces", async () => {

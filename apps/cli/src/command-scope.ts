@@ -33,7 +33,7 @@ export async function resolveCommandScope(
                 dependencies: {},
                 skills: {}
             }, "shared");
-            printSuccess(`Project harbor initialized at .harbor/harbor-manifest.json. Add skills with 'skill-harbor dock <url>' and rerun '${rerunCommand}'.`);
+            printSuccess(`Project harbor initialized at .harbor/harbor-manifest.json. Add skills with 'skill-harbor dock <source>' and rerun '${rerunCommand}'.`);
             return { useGlobalScope: false, shouldStop: true };
         }
 

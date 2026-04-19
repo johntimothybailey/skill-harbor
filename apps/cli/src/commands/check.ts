@@ -24,7 +24,7 @@ export async function checkAction(options: any, command: any) {
             ? await manifestManager.read("global") 
             : await manifestManager.readMerged();
 
-        const skills = Object.values(manifest.skills);
+        const skills = manifestManager.materializeSkills(manifest);
 
         if (skills.length === 0) {
             printInfo("Empty Harbor", "No skills found in the manifest stack to check.");
@@ -33,7 +33,7 @@ export async function checkAction(options: any, command: any) {
 
         // 2. Override Warnings
         if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0) {
-            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
@@ -47,7 +47,7 @@ export async function checkAction(options: any, command: any) {
             const orchestrator = new Orchestrator({ skillName: skill.name, spinnies });
             
             let layerLabel = "";
-            if (skill.layer === "local") layerLabel = kleur.yellow(" [Local Override]");
+            if (skill.layer === "local") layerLabel = kleur.yellow(" [Override]");
             else if (skill.layer === "global") layerLabel = kleur.gray(" [Global]");
             
             spinnies.add(`check-${skill.name}`, { text: `Auditing ${kleur.bold(skill.name)}${layerLabel}...` });

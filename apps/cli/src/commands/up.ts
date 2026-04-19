@@ -8,11 +8,12 @@ import crypto from "node:crypto";
 import glob from "fast-glob";
 import kleur from "kleur";
 import Spinnies from "spinnies";
-import { ManifestManager } from "../manifest";
+import { GeneratedSkillEntry, ManifestLayer, ManifestManager, SkillEntry } from "../manifest";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets, getSupportedTargetKeys } from "../utils";
 import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from "../ui";
 import { migrateAction } from "./migrate";
+import { ProfilerService } from "../services/profiler";
 
 const execAsync = promisify(exec);
 
@@ -22,7 +23,8 @@ const execAsync = promisify(exec);
 async function ensureHarborIgnoreCorrect(cwd: string) {
     const gitignorePath = path.join(cwd, ".gitignore");
     const requiredIgnores = [
-        "harbor-manifest.local.json",
+        ".harbor/harbor-manifest.overrides.json",
+        ".harbor/ghosts.json",
         "harbor-compass.yaml",
         ".harbor/skills/",
         ".harbor/stowage/"
@@ -45,6 +47,12 @@ async function ensureHarborIgnoreCorrect(cwd: string) {
         const legacyIndex = lines.findIndex(l => l.trim() === ".harbor" || l.trim() === ".harbor/");
         if (legacyIndex !== -1) {
             lines[legacyIndex] = ".harbor/skills/";
+            updated = true;
+        }
+
+        const legacyOverridesIgnoreIndex = lines.findIndex(l => l.trim() === "harbor-manifest.local.json" || l.trim() === ".harbor/harbor-manifest.local.json");
+        if (legacyOverridesIgnoreIndex !== -1) {
+            lines[legacyOverridesIgnoreIndex] = ".harbor/harbor-manifest.overrides.json";
             updated = true;
         }
 
@@ -145,8 +153,118 @@ function parseTargetOption(targetOption?: string | string[]): string[] | undefin
     return targets.length > 0 ? [...new Set(targets)] : undefined;
 }
 
+type SyncLeafSkill = {
+    name: string;
+    source: string;
+    previous?: GeneratedSkillEntry | SkillEntry;
+};
+
+function normalizeLocalSourcePath(source: string): string {
+    return path.resolve(process.cwd(), source.replace("file://", ""));
+}
+
+async function syncLeafSkill(params: {
+    leaf: SyncLeafSkill;
+    skillLayer: string;
+    activeTargetConfigs: Array<{ path: string; label: string; key: string }>;
+    manifestManager: any;
+    spinnies: Spinnies;
+    options: any;
+}): Promise<GeneratedSkillEntry> {
+    const { leaf, skillLayer, activeTargetConfigs, manifestManager, spinnies, options } = params;
+    const orchestrator = new Orchestrator({
+        skillName: leaf.name,
+        spinnies,
+        debug: options.debug
+    });
+
+    try {
+        const currentSourceHash = await getSourceHash(leaf.source);
+        const activeTargets = activeTargetConfigs.map(target => target.key);
+        const previousTargets = [...(leaf.previous?.lastSyncTargets || [])].sort();
+        const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify(previousTargets);
+        const cachedPath = path.join(manifestManager.getSkillsCacheDir(skillLayer), leaf.name);
+        const cacheExists = await exists(cachedPath);
+
+        let destinationsMissing = false;
+        for (const target of activeTargetConfigs) {
+            if (!(await exists(path.join(target.path, leaf.name)))) {
+                destinationsMissing = true;
+                break;
+            }
+        }
+
+        if (!options.force && currentSourceHash === leaf.previous?.lastSyncHash && !targetsChanged && !destinationsMissing && cacheExists) {
+            spinnies.add(`sync-${leaf.name}`, { text: kleur.gray(`[${leaf.name}] No changes detected. Skipping sync.`) });
+            spinnies.succeed(`sync-${leaf.name}`);
+            return {
+                name: leaf.name,
+                source: leaf.source,
+                localPath: cachedPath,
+                lastSyncHash: currentSourceHash,
+                lastSyncTargets: activeTargets
+            };
+        }
+
+        const cargoPath = (!options.force && currentSourceHash === leaf.previous?.lastSyncHash && cacheExists)
+            ? cachedPath
+            : await orchestrator.moor(leaf.source);
+
+        const berthedTargets: string[] = [];
+        const needsClaudeProcessed = activeTargets.some(target => ["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target));
+        const needsGeminiProcessed = activeTargets.some(target => ["antigravity", "gemini"].includes(target));
+
+        const claudeProcessed = needsClaudeProcessed
+            ? await orchestrator.processCargo(cargoPath, "claude")
+            : null;
+
+        const geminiProcessed = needsGeminiProcessed
+            ? await orchestrator.processCargo(cargoPath, "gemini")
+            : null;
+
+        for (const target of activeTargetConfigs) {
+            const dest = path.join(target.path, leaf.name);
+            let success = false;
+
+            if (["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target.key) && claudeProcessed) {
+                success = await orchestrator.berth(claudeProcessed, dest, target.label);
+            } else if (["antigravity", "gemini"].includes(target.key) && geminiProcessed) {
+                success = await orchestrator.berth(geminiProcessed, dest, target.label);
+            } else if (target.key === "codex") {
+                success = await orchestrator.berth(cargoPath, dest, target.label);
+            }
+
+            if (success) {
+                berthedTargets.push(target.label);
+            } else if (target.key !== "codex") {
+                await orchestrator.berth(cargoPath, dest, `${target.label} (Raw)`);
+                berthedTargets.push(`${target.label} (Raw)`);
+            }
+        }
+
+        if (cargoPath !== cachedPath) {
+            await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
+        }
+
+        orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
+
+        return {
+            name: leaf.name,
+            source: leaf.source,
+            localPath: cachedPath,
+            lastSyncHash: currentSourceHash,
+            lastSyncTargets: activeTargets
+        };
+    } finally {
+        await orchestrator.cleanup();
+    }
+}
+
 export async function upAction(options: any, command: any) {
-    const opts = command.opts();
+    const opts = {
+        ...command.opts(),
+        ...options
+    };
     const manifestManager = getManifestManager(opts);
     // Concurrent sync is easier to read as deterministic line updates than as
     // animated multi-spinner rendering, especially in mixed success/failure runs.
@@ -156,6 +274,13 @@ export async function upAction(options: any, command: any) {
         printHeader("Workspace Synchronization Initiated");
 
         let useGlobalScope = opts.global ?? false;
+
+        if (!useGlobalScope) {
+            await manifestManager.init();
+            await manifestManager.migrateLegacyOverrides((message: string) => {
+                printInfo("Overrides Manifest Updated", message);
+            });
+        }
 
         if (!useGlobalScope) {
             const hasProjectManifestStack = await manifestManager.hasProjectManifestStack();
@@ -178,7 +303,7 @@ export async function upAction(options: any, command: any) {
                             dependencies: {},
                             skills: {}
                         }, "shared");
-                        printSuccess("Project harbor initialized at .harbor/harbor-manifest.json. Run 'skill-harbor dock <url>' to add skills, then run 'skill-harbor up' again.");
+                        printSuccess("Project harbor initialized at .harbor/harbor-manifest.json. Run 'skill-harbor dock <source>' to add skills, then run 'skill-harbor up' again.");
                         return;
                     }
 
@@ -221,13 +346,13 @@ export async function upAction(options: any, command: any) {
             }
 
             if (manifestManager.isLocalMigrationRecommended) {
-                console.log(kleur.yellow(`\n💡  Recommendation: Found harbor-manifest.local.json at project root.`));
-                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to automate the transition.\n`));
+                console.log(kleur.yellow(`\n💡  Recommendation: Found a legacy overrides manifest filename.`));
+                console.log(kleur.gray(`    Run 'skill-harbor migrate' or 'skill-harbor up --migrate' to rename it to harbor-manifest.overrides.json.\n`));
             }
         }
 
         if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0) {
-            console.log(kleur.yellow(`\n⚠️  Local Override: The following skills are being overridden by personal definitions in harbor-manifest.local.json:`));
+            console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
@@ -237,8 +362,8 @@ export async function upAction(options: any, command: any) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
         
-        // Always ensure basic local manifest ignore if it exists at root (for safety)
-        if (!useGlobalScope && !opts.migrate && await exists(path.join(process.cwd(), "harbor-manifest.local.json"))) {
+        // Always ensure basic overrides manifest ignore if the project uses it (for safety)
+        if (!useGlobalScope && !opts.migrate && await exists(ManifestManager.getProjectOverridesPath(process.cwd()))) {
             await ensureHarborIgnoreCorrect(process.cwd());
         }
 
@@ -276,111 +401,142 @@ export async function upAction(options: any, command: any) {
         }
 
         const failures: { skill: string; error: string }[] = [];
+        const manifestUpdates: Array<{ skill: SkillEntry; layer: ManifestLayer }> = [];
+        const profiler = new ProfilerService();
         const syncPromises = skills.map(async (skill) => {
-            const orchestrator = new Orchestrator({ 
-                skillName: skill.name, 
-                spinnies, 
-                debug: options.debug 
-            });
-            
             try {
-                // 1. Change Detection
                 const skillLayer = skill.layer || (useGlobalScope ? "global" : "shared");
                 const currentSourceHash = await getSourceHash(skill.source);
-                const sourceChanged = currentSourceHash !== skill.lastSyncHash;
-                const harborDir = manifestManager.getSkillsCacheDir(skillLayer);
-                const cachedPath = path.join(harborDir, skill.name);
-                const cacheExists = await exists(cachedPath);
-
-                // 2. Already identified activeTargetConfigs
                 const activeTargets = activeTargetConfigs.map(target => target.key);
                 const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify([...(skill.lastSyncTargets || [])].sort());
-                
-                // 3. Destination Integrity Check
-                let destinationsMissing = false;
-                for (const target of activeTargetConfigs) {
-                    const dest = path.join(target.path, skill.name);
-                    if (!(await exists(dest))) {
-                        destinationsMissing = true;
-                        break;
-                    }
-                }
+                const sourceChanged = currentSourceHash !== skill.lastSyncHash;
 
-                if (!opts.force && !sourceChanged && !targetsChanged && !destinationsMissing && cacheExists) {
-                    spinnies.add(`sync-${skill.name}`, { text: kleur.gray(`[${skill.name}] No changes detected. Skipping sync.`) });
-                    spinnies.succeed(`sync-${skill.name}`);
+                if (skill.sourceType === "folder") {
+                    const absoluteRoot = normalizeLocalSourcePath(skill.source);
+                    const discovered = (await profiler.findSkills(absoluteRoot))
+                        .filter(foundPath => path.resolve(foundPath) !== absoluteRoot)
+                        .sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
+                    const previousChildren = new Map((skill.generatedChildren || []).map(child => [child.name, child]));
+                    const topLevelConflicts = new Set(
+                        skills
+                            .filter(candidate => candidate.name !== skill.name)
+                            .map(candidate => candidate.name)
+                    );
+                    for (const sibling of skills.filter(candidate => candidate.name !== skill.name && candidate.sourceType === "folder")) {
+                        for (const child of sibling.generatedChildren || []) {
+                            topLevelConflicts.add(child.name);
+                        }
+                    }
+                    let destinationsMissing = (skill.generatedChildren || []).length === 0;
+                    if (!destinationsMissing) {
+                        for (const child of skill.generatedChildren || []) {
+                            if (!(await exists(path.join(manifestManager.getSkillsCacheDir(skillLayer), child.name)))) {
+                                destinationsMissing = true;
+                                break;
+                            }
+                            for (const target of activeTargetConfigs) {
+                                if (!(await exists(path.join(target.path, child.name)))) {
+                                    destinationsMissing = true;
+                                    break;
+                                }
+                            }
+                            if (destinationsMissing) break;
+                        }
+                    }
+
+                    if (!opts.force && !sourceChanged && !targetsChanged && !destinationsMissing) {
+                        spinnies.add(`sync-${skill.name}`, { text: kleur.gray(`[${skill.name}] No folder-source changes detected. Skipping sync.`) });
+                        spinnies.succeed(`sync-${skill.name}`);
+                        return;
+                    }
+
+                    const warnings: string[] = [];
+                    const syncedChildren: GeneratedSkillEntry[] = [];
+
+                    for (const childSource of discovered) {
+                        const childName = path.basename(childSource);
+                        if (topLevelConflicts.has(childName)) {
+                            warnings.push(`Skipped ${childName} because a manual manifest entry already uses that name.`);
+                            continue;
+                        }
+
+                        const syncedChild = await syncLeafSkill({
+                            leaf: {
+                                name: childName,
+                                source: childSource,
+                                previous: previousChildren.get(childName)
+                            },
+                            skillLayer,
+                            activeTargetConfigs,
+                            manifestManager,
+                            spinnies,
+                            options: opts
+                        });
+                        syncedChildren.push(syncedChild);
+                    }
+
+                    const syncedChildNames = new Set(syncedChildren.map(child => child.name));
+                    const staleChildren = (skill.generatedChildren || []).filter(child => !syncedChildNames.has(child.name));
+                    for (const staleChild of staleChildren) {
+                        await fs.rm(path.join(manifestManager.getSkillsCacheDir(skillLayer), staleChild.name), { recursive: true, force: true });
+                        for (const target of activeTargetConfigs) {
+                            await fs.rm(path.join(target.path, staleChild.name), { recursive: true, force: true });
+                        }
+                    }
+
+                    manifestUpdates.push({
+                        skill: {
+                        ...skill,
+                        generatedChildren: syncedChildren,
+                        lastSyncHash: currentSourceHash,
+                        lastSyncTargets: activeTargets
+                        },
+                        layer: skillLayer
+                    });
+
+                    const syncMessage = warnings.length > 0
+                        ? `Synced ${syncedChildren.length} child skill(s). ${warnings.join(" ")}`
+                        : `Synced ${syncedChildren.length} child skill(s) from folder source.`;
+                    printInfo(`Folder Source: ${skill.name}`, syncMessage);
                     return;
                 }
 
-                let cargoPath = "";
-                if (!opts.force && !sourceChanged && cacheExists) {
-                    cargoPath = cachedPath;
-                    spinnies.add(`sync-${skill.name}`, { text: kleur.cyan(`[${skill.name}] Source unchanged. Reusing cached cargo.`) });
-                } else {
-                    cargoPath = await orchestrator.moor(skill.source);
-                }
+                const syncedLeaf = await syncLeafSkill({
+                    leaf: {
+                        name: skill.name,
+                        source: skill.source,
+                        previous: skill
+                    },
+                    skillLayer,
+                    activeTargetConfigs,
+                    manifestManager,
+                    spinnies,
+                    options: opts
+                });
 
-                // 5. Transpile & Berth
-                const berthedTargets: string[] = [];
-                const needsClaudeProcessed = activeTargets.some(target => ["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target));
-                const needsGeminiProcessed = activeTargets.some(target => ["antigravity", "gemini"].includes(target));
-
-                const claudeProcessed = needsClaudeProcessed
-                    ? await orchestrator.processCargo(cargoPath, "claude")
-                    : null;
-                
-                const geminiProcessed = needsGeminiProcessed
-                    ? await orchestrator.processCargo(cargoPath, "gemini")
-                    : null;
-
-                for (const target of activeTargetConfigs) {
-                    const dest = path.join(target.path, skill.name);
-                    let success = false;
-
-                    if (["claude", "cursor", "rulesync", "windsurf", "continue", "copilot"].includes(target.key) && claudeProcessed) {
-                        success = await orchestrator.berth(claudeProcessed, dest, target.label);
-                    } else if (["antigravity", "gemini"].includes(target.key) && geminiProcessed) {
-                        success = await orchestrator.berth(geminiProcessed, dest, target.label);
-                    } else if (target.key === "codex") {
-                        // Codex usually likes raw or specific format, currently raw as per original logic
-                        success = await orchestrator.berth(cargoPath, dest, target.label);
-                    }
-
-                    if (success) {
-                        berthedTargets.push(target.label);
-                    } else if (target.key !== "codex") {
-                        // Fallback to raw for standard IDE targets if processing failed
-                        await orchestrator.berth(cargoPath, dest, `${target.label} (Raw)`);
-                        berthedTargets.push(`${target.label} (Raw)`);
-                    }
-                }
-
-                // 6. Update Cache & State (Only if we fetched fresh cargo)
-                if (cargoPath !== cachedPath) {
-                    await orchestrator.berth(cargoPath, cachedPath, "Harbor Cache");
-                }
-
-                await manifestManager.addSkill({
+                manifestUpdates.push({
+                    skill: {
                     ...skill,
-                    localPath: cachedPath,
-                    lastSyncHash: currentSourceHash,
-                    lastSyncTargets: activeTargets
-                }, skillLayer);
-
-                orchestrator.finalize(`Successfully berthed to: ${berthedTargets.join(", ") || "Harbor Cache"}`);
+                    localPath: syncedLeaf.localPath,
+                    lastSyncHash: syncedLeaf.lastSyncHash,
+                    lastSyncTargets: syncedLeaf.lastSyncTargets
+                    },
+                    layer: skillLayer
+                });
             } catch (err: any) {
                 failures.push({ skill: skill.name, error: err.message });
-            } finally {
-                await orchestrator.cleanup();
             }
         });
 
         await Promise.all(syncPromises);
+        for (const update of manifestUpdates) {
+            await manifestManager.addSkill(update.skill, update.layer);
+        }
 
         // --- Lighthouse: Automated Master Fleet Manifest ---
         console.log(kleur.yellow("\n  💡  Shining the Lighthouse..."));
         const latestManifest = useGlobalScope ? await manifestManager.read("global") : await manifestManager.readMerged();
-        const latestSkills = Object.values(latestManifest.skills);
+        const latestSkills = manifestManager.materializeSkills(latestManifest);
         const metadataList = [];
         for (const skill of latestSkills) {
             const skillLayer = skill.layer || (useGlobalScope ? "global" : "shared");
@@ -393,7 +549,7 @@ export async function upAction(options: any, command: any) {
         }
 
         if (metadataList.length > 0) {
-            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agent skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Local Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
+            const manifestContent = `# Master Fleet Manifest\n\nThis workspace is powered by Skill Harbor. The following specialized agent skills are berthed and active.\n\n${metadataList.map(m => `### ${m.name}${m.layer === 'local' ? ' (Layer: Override)' : ''}\n- **Description**: ${m.description}\n- **Triggers**: ${m.triggers.join(", ") || "Auto-routed"}`).join("\n\n")}`;
             const codexManifestContent = `---\nname: fleet-intelligence\ndescription: Discover the specialized skills currently berthed by Skill Harbor in this workspace.\n---\n\n${manifestContent}`;
             
             const fleetIntelligencePath = "000-fleet-intelligence.md";

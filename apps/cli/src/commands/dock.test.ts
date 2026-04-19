@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'node:fs/promises';
 import { dockAction } from './dock';
 import { getManifestManager } from '../utils';
-import { printHeader, printSuccess, printError } from '../ui';
+import { printHeader, printSuccess, printError, printInfo } from '../ui';
+import { ProfilerService } from '../services/profiler';
 
 vi.mock('../utils');
 vi.mock('../ui');
 vi.mock('spinnies');
+vi.mock('node:fs/promises');
+vi.mock('../services/profiler');
 
 describe('dockAction', () => {
     let mockManifestManager: any;
@@ -14,6 +18,7 @@ describe('dockAction', () => {
         vi.clearAllMocks();
         mockManifestManager = {
             init: vi.fn().mockResolvedValue(undefined),
+            migrateLegacyOverrides: vi.fn().mockResolvedValue(false),
             addSkill: vi.fn().mockResolvedValue(undefined),
         };
         (getManifestManager as any).mockReturnValue(mockManifestManager);
@@ -33,20 +38,50 @@ describe('dockAction', () => {
         expect(mockManifestManager.addSkill).toHaveBeenCalledWith({
             name: 'my-skill',
             source: url,
+            sourceType: 'single',
             localPath: '',
         }, "shared");
         expect(printSuccess).toHaveBeenCalledWith(expect.stringContaining('Skill successfully manifested!'));
     });
 
-    it('should generate a skill name if the URL is empty or invalid', async () => {
+    it('should detect a local collection folder and mark it as a folder source', async () => {
+        const source = './rulesync-skills';
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => true } as any);
+        vi.mocked(fs.access)
+            .mockRejectedValueOnce(new Error('missing root skill'))
+            .mockResolvedValue(undefined);
+        (ProfilerService as any).mockImplementation(function() {
+            return {
+            findSkills: vi.fn().mockResolvedValue(['/workspace/rulesync-skills/a', '/workspace/rulesync-skills/b'])
+            };
+        });
+
+        await dockAction(source, options, mockCommand);
+
+        expect(mockManifestManager.addSkill).toHaveBeenCalledWith(expect.objectContaining({
+            source,
+            sourceType: 'folder',
+        }), 'shared');
+        expect(printInfo).toHaveBeenCalledWith(
+            'Folder Source Detected',
+            expect.stringContaining("rescan it during 'up' and 'freshen'")
+        );
+    });
+
+    it('should register override docks in the overrides manifest layer', async () => {
         const url = '';
-        const options = { local: true };
+        const options = { override: true };
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
 
         await dockAction(url, options, mockCommand);
 
+        expect(mockManifestManager.migrateLegacyOverrides).toHaveBeenCalled();
         expect(mockManifestManager.addSkill).toHaveBeenCalledWith(expect.objectContaining({
             source: url,
             localPath: '',

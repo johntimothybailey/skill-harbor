@@ -98,12 +98,17 @@ Install Skill Harbor globally via your preferred package manager to use the `ski
 ```
 
 ### 2. Dock Your First Skill Source
-Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo or local path) to register it in your `harbor-manifest.json`:
+Skill Harbor doesn't come with skills—it manages them. "Dock" a source (GitHub repo, local skill path, or local folder of child skills) to register it in your `harbor-manifest.json`:
 
 ```bash
 # Example: Adding a community React Hooks skill
 skill-harbor dock https://github.com/my-org/react-skills
+
+# Example: Docking a local folder-backed source (rescanned on `up`, force-refreshed on `freshen`)
+skill-harbor dock ~/.rulesync/skills
 ```
+
+> If the skills are already berthed somewhere locally but not manifested yet, `skill-harbor fathom --ghosts` is still the quickest interactive discovery-and-dock path.
 
 ### 3. Synchronize Your Space (The "Up")
 Run the core engine to fetch, transpile, and berth your skills. 
@@ -137,7 +142,7 @@ skill-harbor up --global
 
 | Command | Why it exists | Typical Use Case |
 | :--- | :--- | :--- |
-| **`dock <url>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
+| **`dock <source>`** | Registers a skill's source in the manifest. | You found a great repo of React hooks and want your whole team to have them. |
 | **`up`** | The core engine. Syncs, transpiles, and berths skills. | Run after `git pull` or when you've just docked new skills. |
 | **`up --target <key>`** | **Targeted Sync.** Only berths to one or more specific agents. | Use `--target codex`, `--target codex,cursor`, or `--target codex --target cursor` to limit sync to selected targets. |
 | **`freshen`** | **Force-syncs fresh cargo.** Bypasses local cache. | Use when a remote skill has updated and you want the latest immediately. |
@@ -416,11 +421,21 @@ Skill Harbor is not just a sync engine—it is an **Agent Authoring Partner**. I
 - **`contract-notary`**: Performs deep semantic audits of your `## Requires` and `## Produces` sections to guarantee chaining compatibility.
 
 ### 👻 Interactive Ghost Docking
-When running `fathom --ghosts` or `voyager`, Skill Harbor acts as a proactive assistant. If it discovers a local skill folder that isn't manifested, it will identify it as a **"Ghost"** and provide an interactive prompt to `dock` it immediately.
+When running `fathom --ghosts`, `ghosts`, or `voyager`, Skill Harbor can surface unmanaged **"Ghost"** skills.
+
+- Ghost discovery defaults to `autodetect`, which scans every detected berth/stowage location in the selected scope.
+- Pass `--scan-mode targets-only` to limit discovery to the selected manifest's declared targets.
+- If `targets-only` is selected and the manifest has no targets, Harbor performs no ghost scan.
+- Non-interactive runs never prompt for scan mode or docking decisions.
+- `ghosts --details` shows the full path for each ghost plus parsed `SKILL.md` frontmatter metadata when available.
+- Ghost and Fathom berth output now use concise placement formatting like `Codex | .codex` and `Codex | .stowage/codex`.
 
 ```bash
 # Scan for ghosts and dock them interactively
 skill-harbor fathom --ghosts
+
+# Limit discovery to the selected manifest targets
+skill-harbor ghosts --scan-mode targets-only
 ```
 
 ---

@@ -1,7 +1,8 @@
 {
   "version": "1.0",
   "dependencies": {
-    "scryer": "https://github.com/johntimothybailey/sia/skills/scryer"
+    "scryer": "https://github.com/johntimothybailey/sia/skills/scryer",
+    "quartermaster": "./skills/quartermaster"
   },
   "skills": {
     "scryer": {
@@ -18,6 +19,11 @@
       "name": "test-skill",
       "source": "local",
       "localPath": ".harbor/test-skill"
+    },
+    "quartermaster": {
+      "name": "quartermaster",
+      "source": "./skills/quartermaster",
+      "localPath": ""
     }
   }
 }

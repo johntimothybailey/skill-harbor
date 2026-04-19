@@ -1,7 +1,7 @@
 import { source } from '@/lib/docs-source'
+import { getDocsMdxPath } from '@/lib/docs-content'
 import { siteConfig, getSiteUrl } from '@/lib/theme-config'
 import fs from 'fs'
-import path from 'path'
 
 export const dynamic = 'force-static'
 
@@ -25,7 +25,6 @@ function stripMdxContent(content: string): string {
 export async function GET() {
   const baseUrl = getSiteUrl()
   const pages = source.getPages()
-  const contentDir = path.join(process.cwd(), 'content', 'docs')
 
   // Build llms-full.txt following llmstxt.org format
   let content = `# ${siteConfig.name}
@@ -52,11 +51,8 @@ This document contains the full content of all documentation pages for AI consum
     content += `\n`
 
     // Try to read the raw MDX content
-    // Page slugs map to file paths: /docs/foo/bar -> content/docs/foo/bar.mdx
-    const slugPath = page.slugs.join('/')
-    const mdxPath = slugPath
-      ? path.join(contentDir, `${slugPath}.mdx`)
-      : path.join(contentDir, 'index.mdx')
+    // Mirror the same repo docs root configured in source.config.ts
+    const mdxPath = getDocsMdxPath(page.slugs)
 
     try {
       if (fs.existsSync(mdxPath)) {

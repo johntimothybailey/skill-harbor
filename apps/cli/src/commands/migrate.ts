@@ -4,13 +4,13 @@ import readline from "node:readline";
 import kleur from "kleur";
 import { printHeader, printSuccess, printInfo, printError } from "../ui";
 import { exists } from "../utils";
-import { ManifestManager } from "../manifest";
+import { ManifestManager, OVERRIDES_RENAME_EXPLANATION } from "../manifest";
 
 /**
  * Migration Engine for Skill Harbor.
  * Updates legacy project layouts to the consolidated .harbor/ standard.
  */
-export async function migrateAction(options: any) {
+export async function migrateAction(_options: any) {
     const cwd = process.cwd();
     const manifestManager = new ManifestManager({ cwd });
     await manifestManager.init();
@@ -32,27 +32,46 @@ export async function migrateAction(options: any) {
         let changesMade = false;
 
         // 1. Manifest Migration
-        const legacyShared = path.join(cwd, "harbor-manifest.json");
-        const preferredShared = path.join(cwd, ".harbor", "harbor-manifest.json");
-        const legacyLocal = path.join(cwd, "harbor-manifest.local.json");
-        const preferredLocal = path.join(cwd, ".harbor", "harbor-manifest.local.json");
+        const legacyShared = ManifestManager.getProjectLegacySharedPath(cwd);
+        const preferredShared = ManifestManager.getProjectSharedPath(cwd);
+        const legacyOverridesAtRoot = ManifestManager.getProjectLegacyOverridesPath(cwd);
+        const legacyOverridesInHarbor = ManifestManager.getProjectLegacyHarborLocalPath(cwd);
+        const preferredOverrides = ManifestManager.getProjectOverridesPath(cwd);
+        const renameLegacyOverrides = async (legacyPath: string, prompt: string, successMessage: string) => {
+            console.log(kleur.cyan(`🔒  Found legacy overrides manifest: ${kleur.bold(path.relative(cwd, legacyPath))}`));
+            if (await ask(prompt)) {
+                await fs.mkdir(path.dirname(preferredOverrides), { recursive: true });
+                await fs.rename(legacyPath, preferredOverrides);
+                console.log(kleur.green(successMessage));
+                console.log(kleur.gray(`     ${OVERRIDES_RENAME_EXPLANATION}`));
+                changesMade = true;
+            }
+        };
 
         if (await exists(legacyShared)) {
             console.log(kleur.cyan(`📦  Found shared manifest at root: ${kleur.bold("harbor-manifest.json")}`));
             if (await ask("Move shared manifest to .harbor/?")) {
+                await fs.mkdir(path.dirname(preferredShared), { recursive: true });
                 await fs.rename(legacyShared, preferredShared);
                 console.log(kleur.green("   ✓ Moved to .harbor/harbor-manifest.json"));
                 changesMade = true;
             }
         }
 
-        if (await exists(legacyLocal)) {
-            console.log(kleur.cyan(`🔒  Found local manifest at root: ${kleur.bold("harbor-manifest.local.json")}`));
-            if (await ask("Move local manifest to .harbor/?")) {
-                await fs.rename(legacyLocal, preferredLocal);
-                console.log(kleur.green("   ✓ Moved to .harbor/harbor-manifest.local.json"));
-                changesMade = true;
-            }
+        if (await exists(legacyOverridesAtRoot)) {
+            await renameLegacyOverrides(
+                legacyOverridesAtRoot,
+                "Rename and move it to .harbor/harbor-manifest.overrides.json?",
+                "   ✓ Renamed and moved to .harbor/harbor-manifest.overrides.json"
+            );
+        }
+
+        if (await exists(legacyOverridesInHarbor)) {
+            await renameLegacyOverrides(
+                legacyOverridesInHarbor,
+                "Rename it to .harbor/harbor-manifest.overrides.json?",
+                "   ✓ Renamed to .harbor/harbor-manifest.overrides.json"
+            );
         }
 
         // 2. Skills Cache Migration
@@ -60,7 +79,7 @@ export async function migrateAction(options: any) {
         const skillsDir = path.join(harborDir, "skills");
         
         // Find directories in .harbor that aren't 'skills', 'hooks', or 'stowage'
-        const items = await fs.readdir(harborDir, { withFileTypes: true });
+        const items = await fs.readdir(harborDir, { withFileTypes: true }).catch(() => []);
         const legacySkills = items.filter(dirent => 
             dirent.isDirectory() && 
             !["skills", "hooks", "stowage"].includes(dirent.name) &&
@@ -95,9 +114,10 @@ export async function migrateAction(options: any) {
                 
                 if (await ask("Switch to granular ignores for .harbor/skills/ and .harbor/stowage/?")) {
                     const newIgnores = [
+                        ".harbor/ghosts.json",
                         ".harbor/skills/",
                         ".harbor/stowage/",
-                        "harbor-manifest.local.json",
+                        ".harbor/harbor-manifest.overrides.json",
                         "harbor-compass.yaml"
                     ];
                     

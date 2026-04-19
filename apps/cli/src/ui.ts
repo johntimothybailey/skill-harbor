@@ -1,7 +1,7 @@
 import boxen, { Options as BoxenOptions } from 'boxen';
 import kleur from 'kleur';
 import prompts from 'prompts';
-import { AgentBerth } from './utils';
+import { AgentBerth, formatBerthDetail } from './utils';
 
 const baseOptions: BoxenOptions = {
     padding: 1,
@@ -80,6 +80,27 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
     if (report.fleetStatus) {
         content += `${kleur.bold().yellow('📊 Fleet Status Distribution')}\n`;
         content += `⚓ Berthed: ${report.fleetStatus.berthed} | 📦 Stowed: ${report.fleetStatus.stowed} | 🚜 Dry Dock: ${report.fleetStatus.dryDock}\n\n`;
+    }
+
+    if (report.vesselPlacements && report.vesselPlacements.length > 0) {
+        const placementRows = report.vesselPlacements.filter((placement: any) => placement.berthed.length > 0 || placement.stowed.length > 0);
+        if (placementRows.length > 0) {
+            content += `${kleur.bold().yellow('📍 Vessel Placements')}\n`;
+            for (const placement of placementRows.slice(0, 10)) {
+                const parts: string[] = [];
+                if (placement.berthed.length > 0) {
+                    parts.push(`Berthed: ${placement.berthed.map(formatBerthDetail).join(", ")}`);
+                }
+                if (placement.stowed.length > 0) {
+                    parts.push(`Stowed: ${placement.stowed.map(formatBerthDetail).join(", ")}`);
+                }
+                content += `${placement.name} — ${parts.join(" | ")}\n`;
+            }
+            if (placementRows.length > 10) {
+                content += `${kleur.gray(`… ${placementRows.length - 10} more placement${placementRows.length - 10 === 1 ? "" : "s"}`)}\n`;
+            }
+            content += `\n`;
+        }
     }
 
     if (report.contractMismatches || report.contractWarnings) {

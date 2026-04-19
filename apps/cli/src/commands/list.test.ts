@@ -3,7 +3,6 @@ import { listAction } from './list';
 import { resolveCommandScope } from '../command-scope';
 import { getManifestManager } from '../utils';
 import { printHeader, printError } from '../ui';
-import kleur from 'kleur';
 
 vi.mock('../command-scope');
 vi.mock('../utils');
@@ -17,6 +16,7 @@ describe('listAction', () => {
         vi.clearAllMocks();
         mockManifestManager = {
             read: vi.fn(),
+            readMerged: vi.fn(),
         };
         (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: false, shouldStop: false });
         (getManifestManager as any).mockReturnValue(mockManifestManager);
@@ -33,7 +33,7 @@ describe('listAction', () => {
                 'skill2': { name: 'skill2', source: 'source2' },
             }
         };
-        mockManifestManager.read.mockResolvedValue(manifest);
+        mockManifestManager.readMerged.mockResolvedValue(manifest);
 
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -60,6 +60,26 @@ describe('listAction', () => {
         expect(printHeader).toHaveBeenCalledWith('Global Fleet Manifest');
     });
 
+    it('should use the merged manifest stack for local listings', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                'shared-skill': { name: 'shared-skill', source: 'shared-source' },
+                'override-skill': { name: 'override-skill', source: 'override-source', layer: 'local' },
+            }
+        });
+        const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        await listAction(options, mockCommand);
+
+        expect(mockManifestManager.readMerged).toHaveBeenCalledTimes(1);
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('shared-skill'));
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('override-skill'));
+    });
+
     it('should stop without reading when scope resolution says to stop', async () => {
         const options = {};
         const mockCommand = {
@@ -70,6 +90,7 @@ describe('listAction', () => {
         await listAction(options, mockCommand);
 
         expect(mockManifestManager.read).not.toHaveBeenCalled();
+        expect(mockManifestManager.readMerged).not.toHaveBeenCalled();
     });
 
     it('should show empty message when no skills are docked', async () => {
@@ -77,7 +98,7 @@ describe('listAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockResolvedValue({ skills: {} });
+        mockManifestManager.readMerged.mockResolvedValue({ skills: {} });
         const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
         await listAction(options, mockCommand);
@@ -90,7 +111,7 @@ describe('listAction', () => {
         const mockCommand = {
             opts: vi.fn().mockReturnValue(options),
         };
-        mockManifestManager.read.mockRejectedValue(new Error('Read failed'));
+        mockManifestManager.readMerged.mockRejectedValue(new Error('Read failed'));
 
         await listAction(options, mockCommand);
 

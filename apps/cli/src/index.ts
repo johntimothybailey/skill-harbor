@@ -9,6 +9,7 @@ import { undockAction } from "./commands/undock";
 import { stowAction } from "./commands/stow";
 import { unstowAction } from "./commands/unstow";
 import { lighthouseAction } from "./commands/lighthouse";
+import { ghostsAction } from "./commands/ghosts";
 import { fathomAction } from "./commands/fathom";
 import { voyagerAction } from "./commands/voyager";
 import { migrateAction } from "./commands/migrate";
@@ -32,10 +33,10 @@ program
 
 
 program
-    .command("dock <url>")
+    .command("dock <source>")
     .description("Register a skill's source in the manifest.")
     .option("-g, --global", "Register the skill in the global manifest (~/.harbor)")
-    .option("-l, --local <path>", "Register a local project-specific skill from a file path")
+    .option("-o, --override", "Register the skill in the project overrides manifest (.harbor/harbor-manifest.overrides.json)")
     .action(dockAction);
 
 program
@@ -93,6 +94,15 @@ program
     .action(lighthouseAction);
 
 program
+    .command("ghosts")
+    .description("Inspect unmanaged ghost skills and mark known ones as friendly.")
+    .option("-g, --global", "Inspect ghosts against the global manifest (~/.harbor).")
+    .option("--friendly", "Show the separate friendly-ghost section.")
+    .option("-d, --details", "Show full path and parsed metadata for each displayed ghost.")
+    .option("--scan-mode <mode>", "Ghost scan mode ('autodetect' | 'targets-only'). Default: 'autodetect'.")
+    .action(ghostsAction);
+
+program
     .command("fathom")
     .description("Fleet-scale profiler for context bloat & API costs.")
     .option("-d, --details", "Show granular heuristic analysis for each skill.")
@@ -102,6 +112,7 @@ program
     .option("-m, --model <name>", "Override the default LLM model for Sonar auditing.")
     .option("-b, --baseUrl <url>", "Override the default API base URL for Sonar auditing (e.g., local Ollama).")
     .option("-u, --ghosts", "Scan agent berths for unregistered 'ghost' skills.")
+    .option("--scan-mode <mode>", "Ghost scan mode for --ghosts ('autodetect' | 'targets-only'). Default: 'autodetect'.")
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")

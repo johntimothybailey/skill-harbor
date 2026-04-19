@@ -6,9 +6,11 @@ tsconfig.tsbuildinfo
 .claude/
 .cursor/
 .harbor/skills/
+.harbor/ghosts.json
 .harbor/stowage/
 .env*
 .npmrc
+*.tgz
 harbor-manifest.local.json
 harbor-compass.yaml
 *voyage-test.yaml

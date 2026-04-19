@@ -10,17 +10,37 @@ Explore the full suite of **Skill Harbor** commands designed for skill orchestra
 
 ---
 
-## `dock <url>`
+## `dock <source>`
 Register a skill's source in the manifest.
+
+`<source>` may be:
+- a GitHub repository
+- a local single-skill path
+- a local folder-backed source containing nested child skills
+
+If a docked local folder contains child `SKILL.md` directories, Skill Harbor treats it as a collection source and rescans it during `up`. `freshen` forces a refresh of that rescan path.
+
+For the conceptual model behind this, see [Sources & Targets](/docs/foundations/sources-and-targets).
 
 **Flags:**
 - `-g, --global`: Register the skill in the global manifest (`~/.harbor/harbor-manifest.json`).
-- `-l, --local <path>`: Register a local project-specific skill from a file path.
+- `-o, --override`: Register the skill in the project overrides manifest (`.harbor/harbor-manifest.overrides.json`).
 
 **Example:**
 ```bash
 skill-harbor dock https://github.com/skill-mill/react-hooks --global
+
+# Local filesystem source
+skill-harbor dock ./skills/my-local-skill
+
+# Folder-backed local source
+skill-harbor dock ~/.rulesync/skills
+
+# Project-only override entry
+skill-harbor dock ./skills/my-debug-skill --override
 ```
+
+> Already have unmanaged skills living in active berths? `skill-harbor fathom --ghosts` and `skill-harbor ghosts` can discover them with the default `autodetect` scan mode or the narrower `--scan-mode targets-only` mode.
 
 ---
 
@@ -66,8 +86,33 @@ The skill intelligence and profiling engine. Measures token saturation, quality 
 - `--query <text>`: Conducts a probabilistic **Sonar** audit using the configured LLM provider.
 - `--contracts`: Audits semantic I/O contract alignment between fleet members.
 - `--ghosts`: Scans agent folders for unregistered "Ghost" skills and offers to dock them.
+- `--scan-mode <mode>`: Ghost-only scan mode for `--ghosts`. `autodetect` is the default; `targets-only` uses the selected manifest's declared targets exactly.
 
 *For more details on the science behind Fathom, see the [Fathom Deep Dive](/docs/foundations/fathom).*
+
+**Status formatting note:** Fathom renders berth/stowage placement in the concise form `Label | .folder`, and report JSON includes additive placement detail under `vesselPlacements`.
+
+---
+
+## `ghosts`
+Primary ghost inspection workflow for unmanaged skills discovered in active berths and stowage.
+
+**Flags:**
+- `-g, --global`: Inspect ghosts against the global manifest.
+- `--friendly`: Reveal the separate friendly-ghost section instead of only showing the summary count.
+- `-d, --details`: Show the full ghost path and parsed `SKILL.md` frontmatter metadata when available.
+- `--scan-mode <mode>`: Choose `autodetect` (default) or `targets-only`.
+
+**Notes:**
+- Default output shows active ghosts and summarizes friendly ghosts by count.
+- `autodetect` scans every detected berth/stowage location in the selected scope.
+- `targets-only` scans only the selected manifest's resolved `targets`; with no targets, it performs no scan.
+- Non-interactive runs never prompt for scan mode; use the default or pass the flag explicitly.
+- Friendly ghosts are a non-destructive classification; they are **not** docked, removed, or mutated by being marked friendly.
+- `fathom --ghosts` still exists as the ghost-aware inspection mode inside Fathom and follows the same scan-mode rules.
+- Ghost rows use the same concise placement format as Fathom while still distinguishing berth vs stowage.
+
+*For the conceptual model, see [Ghosts](/docs/foundations/ghosts).*
 
 ---
 
@@ -118,7 +163,7 @@ Shows a breakdown of all skills currently tracked by Skill Harbor, including the
 Interactive migration engine that modernizes a project from the legacy root-level layout to the consolidated `.harbor/` standard.
 
 The engine detects and offers to move:
-1. **Root manifests** — `harbor-manifest.json` and `harbor-manifest.local.json` from the project root into `.harbor/`.
+1. **Root manifests** — `harbor-manifest.json` plus any legacy `harbor-manifest.local.json` files are moved into `.harbor/`, with the legacy local filename renamed to `harbor-manifest.overrides.json`.
 2. **Loose skill caches** — Skill directories sitting directly in `.harbor/` are relocated to `.harbor/skills/`.
 3. **Broad gitignore rules** — A blanket `.harbor/` ignore is replaced with granular rules (`.harbor/skills/`, `.harbor/stowage/`) so that manifests and hooks can be committed.
 

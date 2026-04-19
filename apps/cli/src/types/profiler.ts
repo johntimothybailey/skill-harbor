@@ -1,3 +1,5 @@
+import type { BerthDetail } from "../utils";
+
 export type SkillType = "API Tool" | "Agent Skill";
 
 export type ShipClass = "Dinghy" | "Schooner" | "Brigantine" | "Frigate" | "Galleon";
@@ -88,6 +90,11 @@ export interface HarborHealthReport {
         stowed: number;
         dryDock: number;
     };
+    vesselPlacements?: Array<{
+        name: string;
+        berthed: BerthDetail[];
+        stowed: BerthDetail[];
+    }>;
 }
 
 export interface FathomThresholds {

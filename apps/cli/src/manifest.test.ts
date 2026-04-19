@@ -62,4 +62,79 @@ describe("ManifestManager", () => {
         expect(manager.getSkillsCacheDir("local")).toBe(path.join(workspaceDir, ".harbor", "skills"));
         expect(manager.getSkillsCacheDir("global")).toBe(path.join(homeDir, ".harbor", "skills"));
     });
+
+    it("prefers the overrides manifest path for the project-personal layer", async () => {
+        const manager = new ManifestManager({ cwd: workspaceDir });
+
+        await manager.init();
+
+        expect(manager.getOverridesPath()).toBe(path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json"));
+        expect(manager.getLocalPath()).toBe(path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json"));
+    });
+
+    it("migrates a legacy local manifest filename to the overrides manifest path", async () => {
+        const legacyPath = path.join(workspaceDir, "harbor-manifest.local.json");
+        const preferredPath = path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json");
+        await fs.writeFile(
+            legacyPath,
+            JSON.stringify({
+                version: "1.0",
+                dependencies: {},
+                skills: {
+                    localSkill: {
+                        name: "localSkill",
+                        source: "./skill",
+                        localPath: ""
+                    }
+                }
+            }),
+            "utf-8"
+        );
+
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        const messages: string[] = [];
+
+        const migrated = await manager.migrateLegacyOverrides((message) => messages.push(message));
+
+        expect(migrated).toBe(true);
+        expect(await pathExists(legacyPath)).toBe(false);
+        expect(await pathExists(preferredPath)).toBe(true);
+        expect(messages[0]).toContain("harbor-manifest.overrides.json");
+        expect(messages[0]).toContain("local filesystem skill sources");
+    });
+
+    it("materializes generated children from folder-backed sources for operational commands", () => {
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        const manifest = {
+            version: "1.0",
+            dependencies: {},
+            skills: {
+                rulesyncFolder: {
+                    name: "rulesyncFolder",
+                    source: "./.rulesync/skills",
+                    sourceType: "folder" as const,
+                    localPath: "",
+                    layer: "shared" as const,
+                    generatedChildren: [
+                        {
+                            name: "team-skill",
+                            source: "/workspace/.rulesync/skills/team-skill",
+                            localPath: "/workspace/.harbor/skills/team-skill",
+                        }
+                    ]
+                }
+            }
+        };
+
+        const materialized = manager.materializeSkills(manifest as any);
+
+        expect(materialized).toHaveLength(1);
+        expect(materialized[0]).toMatchObject({
+            name: "team-skill",
+            source: "/workspace/.rulesync/skills/team-skill",
+            managedBy: "rulesyncFolder",
+            collectionRoot: "./.rulesync/skills",
+            generated: true
+        });
+    });
 });

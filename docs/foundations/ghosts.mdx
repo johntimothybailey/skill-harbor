@@ -1,0 +1,445 @@
+---
+title: Ghosts
+description: "Understand unmanaged skills, how Fathom and Voyager surface them, and when to use ghost docking."
+icon: "ghost"
+---
+
+# 👻 Ghosts
+
+Ghosts are one of the most important governance concepts in Skill Harbor.
+
+They explain why a workspace can behave differently than the manifest suggests, and why tools like **Fathom** and **Voyager** sometimes discover skill context you did not explicitly dock.
+
+Sometimes the harbor is not empty after all.
+
+Sometimes it is haunted.
+
+Not by cursed ships or sea monsters — by **skills you forgot were there**, copied by hand, left behind after an undock, or drifting around outside the manifest while still whispering instructions into your agents' ears.
+
+---
+
+## TL;DR
+
+- A **Ghost** is an unmanaged skill directory that exists in a berth or related scan scope but is not registered in your Harbor manifest.
+- `skill-harbor ghosts` is the primary explicit ghost-discovery workflow.
+- `skill-harbor fathom --ghosts` remains the ghost-aware inspection path inside Fathom.
+- Commands like **Fathom** and **Voyager** can still surface ghosts during their scans.
+- `voyager` can also surface ghosts automatically when it cannot find a clean manifested fleet to work with.
+
+---
+
+## What is a Ghost?
+
+A **Ghost** is any skill folder containing a valid `SKILL.md` that exists in a Harbor-relevant location but is **not** registered in the manifest Harbor is currently using.
+
+Common examples:
+
+- a skill manually copied into `.claude/skills/`
+- a skill left behind after an `undock`
+- a local skill added outside the `dock` workflow
+- a skill sitting in stowage or another scanned berth that Harbor is not governing yet
+
+Ghosts matter because they still affect agent behavior even though they are not governed by your manifest.
+
+In practice, that means a ghost can still haunt the harbor even when Harbor did not load it intentionally from your declared fleet.
+
+---
+
+## How commands surface ghosts
+
+Different Harbor commands can surface ghosts in different operational contexts.
+
+- **Fathom** surfaces ghosts during explicit governance and berth scanning
+- **Voyager** surfaces ghosts during fleet preparation when unmanaged local skills interfere with simulation readiness
+
+The important point is simple:
+
+> they are all still just **Ghosts**
+
+Harbor does **not** currently store a separate persistent object type for a “command ghost.”
+
+---
+
+## Ghosts vs folder-backed sources
+
+Do not confuse these:
+
+- **Ghost** = unmanaged, discovered during a scan
+- **Folder-backed source** = intentionally docked and managed by Harbor
+
+For example:
+
+- `skill-harbor dock ~/.rulesync/skills`
+  - creates a managed folder-backed source
+- `skill-harbor fathom --ghosts`
+  - discovers unmanaged local skill directories and offers to dock them
+
+If the folder is your real ongoing source of truth, prefer a **folder-backed source**.
+
+If skills are just sitting around locally and Harbor has not manifested them yet, use **ghost discovery**.
+
+See also: [Sources & Targets](/docs/foundations/sources-and-targets)
+
+---
+
+## How Fathom discovers ghosts
+
+When you run:
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+Fathom:
+
+1. scans active agent berths
+2. scans stowage berths
+3. compares discovered skill names against the selected manifest scope
+4. flags anything unmanaged as a ghost
+
+That means Fathom’s ghost model is berth-oriented and governance-oriented.
+
+### Fathom scan scope
+
+Fathom checks:
+
+- active berths such as Claude, Cursor, Codex, Gemini, RuleSync, etc.
+- stowage under `.harbor/stowage/`
+- by default, every detected berth in the selected local or global scope (`autodetect`)
+- or only the selected manifest's declared `targets` when you pass `--scan-mode targets-only`
+
+If you choose `targets-only` and the selected manifest has no targets, Harbor performs **no ghost scan** instead of widening back to autodetect.
+
+### Fathom output behavior
+
+- ghosts appear in individual analysis output tagged as `[Ghost]`
+- if `--report` is also enabled, ghost paths are merged into the health report scan
+- in interactive TTY runs, Fathom can then prompt you to dock them into the selected local or global manifest
+
+This makes Fathom the best explicit “show me unmanaged skill context” command in Harbor today.
+
+See also: [Fathom](/docs/foundations/fathom)
+
+---
+
+## `skill-harbor ghosts`
+
+Ghosts now has a dedicated entry point:
+
+```bash
+skill-harbor ghosts
+```
+
+This is the primary explicit Ghosts workflow.
+
+### Default behavior
+
+By default, `skill-harbor ghosts`:
+
+- shows active ghosts in the main section
+- shows a summary count of friendly ghosts
+- stays interactive and non-destructive
+- uses `--scan-mode autodetect`, which scans every detected berth/stowage location in the selected scope
+- shows berth/stowage placement in the same concise style used by Fathom, for example `berth: Codex | .codex`
+
+### `--scan-mode`
+
+Use:
+
+```bash
+skill-harbor ghosts --scan-mode targets-only
+```
+
+to limit ghost discovery to the selected manifest's declared `targets`.
+
+- `autodetect` is the default
+- `targets-only` uses the selected manifest's resolved `targets` exactly
+- if there are no declared targets, `targets-only` performs no scan
+- non-interactive runs never prompt for scan mode; use the default or pass the flag explicitly
+
+### `--friendly`
+
+Use:
+
+```bash
+skill-harbor ghosts --friendly
+```
+
+to reveal a separate friendly-ghost section with calmer/checkmark-style presentation.
+
+Friendly ghosts are still known to Harbor, but they are not docked, deleted, or mutated just because they were marked friendly.
+
+When a ghost is in stowage, Harbor keeps that semantic explicit in the display, for example `stowage: Codex | .stowage/codex`.
+
+### `--details`
+
+Use:
+
+```bash
+skill-harbor ghosts --details
+```
+
+to expand each displayed ghost with:
+
+- its full filesystem path
+- parsed `SKILL.md` frontmatter metadata when present
+
+If no frontmatter metadata is present, Harbor shows `metadata: none`.
+
+### Relationship to Fathom
+
+`skill-harbor fathom --ghosts` still exists and follows the same scan-mode rules.
+
+Use it when you want ghost inspection inside a Fathom profiling run.
+
+Use `skill-harbor ghosts` when you want Ghosts as the primary workflow.
+
+---
+
+## How Voyager discovers ghosts
+
+Voyager’s ghost behavior is a little different.
+
+Voyager first tries to build an integration test surface from active berthed skills.
+
+If it cannot find a usable fleet, it may perform ghost discovery and offer to dock unmanaged skills.
+
+### Voyager scan behavior
+
+Voyager:
+
+- scans the relevant local base directory for skills
+- excludes Harbor’s own cache (`.harbor/skills`)
+- treats unmanaged discovered skills as candidates for docking
+
+So Voyager’s command-ghost behavior is more workflow-oriented:
+
+- “I can’t simulate a clean fleet yet”
+- “I found skills you probably meant Harbor to manage”
+
+This is why Voyager ghost docking feels like a recovery/onboarding helper rather than a dedicated governance scan.
+
+See also: [Voyager](/docs/foundations/voyager)
+
+---
+
+## Ghost docking
+
+Once ghosts are found, Harbor can offer to dock them.
+
+### Fathom ghost docking
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+If you accept the prompt, Harbor docks each discovered ghost into the currently selected manifest scope.
+
+### Voyager ghost docking
+
+Voyager can also prompt to dock unmanaged skills when it discovers them during test preparation.
+
+That is especially useful when:
+
+- a team has local skills already present
+- Harbor was not yet fully manifested
+- you want quick insight workflows without manually docking each skill first
+
+---
+
+### What docking does
+
+Docking is how you bring a ghost under Harbor’s control.
+
+Once a ghost is docked, it stops being stray unmanaged context and becomes part of a manifest-governed workflow.
+
+Depending on scope, Harbor may write the resulting entry into:
+
+- the local project manifest
+- the global manifest
+
+That is why ghost docking is not just discovery — it is the step that converts a haunted berth into governed Harbor state.
+
+---
+
+## Ghosts, stowage, and bringing them under control
+
+Ghosts are not only found in active berths.
+
+Fathom also checks **stowage**, which means unmanaged skills can keep haunting a workspace even after they have been moved out of the active berth.
+
+### How `stow` fits in
+
+`stow` is not a ghost-discovery command by itself.
+
+Its job is to move current agent context out of the active berth and into Harbor-managed backup storage.
+
+But that still matters for ghosts because:
+
+- unmanaged skills may end up in stowage during cleanup-oriented workflows
+- later, `fathom --ghosts` can surface them from stowage
+- then Harbor can offer to dock them properly into the manifest
+
+So:
+
+- **`stow`** helps control where unmanaged context lives
+- **`fathom --ghosts`** helps discover it
+- **`dock`** is how you bring it under Harbor governance
+
+### Practical control paths
+
+If you want to bring ghosts under control, the common paths are:
+
+1. **Scan for ghosts**
+
+   ```bash
+   skill-harbor fathom --ghosts
+   ```
+
+2. **Dock the discovered ghosts**
+   - accept the interactive prompt
+
+3. **Or dock the durable source directly**
+   - if the unmanaged skills actually come from a real ongoing source of truth
+
+   ```bash
+   skill-harbor dock ~/.rulesync/skills
+   ```
+
+That distinction matters:
+
+- use **ghost docking** when Harbor discovered unmanaged local context
+- use **source docking** when you want Harbor to manage the actual source over time
+
+---
+
+## Configuration and command options
+
+Ghost behavior is mostly controlled through **command options**, not through a large standalone ghost config system.
+
+### Fathom options relevant to ghosts
+
+- `--ghosts`
+  - enables ghost discovery
+- `--report`
+  - includes ghost paths in the aggregate health report when ghost scanning is active
+- `--format json`
+  - useful if you want machine-readable output around ghost-related scans
+- `--global`
+  - changes which manifest scope Harbor compares against
+
+### Voyager behavior relevant to ghosts
+
+Voyager does not currently expose a dedicated `--ghosts` flag.
+
+Instead, ghost docking happens as part of Voyager’s preparation flow when it detects unmanaged local skills.
+
+### Scope matters
+
+Ghosts are always relative to the manifest scope being used:
+
+- **local/project scope**
+- **global scope**
+
+A skill can be a ghost in one scope and governed in another.
+
+That is why Harbor distinguishes:
+
+- local/project manifest state
+- global manifest state
+- override-layer state
+
+And that is why the same skill might show up as:
+
+- a Ghost in one scope
+- governed in another scope
+- or sitting in stowage waiting to be inspected and docked intentionally
+
+---
+
+## When to use ghosts vs managed sources
+
+### Use ghost workflows when
+
+- you suspect unmanaged skills are affecting agents
+- you want a quick cleanup/discovery pass
+- you are onboarding a workspace that already has local skill state
+
+### Use managed sources when
+
+- the source should remain durable over time
+- Harbor should keep rescanning or refreshing it
+- you want repeatable sync behavior through `up` / `freshen`
+
+---
+
+## v1 safety boundaries
+
+Ghost workflows are intentionally conservative.
+
+They should help Harbor discover and govern unmanaged skills, but they should **not** become magical cleanup systems.
+
+In practice, that means:
+
+- ghost docking is interactive
+- unmanaged skills are surfaced before Harbor governs them
+- Harbor does not silently rewrite unrelated config just because ghosts exist
+
+For RuleSync-backed teams in particular:
+
+- ghost discovery is a good fallback and onboarding helper
+- but a docked folder-backed source is the better long-term solution when the folder is the true source of record
+
+---
+
+## Practical guidance
+
+### “I think local skill state is affecting my agents”
+
+Use:
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+Then decide whether you want to:
+
+- dock the discovered ghosts directly
+- dock the durable folder source they really came from
+- or leave them unmanaged and clean them up separately
+
+### “Voyager says it can’t find a clean fleet”
+
+Let Voyager surface and dock ghost skills if that matches your intent.
+
+### “Our team keeps skills in `~/.rulesync/skills`”
+
+If that folder is the real ongoing source of truth, dock it as a **folder-backed source**.
+
+If skills are merely lying around unmanaged, use **ghost docking** first.
+
+### “I used `stow` / lockdown and now I want to understand what’s still around”
+
+Use:
+
+```bash
+skill-harbor fathom --ghosts
+```
+
+because Fathom inspects both active berths and stowage, making it the best current command for finding unmanaged skills that may still be haunting the harbor from either location.
+
+---
+
+## Mental model
+
+Use this simple frame:
+
+- **Ghost** = unmanaged skill context Harbor discovered
+- **Command ghost** = the same ghost, surfaced by a particular command run
+- **Managed source** = intentionally docked source Harbor is expected to govern over time
+
+That distinction helps teams avoid conflating:
+
+- accidental local drift
+- intentional source-of-truth workflows
+- temporary onboarding helpers
