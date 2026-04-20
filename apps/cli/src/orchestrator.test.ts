@@ -3,6 +3,7 @@ import { Orchestrator } from './orchestrator';
 import Spinnies from 'spinnies';
 import path from 'path';
 import fs from 'node:fs/promises';
+import { chmodSync } from 'node:fs';
 import os from 'node:os';
 
 describe('Orchestrator Unit Tests', () => {
@@ -78,6 +79,68 @@ describe('Orchestrator Unit Tests', () => {
         });
 
         await expect((nestedOrchestrator as any).resolveLocalBin('skillfish')).resolves.toBe(expectedPath);
+
+        await nestedOrchestrator.cleanup();
+        await fs.rm(workspaceRoot, { recursive: true, force: true });
+    });
+
+    it('should berth cached cargo even when no spinner has been initialized yet', async () => {
+        const cargoPath = path.join(tempDir, 'cached-cargo');
+        const targetPath = path.join(tempDir, 'target-skill');
+
+        await fs.mkdir(cargoPath, { recursive: true });
+        await fs.writeFile(path.join(cargoPath, 'SKILL.md'), '---\nname: cached-skill\ndescription: cached skill\n---\n');
+
+        await expect(orchestrator.berth(cargoPath, targetPath, 'Codex')).resolves.toBe(true);
+        await expect(fs.readFile(path.join(targetPath, 'SKILL.md'), 'utf-8')).resolves.toContain('cached-skill');
+
+        expect(() => orchestrator.finalize('Successfully berthed to: Codex')).not.toThrow();
+    });
+
+    it('should process cached cargo without requiring a prior moor spinner', async () => {
+        const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-harbor-workspace-'));
+        const nestedPackageRoot = path.join(workspaceRoot, 'apps', 'cli');
+        const binDir = path.join(workspaceRoot, 'node_modules', '.bin');
+        const binaryName = process.platform === 'win32' ? 'skill-porter.cmd' : 'skill-porter';
+        const scriptPath = path.join(binDir, binaryName);
+        const cargoPath = path.join(tempDir, 'cargo-to-process');
+
+        await fs.mkdir(binDir, { recursive: true });
+        await fs.mkdir(nestedPackageRoot, { recursive: true });
+        await fs.mkdir(cargoPath, { recursive: true });
+        await fs.writeFile(path.join(cargoPath, 'SKILL.md'), '---\nname: cached-skill\ndescription: cached skill\n---\n');
+
+        if (process.platform === 'win32') {
+            await fs.writeFile(
+                scriptPath,
+                '@echo off\r\n' +
+                'setlocal\r\n' +
+                'set "input=%2"\r\n' +
+                'set "output=%6"\r\n' +
+                'mkdir "%output%" >nul 2>&1\r\n' +
+                'xcopy "%input%\\*" "%output%\\" /E /I /Y >nul\r\n'
+            );
+        } else {
+            await fs.writeFile(
+                scriptPath,
+                '#!/usr/bin/env sh\n' +
+                'input="$2"\n' +
+                'output="$6"\n' +
+                'mkdir -p "$output"\n' +
+                'cp -R "$input"/. "$output"/\n'
+            );
+            chmodSync(scriptPath, 0o755);
+        }
+
+        const nestedOrchestrator = new Orchestrator({
+            skillName: 'cached-skill',
+            spinnies,
+            packageRoot: nestedPackageRoot
+        });
+
+        const processedPath = await nestedOrchestrator.processCargo(cargoPath, 'claude');
+
+        await expect(fs.readFile(path.join(processedPath, 'SKILL.md'), 'utf-8')).resolves.toContain('cached-skill');
 
         await nestedOrchestrator.cleanup();
         await fs.rm(workspaceRoot, { recursive: true, force: true });
