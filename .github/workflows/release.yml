@@ -3,6 +3,14 @@ on:
   push:
     branches:
       - main
+  # Changesets includes [skip ci] in the version-PR commit body, so the merge
+  # commit on main can skip push-triggered workflows unless we also listen for
+  # the PR closing event.
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -15,11 +23,17 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'changeset-release/'))
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
+          # pull_request:closed runs on the PR head by default; publish must run
+          # against the merged main branch state.
+          ref: ${{ github.event_name == 'pull_request' && 'main' || '' }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -49,7 +63,7 @@ jobs:
 
       # --- Mode 1: Pending changesets exist → create/update the Version PR ---
       - name: Create Release Pull Request
-        if: steps.check.outputs.has_changesets == 'true'
+        if: steps.check.outputs.has_changesets == 'true' && github.event_name != 'pull_request'
         uses: changesets/action@v1
         with:
           createGithubReleases: false
