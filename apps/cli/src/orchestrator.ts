@@ -36,6 +36,15 @@ export class Orchestrator {
         return `sync-${this.skillName}`;
     }
 
+    private ensureSpinnerActive(text: string): void {
+        if (!this.spinnies.pick(this.spinnerId)) {
+            this.spinnies.add(this.spinnerId, { text });
+            return;
+        }
+
+        this.spinnies.update(this.spinnerId, { text });
+    }
+
     private async resolveLocalBin(binaryName: string): Promise<string> {
         const executableName = process.platform === "win32" ? `${binaryName}.cmd` : binaryName;
         let currentDir = path.resolve(this.packageRoot);
@@ -56,7 +65,7 @@ export class Orchestrator {
     }
 
     async moor(url: string): Promise<string> {
-        this.spinnies.add(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Mooring skill from ${url}...`) });
+        this.ensureSpinnerActive(kleur.cyan(`[${this.skillName}] Mooring skill from ${url}...`));
         try {
             await fs.mkdir(this.tempDir, { recursive: true });
 
@@ -105,7 +114,7 @@ export class Orchestrator {
 
             const child = spawn(binPath, args, {
                 cwd: this.tempDir,
-                shell: true,
+                shell: false,
                 stdio: ["pipe", "pipe", "pipe"]
             });
 
@@ -153,7 +162,7 @@ export class Orchestrator {
     }
 
     async processCargo(cargoPath: string, targetAgent: string): Promise<string> {
-        this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Processing cargo for ${targetAgent}...`) });
+        this.ensureSpinnerActive(kleur.cyan(`[${this.skillName}] Processing cargo for ${targetAgent}...`));
         try {
             const outputPath = path.join(this.tempDir, "processed", targetAgent);
             await fs.mkdir(outputPath, { recursive: true });
@@ -162,7 +171,7 @@ export class Orchestrator {
             const args = ["convert", cargoPath, "-t", targetAgent, "-o", outputPath];
 
             const child = spawn(binPath, args, {
-                shell: true,
+                shell: false,
                 stdio: ["ignore", "pipe", "pipe"]
             });
 
@@ -194,7 +203,7 @@ export class Orchestrator {
             return false;
         }
 
-        this.spinnies.update(this.spinnerId, { text: kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`) });
+        this.ensureSpinnerActive(kleur.cyan(`[${this.skillName}] Transporting to ${label} berth...`));
         try {
             // Fix: Proactively handle existing files or broken symlinks at targetPath
             const stats = await fs.lstat(targetPath).catch(() => null);
@@ -387,6 +396,7 @@ export class Orchestrator {
     }
 
     public finalize(message: string): void {
+        this.ensureSpinnerActive(kleur.green(`[${this.skillName}] ${message}`));
         this.spinnies.succeed(this.spinnerId, { text: kleur.bold().green(`[${this.skillName}] ${message}`) });
     }
 }
