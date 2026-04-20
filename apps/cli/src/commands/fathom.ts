@@ -274,7 +274,9 @@ export async function fathomAction(options: any, command: any) {
                     sonarText = `[${bar}] ${sonarColor(sonarResult.score + "%")} (via ${sonarResult.model})`;
                 }
 
-                const typeEmoji = heuristic.skillType === "API Tool" ? "🔧" : "🧠";
+                const typeBadge = heuristic.skillType === "API Tool"
+                    ? ` 🔧 ${kleur.blue("<API Tool>")}`
+                    : "";
                 const validationEmoji = heuristic.validation.isProperlyFormatted ? "✅" : "⚠️";
 
                 const fmt = (v: number) => { const inv = -v; return inv > 0 ? `+${inv}` : `${inv}`; };
@@ -286,7 +288,7 @@ export async function fathomAction(options: any, command: any) {
                     heuristicSubtext = `${kleur.gray(`(Vagueness: ${fmt(heuristic.heuristics.semanticVagueness)}, Constraints: ${fmt(heuristic.heuristics.negativeConstraints)}, Tags: ${fmt(heuristic.heuristics.tagDensity ?? 0)}, Triggers: ${fmt(heuristic.heuristics.triggerClarity ?? 0)})`)}`;
                 }
 
-                console.log(`${kleur.green("✓")} [${kleur.bold(skill.name)}]${layerLabel}${statusColor(statusLabel)} ${typeEmoji} ${kleur.blue(`<${heuristic.skillType}>`)} ${validationEmoji}`);
+                console.log(`${kleur.green("✓")} [${kleur.bold(skill.name)}]${layerLabel}${statusColor(statusLabel)}${typeBadge} ${validationEmoji}`);
                 console.log(`    ${kleur.cyan("Displacement:")} ${displacementText}`);
                 console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
                 console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
@@ -317,6 +319,13 @@ export async function fathomAction(options: any, command: any) {
                     console.log("");
                     console.log(kleur.bold().cyan(`    📋 Heuristic Breakdown for ${skill.name}`));
                     console.log(kleur.gray("    ─────────────────────────────────────"));
+                    if (heuristic.skillType === "API Tool") {
+                        printDetailRow("Type", "API Tool",
+                            "Detected as a tool/schema-style asset, so Fathom evaluates it with API-tool heuristics such as schema strictness.");
+                    } else {
+                        printDetailRow("Type", "Agent Skill",
+                            "Detected as an instruction/prompt-style skill, so Fathom evaluates it with agent-skill heuristics such as tags and trigger clarity.");
+                    }
 
                     if (heuristic.skillType === "API Tool") {
                         printDetailRow("Vagueness", fmt(h.semanticVagueness),

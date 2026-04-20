@@ -250,6 +250,88 @@ describe("fathomAction", () => {
         logSpy.mockRestore();
     });
 
+    it("hides the Agent Skill type badge in default output", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = {};
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/skill1"
+        ));
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🛳️",
+            shipClass: "Frigate",
+            tokens: 5001,
+            cost: { gpt4o: 0.025, gpt4oMini: 0.00075 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 10,
+            condition: "Glassy Water",
+            skillType: "Agent Skill",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: -1,
+                negativeConstraints: 0,
+                tagDensity: -2,
+                triggerClarity: -1
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("✓ [skill1]"));
+        expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("<Agent Skill>"));
+        logSpy.mockRestore();
+    });
+
+    it("shows API Tool in the default line and explains the type in details mode", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = { details: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                tool1: { name: "tool1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "tool1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/tool1"
+        ));
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🚤",
+            shipClass: "Brigantine",
+            tokens: 1646,
+            cost: { gpt4o: 0.0082, gpt4oMini: 0.000247 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 9,
+            condition: "Glassy Water",
+            skillType: "API Tool",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: 0,
+                negativeConstraints: -1,
+                schemaStrictness: -2
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("<API Tool>"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Type"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("tool/schema-style asset"));
+        logSpy.mockRestore();
+    });
+
     it("adds structured vessel placement detail to report output", async () => {
         const options = { report: true, format: "json" };
         const mockCommand = { opts: vi.fn().mockReturnValue(options) };
