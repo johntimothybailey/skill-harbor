@@ -69,13 +69,12 @@ export async function fathomAction(options: any, command: any) {
         let skills: any[] = manifestManager.materializeSkills(manifest);
         const ghostSkillPaths: string[] = [];
         let friendlyGhostCount = 0;
-        let ghostSkillNames = new Set<string>();
         let ghostScanContext: GhostScanContext | null = null;
 
         // 2.5 Active Berths Discovery
         const baseDir = useGlobalScope ? os.homedir() : process.cwd();
-        const activeBerths = await getAgentBerths(baseDir, manifest.targets);
-        const stowageBerths = await getStowageBerths(baseDir, manifest.targets);
+        const activeBerths = await getAgentBerths(baseDir);
+        const stowageBerths = await getStowageBerths(baseDir);
 
         // 2.6 Ghost Skill Discovery (Active Berths)
         if (opts.ghosts) {
@@ -94,7 +93,6 @@ export async function fathomAction(options: any, command: any) {
             });
             const { active, friendly } = summarizeGhosts(ghosts);
             friendlyGhostCount = friendly.length;
-            ghostSkillNames = new Set(active.map(ghost => ghost.name));
             for (const ghost of active) {
                 ghostSkillPaths.push(ghost.path);
                 if (!showReport) {
@@ -170,10 +168,7 @@ export async function fathomAction(options: any, command: any) {
             const allPossibleVessels = [...new Set([...skills.map(s => s.name), ...skillPaths.map(p => path.basename(p))])];
             
             for (const name of allPossibleVessels) {
-                const berthContext = ghostSkillNames.has(name) && ghostScanContext
-                    ? ghostScanContext
-                    : { activeBerths, stowageBerths };
-                const status = await getVesselStatus(name, berthContext.activeBerths, berthContext.stowageBerths);
+                const status = await getVesselStatus(name, activeBerths, stowageBerths);
                 if (status.berthed.length > 0 || status.stowed.length > 0) {
                     vesselPlacements.push({
                         name,
@@ -213,10 +208,7 @@ export async function fathomAction(options: any, command: any) {
                     skill.name
                 );
             
-            const berthContext = skill.isGhost && ghostScanContext
-                ? ghostScanContext
-                : { activeBerths, stowageBerths };
-            const vStatus = await getVesselStatus(skill.name, berthContext.activeBerths, berthContext.stowageBerths);
+            const vStatus = await getVesselStatus(skill.name, activeBerths, stowageBerths);
             let statusLabel = "";
             let statusColor = kleur.gray;
 
