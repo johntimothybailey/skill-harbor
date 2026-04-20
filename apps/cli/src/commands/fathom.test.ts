@@ -165,6 +165,7 @@ describe("fathomAction", () => {
         (discoverGhosts as any).mockResolvedValue([
             { name: "ghost-skill", path: "/ghosts/ghost-skill", location: "berth", berthLabel: "Codex", friendly: false }
         ]);
+        (getAgentBerths as any).mockResolvedValue([{ path: "/codex", label: "Codex", key: "codex" }]);
         (exists as any).mockImplementation(async (candidatePath: string) => (
             candidatePath === "/ghosts/ghost-skill" || candidatePath === "/codex/ghost-skill"
         ));
@@ -192,6 +193,142 @@ describe("fathomAction", () => {
 
         expect(resolveGhostScanContext).toHaveBeenCalledTimes(1);
         expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[Berthed: Codex | .codex]"));
+        logSpy.mockRestore();
+    });
+
+    it("shows every berthed agent match available in the selected scope", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = { global: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.read.mockResolvedValue({
+            skills: {
+                catch22: { name: "catch-22", source: "source1", layer: "global" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "catch-22", layer: "global" }]);
+        (resolveCommandScope as any).mockResolvedValue({ useGlobalScope: true, shouldStop: false });
+        (getAgentBerths as any).mockResolvedValue([
+            { path: "/rulesync", label: "Rulesync", key: "rulesync" },
+            { path: "/codex", label: "Codex", key: "codex" }
+        ]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/catch-22" ||
+            candidatePath === "/rulesync/catch-22" ||
+            candidatePath === "/codex/catch-22"
+        ));
+        (getAgentBerthLocation as any).mockImplementation((berth: any) => {
+            if (berth.path === "/rulesync") return ".rulesync";
+            if (berth.path === "/codex") return ".codex";
+            return undefined;
+        });
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🛳️",
+            shipClass: "Frigate",
+            tokens: 5001,
+            cost: { gpt4o: 0.025, gpt4oMini: 0.00075 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 10,
+            condition: "Glassy Water",
+            skillType: "Agent Skill",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: -1,
+                negativeConstraints: 0,
+                tagDensity: -2,
+                triggerClarity: -1
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(
+            expect.stringContaining("[Berthed: Rulesync | .rulesync, Codex | .codex]")
+        );
+        logSpy.mockRestore();
+    });
+
+    it("hides the Agent Skill type badge in default output", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = {};
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/skill1"
+        ));
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🛳️",
+            shipClass: "Frigate",
+            tokens: 5001,
+            cost: { gpt4o: 0.025, gpt4oMini: 0.00075 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 10,
+            condition: "Glassy Water",
+            skillType: "Agent Skill",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: -1,
+                negativeConstraints: 0,
+                tagDensity: -2,
+                triggerClarity: -1
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("✓ [skill1]"));
+        expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("<Agent Skill>"));
+        logSpy.mockRestore();
+    });
+
+    it("shows API Tool in the default line and explains the type in details mode", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = { details: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                tool1: { name: "tool1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "tool1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/tool1"
+        ));
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🚤",
+            shipClass: "Brigantine",
+            tokens: 1646,
+            cost: { gpt4o: 0.0082, gpt4oMini: 0.000247 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 9,
+            condition: "Glassy Water",
+            skillType: "API Tool",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: 0,
+                negativeConstraints: -1,
+                schemaStrictness: -2
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("<API Tool>"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Type"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("tool/schema-style asset"));
         logSpy.mockRestore();
     });
 

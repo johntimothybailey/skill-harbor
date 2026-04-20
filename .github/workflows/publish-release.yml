@@ -1,0 +1,89 @@
+name: Publish Release
+
+on:
+  pull_request_target:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'changeset-release/'))
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          # For merged changeset PRs we want the merged main branch state.
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Ensure versioned release state
+        run: |
+          CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" | head -1 || true)
+          if [ -n "$CHANGESETS" ]; then
+            echo "Refusing to publish with pending changesets still present: $CHANGESETS"
+            exit 1
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to NPM
+        run: npx changeset publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        run: |
+          VERSION=$(node -p "require('./apps/cli/package.json').version")
+          TAG="v$VERSION"
+
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+          HERO_TITLE=$(grep -A 10 "## $VERSION" apps/cli/CHANGELOG.md | grep "## ⚓" | head -n 1 | sed 's/## ⚓ //')
+          sed -n "/## $VERSION/,/## [0-9]/p" apps/cli/CHANGELOG.md | sed '1d;$d' > release_notes.md
+
+          if [ -z "$HERO_TITLE" ]; then
+            FINAL_TITLE="⚓ Skill Harbor v$VERSION"
+          else
+            FINAL_TITLE="⚓ Skill Harbor v$VERSION: $HERO_TITLE"
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Updating existing release $TAG"
+            gh release edit "$TAG" --title "$FINAL_TITLE" --notes-file release_notes.md
+          else
+            echo "Creating new release $TAG"
+            gh release create "$TAG" --title "$FINAL_TITLE" --notes-file release_notes.md
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
