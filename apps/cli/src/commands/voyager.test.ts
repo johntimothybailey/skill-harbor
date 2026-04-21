@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import matter from "gray-matter";
+import yaml from "js-yaml";
 import { voyagerAction } from "./voyager";
 import { resolveCommandScope } from "../command-scope";
 import { ask, getAgentBerths, getManifestManager } from "../utils";
@@ -84,6 +85,7 @@ describe("voyagerAction", () => {
         (fs.mkdir as any).mockResolvedValue(undefined);
         (fs.writeFile as any).mockResolvedValue(undefined);
         (matter as any).mockReturnValue({ data: {} });
+        vi.mocked(yaml.load as any).mockReset();
         consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
         vi.spyOn(process, "exit").mockImplementation((() => {
             throw new Error("exit");
@@ -211,7 +213,241 @@ describe("voyagerAction", () => {
         expect(withoutSkillsBody.tools).toBeUndefined();
         expect(withoutSkillsBody.tool_choice).toBeUndefined();
     });
+
+    it("loads a valid benchmark pack, skips live setup, and emits pack json", async () => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        vi.mocked(yaml.load as any).mockReturnValue(buildValidPack());
+
+        await voyagerAction(undefined, options, mockCommand);
+
+        expect(resolveCommandScope).not.toHaveBeenCalled();
+        expect(mockConfigManager.loadConfig).not.toHaveBeenCalled();
+        expect(getAgentBerths).not.toHaveBeenCalled();
+        expect(discoverGhosts).not.toHaveBeenCalled();
+
+        const jsonOutput = JSON.parse(consoleSpy.mock.calls.at(-1)[0]);
+        expect(jsonOutput.kind).toBe("harbor.voyager.benchmark-pack.result");
+        expect(jsonOutput.pass).toBe(true);
+        expect(jsonOutput.totals.scenarios_total).toBe(1);
+    });
+
+    it("saves benchmark pack artifacts with the expected layout", async () => {
+        const options = { file: "pack.yaml", format: "json", saveTrace: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        vi.mocked(yaml.load as any).mockReturnValue(buildValidPack());
+
+        await voyagerAction(undefined, options, mockCommand);
+
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("summary.json"), expect.any(String), "utf-8");
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("scenarios/basic-pack-scenario/with-skills.json"), expect.any(String), "utf-8");
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("scenarios/basic-pack-scenario/without-skills.json"), expect.any(String), "utf-8");
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining("scenarios/basic-pack-scenario/summary.json"), expect.any(String), "utf-8");
+    });
+
+    it("fails a pack when a scenario fails", async () => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        const pack = buildValidPack();
+        pack.scenarios[0].assertions.with_skills.assert_status = "failed";
+        vi.mocked(yaml.load as any).mockReturnValue(pack);
+
+        await expect(voyagerAction(undefined, options, mockCommand)).rejects.toThrow("exit");
+    });
+
+    it.each([
+        ["missing kind", (() => { const pack = buildValidPack(); delete pack.kind; return pack; })()],
+        ["wrong kind", (() => { const pack = buildValidPack(); pack.kind = "wrong.kind"; return pack; })()],
+        ["unsupported version", (() => { const pack = buildValidPack(); pack.version = 2; return pack; })()],
+        ["missing pack id", (() => { const pack = buildValidPack(); delete pack.pack.id; return pack; })()],
+        ["invalid scenario id", (() => { const pack = buildValidPack(); pack.scenarios[0].id = "Bad Id"; return pack; })()],
+        ["duplicate scenario ids", (() => { const pack = buildValidPack(); pack.scenarios.push({ ...pack.scenarios[0] }); return pack; })()],
+        ["missing with_skills fixture", (() => { const pack = buildValidPack(); delete pack.scenarios[0].fixtures.with_skills; return pack; })()],
+        ["missing without_skills fixture", (() => { const pack = buildValidPack(); delete pack.scenarios[0].fixtures.without_skills; return pack; })()]
+    ])("fails validation for %s", async (_label, invalidPack) => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        vi.mocked(yaml.load as any).mockReturnValue(invalidPack);
+
+        await expect(voyagerAction(undefined, options, mockCommand)).rejects.toThrow("exit");
+        expect(resolveCommandScope).not.toHaveBeenCalled();
+        expect(mockConfigManager.loadConfig).not.toHaveBeenCalled();
+    });
+
+    it("fails validation when minimum fixture fields are missing", async () => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        const pack = buildValidPack();
+        delete pack.scenarios[0].fixtures.with_skills.trace_sequence;
+        vi.mocked(yaml.load as any).mockReturnValue(pack);
+
+        await expect(voyagerAction(undefined, options, mockCommand)).rejects.toThrow("exit");
+    });
+
+    it("passes expect_assertion_improved delta assertion when with-skills improves", async () => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        const pack = buildValidPack();
+        pack.scenarios[0].assertions.delta = { expect_assertion_improved: true };
+        vi.mocked(yaml.load as any).mockReturnValue(pack);
+
+        await voyagerAction(undefined, options, mockCommand);
+
+        const jsonOutput = JSON.parse(consoleSpy.mock.calls.at(-1)[0]);
+        expect(jsonOutput.scenarios[0].delta.assertion_improved).toBe(true);
+    });
+
+    it("fails expect_assertion_improved delta assertion when there is no improvement", async () => {
+        const options = { file: "pack.yaml", format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+        const pack = buildValidPack();
+        pack.scenarios[0].fixtures.without_skills.status = "completed";
+        pack.scenarios[0].assertions.delta = { expect_assertion_improved: true };
+        vi.mocked(yaml.load as any).mockReturnValue(pack);
+
+        await expect(voyagerAction(undefined, options, mockCommand)).rejects.toThrow("exit");
+    });
+
+    it("passes and fails expect_status_changed delta assertions appropriately", async () => {
+        const passOptions = { file: "pack-pass.yaml", format: "json" };
+        const passCommand = { opts: vi.fn().mockReturnValue(passOptions) };
+        const passingPack = buildValidPack();
+        passingPack.scenarios[0].assertions.delta = { expect_status_changed: true };
+        vi.mocked(yaml.load as any).mockReturnValueOnce(passingPack);
+        await voyagerAction(undefined, passOptions, passCommand);
+
+        const failOptions = { file: "pack-fail.yaml", format: "json" };
+        const failCommand = { opts: vi.fn().mockReturnValue(failOptions) };
+        const failingPack = buildValidPack();
+        failingPack.scenarios[0].fixtures.without_skills.status = "completed";
+        failingPack.scenarios[0].assertions.delta = { expect_status_changed: true };
+        vi.mocked(yaml.load as any).mockReturnValueOnce(failingPack);
+        await expect(voyagerAction(undefined, failOptions, failCommand)).rejects.toThrow("exit");
+    });
+
+    it("passes and fails expect_status_summary delta assertions appropriately", async () => {
+        const passOptions = { file: "pack-pass.yaml", format: "json" };
+        const passCommand = { opts: vi.fn().mockReturnValue(passOptions) };
+        const passingPack = buildValidPack();
+        passingPack.scenarios[0].assertions.delta = { expect_status_summary: "failed -> completed" };
+        vi.mocked(yaml.load as any).mockReturnValueOnce(passingPack);
+        await voyagerAction(undefined, passOptions, passCommand);
+
+        const failOptions = { file: "pack-fail.yaml", format: "json" };
+        const failCommand = { opts: vi.fn().mockReturnValue(failOptions) };
+        const failingPack = buildValidPack();
+        failingPack.scenarios[0].assertions.delta = { expect_status_summary: "completed -> completed" };
+        vi.mocked(yaml.load as any).mockReturnValueOnce(failingPack);
+        await expect(voyagerAction(undefined, failOptions, failCommand)).rejects.toThrow("exit");
+    });
+
+    it("enforces eq/gte/lte comparator assertions for each delta metric", async () => {
+        const comparatorCases = [
+            { label: "tool", field: "expect_tool_count_delta", pass: { eq: 1 }, fail: { eq: 2 } },
+            { label: "iteration", field: "expect_iteration_delta", pass: { gte: 1 }, fail: { lte: 0 } },
+            { label: "elapsed", field: "expect_elapsed_ms_delta", pass: { lte: 80 }, fail: { gte: 100 } }
+        ] as const;
+
+        for (const comparatorCase of comparatorCases) {
+            const passOptions = { file: `pack-pass-${comparatorCase.label}.yaml`, format: "json" };
+            const passCommand = { opts: vi.fn().mockReturnValue(passOptions) };
+            const passingPack = buildValidPack();
+            passingPack.scenarios[0].assertions.delta = { [comparatorCase.field]: comparatorCase.pass };
+            vi.mocked(yaml.load as any).mockReturnValueOnce(passingPack);
+            await voyagerAction(undefined, passOptions, passCommand);
+
+            const failOptions = { file: `pack-fail-${comparatorCase.label}.yaml`, format: "json" };
+            const failCommand = { opts: vi.fn().mockReturnValue(failOptions) };
+            const failingPack = buildValidPack();
+            failingPack.scenarios[0].assertions.delta = { [comparatorCase.field]: comparatorCase.fail };
+            vi.mocked(yaml.load as any).mockReturnValueOnce(failingPack);
+            await expect(voyagerAction(undefined, failOptions, failCommand)).rejects.toThrow("exit");
+        }
+    });
 });
+
+function buildValidPack() {
+    return {
+        kind: "harbor.voyager.benchmark-pack",
+        version: 1,
+        pack: {
+            id: "basic-pack",
+            name: "Basic Pack"
+        },
+        scenarios: [
+            {
+                id: "basic-pack-scenario",
+                name: "Basic Scenario",
+                query: "Check a workflow with and without skills.",
+                fixtures: {
+                    with_skills: makeOfflineFixture({
+                        status: "completed",
+                        final_answer: "done with skills",
+                        iterations: 2,
+                        elapsed_ms: 120,
+                        available_tool_count: 1,
+                        trace_sequence: ["ToolA"],
+                        trace: [
+                            { role: "system", content: "system" },
+                            { role: "user", content: "user" },
+                            { role: "assistant", content: "" },
+                            { role: "tool", toolName: "ToolA", content: "ok" },
+                            { role: "assistant", content: "done with skills" }
+                        ]
+                    }),
+                    without_skills: makeOfflineFixture({
+                        status: "failed",
+                        final_answer: "done without skills",
+                        iterations: 1,
+                        elapsed_ms: 40,
+                        available_tool_count: 0,
+                        trace_sequence: [],
+                        trace: [
+                            { role: "system", content: "system" },
+                            { role: "user", content: "user" },
+                            { role: "assistant", content: "done without skills" }
+                        ]
+                    })
+                },
+                assertions: {
+                    with_skills: {
+                        expected_tools: ["ToolA"],
+                        assert_final_contains: ["done"],
+                        assert_status: "completed"
+                    },
+                    without_skills: {
+                        assert_status: "failed"
+                    },
+                    delta: {
+                        expect_assertion_improved: true,
+                        expect_status_changed: true,
+                        expect_status_summary: "failed -> completed",
+                        expect_tool_count_delta: { eq: 1 },
+                        expect_iteration_delta: { eq: 1 },
+                        expect_elapsed_ms_delta: { eq: 80 }
+                    }
+                }
+            }
+        ]
+    } as any;
+}
+
+function makeOfflineFixture(overrides: any) {
+    return {
+        status: "completed",
+        final_answer: "done",
+        iterations: 1,
+        elapsed_ms: 10,
+        available_tool_count: 0,
+        trace_sequence: [],
+        trace: [
+            { role: "system", content: "system" },
+            { role: "user", content: "user" },
+            { role: "assistant", content: "done" }
+        ],
+        ...overrides
+    };
+}
 
 function makeFetchResponse(message: any) {
     return {

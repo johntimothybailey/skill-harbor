@@ -25,7 +25,7 @@ If Voyager discovers unmanaged local skills while preparing that fleet, it can a
 skill-harbor voyager -f harbor-voyager-test.yaml
 
 # Run an ad-hoc query simulation
-skill-harbor voyager --query "Check if the codebase is portable."
+skill-harbor voyager "Check if the codebase is portable."
 ```
 
 ---
@@ -53,6 +53,43 @@ mocks:
 - **`mocks`**: A mapping of tool names to their simulated return values. This prevents the agent from actually executing destructive commands during the test.
 
 ---
+
+
+## 🧪 Benchmark Packs
+
+Voyager now supports a **Harbor-native benchmark-pack** format for deterministic, fixture-driven scenario evaluation in local and CI environments. This complements the existing live single-scenario flow without replacing it.
+
+- **Legacy scenario files** remain the current single-test YAML shape (`query`, `expected_tools`, `mocks`, assertions).
+- **Benchmark-pack files** use a versioned Harbor-native root with `kind`, `version`, `pack`, and `scenarios`.
+- Pack execution is **offline and API-key-free** in v1: it evaluates scenario outcomes from fixtures rather than running the live provider loop.
+
+### Product boundary
+- **Voyager** owns empirical scenario evaluation: traces, branch outcomes, assertions, uplift/regression.
+- **Fathom** owns predictive and audit-style analysis: heuristics, token/context analysis, routing confidence, fleet recommendations.
+
+That means benchmark packs still belong in Voyager: they make **scenario evaluation reproducible**, but they do **not** compute Fathom-style usefulness heuristics.
+
+### Benchmark-pack example
+
+```yaml
+kind: harbor.voyager.benchmark-pack
+version: 1
+pack:
+  id: sample-benchmark-pack
+  name: Sample Voyager Benchmark Pack
+scenarios:
+  - id: tool-uplift
+    query: "Check if the codebase is portable and then generate a report on any hidden skills."
+    fixtures:
+      with_skills: ...
+      without_skills: ...
+    assertions:
+      with_skills: ...
+      without_skills: ...
+      delta: ...
+```
+
+Use a checked-in pack such as `harbor-voyager-benchmark-pack.yaml` to run deterministic benchmark-style evaluations in CI.
 
 ## 🛡️ Governance & CI/CD
 

@@ -117,12 +117,24 @@ Primary ghost inspection workflow for unmanaged skills discovered in active bert
 ---
 
 ## `voyager`
-End-to-end integration testing suite for agent-skill loops.
+End-to-end integration testing suite for agent-skill loops and deterministic benchmark-pack evaluation.
+
+**Usage:**
+- `skill-harbor voyager [query]`
+- `skill-harbor voyager -f <path>`
 
 **Flags:**
-- `-f, --file <path>`: Provide a YAML test definition file containing mocks and assertions.
-- `--query <text>`: Run an ad-hoc query simulation.
-- `--model <name>`: Override the model used for the simulation.
+- `-f, --file <path>`: Provide either a legacy single-scenario YAML definition or a Harbor-native benchmark-pack file.
+- `-c, --compare`: Run the same legacy scenario with and without skills, then report the delta.
+- `--format <type>`: Output `pretty` or `json`.
+- `--save-trace [dir]`: Persist run artifacts. Pack runs write a top-level `summary.json` plus per-scenario artifacts.
+- `--model <name>`: Override the model used for live Voyager simulation.
+- `--baseUrl <url>`: Override the API base URL for live Voyager simulation.
+
+**Notes:**
+- Legacy single-scenario files and inline queries still use the live Voyager flow.
+- Benchmark-pack files are **fixture-driven and API-key-free** in v1, making them suitable for deterministic local/CI evaluation.
+- Direct SkillsBench ingestion is deferred; benchmark packs are Harbor-native.
 
 *For more details on integration testing, see the [Voyager Deep Dive](/docs/foundations/voyager).*
 

@@ -1,0 +1,76 @@
+kind: harbor.voyager.benchmark-pack
+version: 1
+pack:
+  id: sample-benchmark-pack
+  name: Sample Voyager Benchmark Pack
+  description: Deterministic benchmark-pack example for local and CI evaluation.
+  tags:
+    - voyager
+    - benchmark
+    - ci
+scenarios:
+  - id: tool-uplift
+    name: Tool Uplift Example
+    query: "Check if the codebase is portable and then generate a report on any hidden skills."
+    tags:
+      - uplift
+      - regression
+    fixtures:
+      with_skills:
+        status: completed
+        final_answer: "Portable issues found: none. Hidden skills report generated."
+        iterations: 2
+        elapsed_ms: 120
+        available_tool_count: 2
+        trace_sequence:
+          - Scryer
+          - Fathom
+        trace:
+          - role: system
+            content: "system"
+          - role: user
+            content: "Check portability and hidden skills."
+          - role: assistant
+            content: ""
+          - role: tool
+            toolName: Scryer
+            content: "Portable issues found: none."
+          - role: tool
+            toolName: Fathom
+            content: "Hidden skills report: 2 ghost skills found."
+          - role: assistant
+            content: "Portable issues found: none. Hidden skills report generated."
+      without_skills:
+        status: failed
+        final_answer: "I could not complete both checks."
+        iterations: 1
+        elapsed_ms: 40
+        available_tool_count: 0
+        trace_sequence: []
+        trace:
+          - role: system
+            content: "system"
+          - role: user
+            content: "Check portability and hidden skills."
+          - role: assistant
+            content: "I could not complete both checks."
+    assertions:
+      with_skills:
+        expected_tools:
+          - Scryer
+          - Fathom
+        assert_final_contains:
+          - Hidden skills report
+        assert_status: completed
+      without_skills:
+        assert_status: failed
+      delta:
+        expect_assertion_improved: true
+        expect_status_changed: true
+        expect_status_summary: "failed -> completed"
+        expect_tool_count_delta:
+          eq: 2
+        expect_iteration_delta:
+          eq: 1
+        expect_elapsed_ms_delta:
+          eq: 80

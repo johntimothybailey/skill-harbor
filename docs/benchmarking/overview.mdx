@@ -1,0 +1,114 @@
+---
+title: "Benchmarking Overview"
+description: "How Skill Harbor approaches benchmarking, evaluation, and what it contributes beyond raw benchmark execution."
+icon: "chart-line"
+---
+
+# 📊 Benchmarking in Skill Harbor
+
+Skill Harbor is **not** trying to become a public leaderboard or replace benchmark projects like SkillsBench.
+
+Instead, Skill Harbor treats benchmarking as an **operational capability** inside a team workflow:
+
+- define what should be evaluated
+- run those evaluations repeatably
+- keep the evaluated skill set governed and portable
+- use the results to improve what the team actually ships
+
+That is the core difference.
+
+## The basic idea
+
+A benchmark is only useful if it can survive contact with a real team:
+
+- the skill set must be known
+- the evaluated context must be reproducible
+- the results must be inspectable later
+- the benchmark should fit local development and CI, not only a research harness
+
+Skill Harbor's role is to make those conditions true.
+
+## What Skill Harbor brings
+
+### 1. Governed evaluation inputs
+
+Before you benchmark anything, you need to know **which skills are actually in play**.
+
+Skill Harbor gives you:
+- a manifest-driven source of truth
+- provenance for skill sources
+- consistent berthing across supported agent targets
+- fleet-level inspection and validation
+
+That means benchmarking is attached to a **known fleet**, not an ad hoc pile of prompt files.
+
+### 2. Reproducible scenario evaluation
+
+Skill Harbor's contribution is not merely “run a benchmark.”
+It is to make evaluation:
+
+- **local-first**
+- **CI-friendly**
+- **portable**
+- **artifact-producing**
+
+That is why Voyager now grows toward **Harbor-native benchmark packs** instead of depending immediately on an external task format.
+
+### 3. Clear separation between measurement and prediction
+
+Skill Harbor intentionally separates two different questions:
+
+1. **What happened on a scenario?**
+2. **What is this fleet likely to help or hurt?**
+
+Those belong to different surfaces:
+
+- **Voyager** answers the first question through scenario execution and result comparison.
+- **Fathom** answers the second question through heuristics, audits, token analysis, and routing-risk signals.
+
+See **[Voyager vs Fathom](/docs/benchmarking/voyager-vs-fathom)** for the boundary.
+
+## Why this matters
+
+Without that separation, benchmarking tools tend to become muddy:
+
+- evaluators start acting like heuristic linters
+- heuristic tools start claiming benchmark truth
+- teams lose confidence in what each command is actually telling them
+
+Skill Harbor tries to keep the model clean:
+
+- **Voyager = empirical scenario evaluation**
+- **Fathom = predictive audit and fleet analysis**
+- **Skill Harbor overall = the governed system that makes both useful in practice**
+
+## How this aligns with SkillsBench
+
+SkillsBench is a strong research and evaluation lens.
+Skill Harbor takes the lessons of that lens and makes them **operational**:
+
+- benchmark-style scenarios can be run locally
+- packs can be checked into a repo
+- teams can use CI to keep evaluation repeatable
+- evaluation can be tied back to the governed fleet they actually use
+
+So the goal is not “be SkillsBench inside Skill Harbor.”
+The goal is:
+
+> make benchmark-style learning actionable inside a real engineering workflow.
+
+## Current direction
+
+The current Benchmarking direction in Skill Harbor is:
+
+1. **Voyager compare mode** for with-skills vs without-skills uplift
+2. **Harbor-native benchmark packs** for deterministic local/CI scenario evaluation
+3. **Fathom usefulness heuristics** informed later by empirical evaluation data
+4. **SkillsBench interop later**, as an adapter problem rather than a foundation dependency
+
+## Related pages
+
+- **[Voyager vs Fathom](/docs/benchmarking/voyager-vs-fathom)**
+- **[Voyager](/docs/foundations/voyager)**
+- **[Fathom](/docs/foundations/fathom)**
+- **[How does Skill Harbor align with SkillsBench?](/docs/faq/skillsbench)**
