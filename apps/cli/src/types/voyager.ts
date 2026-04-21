@@ -16,6 +16,27 @@ export interface VoyagerTestDefinition {
     assert_status?: "completed" | "failed";
 }
 
+export interface VoyagerBranchAssertions {
+    expected_tools?: string[];
+    assert_final_contains?: string[];
+    assert_status?: "completed" | "failed";
+}
+
+export interface VoyagerDeltaComparator {
+    eq?: number;
+    gte?: number;
+    lte?: number;
+}
+
+export interface VoyagerDeltaAssertions {
+    expect_assertion_improved?: boolean;
+    expect_status_changed?: boolean;
+    expect_status_summary?: string;
+    expect_tool_count_delta?: VoyagerDeltaComparator;
+    expect_iteration_delta?: VoyagerDeltaComparator;
+    expect_elapsed_ms_delta?: VoyagerDeltaComparator;
+}
+
 export type VoyagerRunStatus = "completed" | "assertion_failed" | "max_iterations" | "api_error";
 
 export interface VoyagerTraceEvent {
@@ -24,6 +45,27 @@ export interface VoyagerTraceEvent {
     toolName?: string;
     toolCallId?: string;
     timestamp: string;
+}
+
+export interface VoyagerOfflineTraceEvent {
+    role: VoyagerTraceEvent["role"];
+    content: string;
+    toolName?: string;
+    toolCallId?: string;
+    timestamp?: string;
+}
+
+export type VoyagerOfflineFixtureStatus = VoyagerRunStatus | "failed";
+
+export interface VoyagerOfflineFixtureResult {
+    status: VoyagerOfflineFixtureStatus;
+    final_answer: string;
+    iterations: number;
+    elapsed_ms: number;
+    available_tool_count: number;
+    trace_sequence: string[];
+    trace: VoyagerOfflineTraceEvent[];
+    error?: string;
 }
 
 export interface VoyagerAssertionSummary {
@@ -66,4 +108,78 @@ export interface VoyagerCompareResult {
         tool_count_delta: number;
         skills_used_delta: number;
     };
+}
+
+export interface VoyagerBenchmarkScenarioDefinition {
+    id: string;
+    name?: string;
+    query: string;
+    tags?: string[];
+    fixtures: {
+        with_skills: VoyagerOfflineFixtureResult;
+        without_skills: VoyagerOfflineFixtureResult;
+    };
+    assertions?: {
+        with_skills?: VoyagerBranchAssertions;
+        without_skills?: VoyagerBranchAssertions;
+        delta?: VoyagerDeltaAssertions;
+    };
+}
+
+export interface VoyagerBenchmarkPackDefinition {
+    kind: "harbor.voyager.benchmark-pack";
+    version: 1;
+    pack: {
+        id: string;
+        name?: string;
+        description?: string;
+        tags?: string[];
+    };
+    scenarios: VoyagerBenchmarkScenarioDefinition[];
+}
+
+export interface VoyagerBenchmarkScenarioSummary {
+    id: string;
+    name?: string;
+    path?: string;
+    status: "passed" | "failed";
+    with_skills: {
+        status: "completed" | "failed";
+        assertions_passed: boolean;
+        tool_call_count: number;
+    };
+    without_skills: {
+        status: "completed" | "failed";
+        assertions_passed: boolean;
+        tool_call_count: number;
+    };
+    delta: VoyagerCompareResult["delta"] & {
+        expectations_passed: boolean;
+    };
+    failures: string[];
+}
+
+export interface VoyagerBenchmarkPackSummary {
+    kind: "harbor.voyager.benchmark-pack.result";
+    version: 1;
+    pack: {
+        id: string;
+        name?: string;
+        source: string;
+        mode: "offline-fixture";
+        generated_at: string;
+    };
+    totals: {
+        scenarios_total: number;
+        scenarios_passed: number;
+        scenarios_failed: number;
+        conditions_total: number;
+        conditions_passed: number;
+        conditions_failed: number;
+        delta_improved: number;
+        delta_neutral: number;
+        delta_regressed: number;
+    };
+    pass: boolean;
+    scenarios: VoyagerBenchmarkScenarioSummary[];
 }
