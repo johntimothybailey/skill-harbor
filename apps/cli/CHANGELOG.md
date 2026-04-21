@@ -1,5 +1,11 @@
 # skill-harbor
 
+## 0.20.0
+
+### Minor Changes
+
+Add Harbor-native Voyager benchmark packs for deterministic local and CI evaluation.
+
 ## 0.19.2
 
 ### Patch Changes

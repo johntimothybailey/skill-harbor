@@ -1,6 +1,6 @@
 {
   "name": "skill-harbor",
-  "version": "0.19.2",
+  "version": "0.20.0",
   "description": "The Declarative Skill Setup & Orchestration Engine — Standardize and prepare engineering context for your entire team.",
   "author": "John Bailey",
   "license": "MIT",
