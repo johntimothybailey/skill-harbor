@@ -1,0 +1,119 @@
+---
+title: "Voyager vs Fathom"
+description: "The product boundary between empirical scenario evaluation and predictive fleet analysis."
+icon: "split"
+---
+
+# 🧭 Voyager vs Fathom
+
+One of the easiest ways to confuse Skill Harbor's evaluation story is to blur **Voyager** and **Fathom** together.
+
+They are related, but they do different jobs.
+
+## Short version
+
+- **Voyager** measures what happens in a scenario.
+- **Fathom** analyzes what is likely to help or hurt before or across those scenarios.
+
+That distinction should stay intact even when Voyager adds deterministic benchmark packs.
+
+## Voyager: empirical scenario evaluation
+
+Voyager is the place for questions like:
+
+- Did the skill-enabled path outperform the no-skills path?
+- Did the agent invoke the expected tools?
+- Did the scenario pass or fail?
+- What trace did the run produce?
+- Can this evaluation be reproduced in CI?
+
+So Voyager owns:
+- scenario execution
+- branch comparison
+- traces
+- assertions
+- pass/fail outcomes
+- benchmark-pack results
+
+## Fathom: predictive and audit analysis
+
+Fathom is the place for questions like:
+
+- Is this fleet too large or too noisy?
+- Are skills colliding semantically?
+- Is the routing surface too vague?
+- How much context bloat is this adding?
+- Which skills look risky or promising before deeper evaluation?
+
+So Fathom owns:
+- heuristics
+- token/context analysis
+- contract validation
+- routing-risk signals
+- fleet-wide reports
+- predictive usefulness guidance
+
+## Why benchmark packs still belong in Voyager
+
+It may feel surprising that **offline deterministic packs** are still a Voyager feature.
+
+But the important boundary is **not**:
+- online = Voyager
+- offline = Fathom
+
+The real boundary is:
+- **scenario outcomes = Voyager**
+- **predictive audit = Fathom**
+
+A deterministic benchmark pack still asks a Voyager question:
+
+> what happened in this scenario, and how did the with-skills branch compare to the without-skills branch?
+
+That is still empirical evaluation, even when the evaluation is fixture-driven and reproducible in CI.
+
+## How they should work together
+
+The intended flow is:
+
+1. **Govern the fleet with Skill Harbor**
+2. **Inspect and predict with Fathom**
+3. **Measure scenario outcomes with Voyager**
+4. **Feed what you learn back into fleet refinement**
+
+In other words:
+
+- **Fathom** helps you decide what looks worth evaluating or trimming.
+- **Voyager** tells you what the scenario evidence actually says.
+
+## A practical rule
+
+If a command produces:
+- scenario traces
+- branch outcomes
+- assertion results
+- uplift/regression evidence
+
+it belongs in **Voyager**.
+
+If a command produces:
+- heuristics
+- token/collision reports
+- probabilistic routing confidence
+- fleet-level recommendations
+
+it belongs in **Fathom**.
+
+## Non-goal of Voyager benchmark packs
+
+Voyager benchmark packs should **not** become:
+- fleet health scores
+- heuristic usefulness scores
+- predictive deployment recommendations
+
+Those belong in Fathom.
+
+## Related pages
+
+- **[Benchmarking Overview](/docs/benchmarking/overview)**
+- **[Voyager](/docs/foundations/voyager)**
+- **[Fathom](/docs/foundations/fathom)**
