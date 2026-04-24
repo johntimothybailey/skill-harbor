@@ -143,5 +143,61 @@ description: No contracts here.
 
             expect(result.contracts?.missingStandard).toBe(true);
         });
+
+        it("should mark malformed frontmatter contracts as invalid", async () => {
+            const skillPath = "/fake/bad-frontmatter";
+            const skillMd = `---
+name: bad-frontmatter
+description: broken
+contracts:
+  requires: [
+---`;
+            vi.mocked(fs.readFile).mockResolvedValue(skillMd);
+            vi.mocked(fs.readdir).mockResolvedValue([]);
+
+            const result = await service.getContractValidation(skillPath);
+
+            expect(result?.status).toBe("invalid");
+            expect(result?.errors[0]).toContain("Failed to parse SKILL.md frontmatter");
+        });
+    });
+
+    describe("generateHealthReport", () => {
+        it("includes parser-level contract warnings and escalates them in strict mode", async () => {
+            vi.spyOn(service, "calculateDisplacement").mockResolvedValue({
+                tokens: 100,
+                shipClass: "Dinghy",
+                icon: "🛶",
+                cost: { gpt4o: 0.001, gpt4oMini: 0.0001 }
+            });
+            vi.spyOn(service, "calculateHeuristicConfidence").mockResolvedValue({
+                score: 7,
+                condition: "Calm Seas",
+                wakeSize: "Small",
+                skillType: "Agent Skill",
+                validation: { namePresent: true, descriptionPresent: true, isProperlyFormatted: true, errors: [] },
+                heuristics: {
+                    semanticVagueness: 0,
+                    negativeConstraints: 0,
+                    schemaStrictness: 0,
+                    tagDensity: 0,
+                    triggerClarity: 0
+                },
+                contracts: {
+                    missingStandard: false,
+                    requires: { input_text: "any" },
+                    produces: {},
+                    isValid: true,
+                    status: "valid",
+                    errors: [],
+                    warnings: ["contracts.requires.input_text is underspecified."]
+                }
+            });
+
+            const report = await service.generateHealthReport(["/fake/skill-a"], undefined, undefined, undefined, true);
+
+            expect(report.contractWarnings).toContain("[skill-a] contracts.requires.input_text is underspecified.");
+            expect(report.status.violations).toContain("[skill-a] contracts.requires.input_text is underspecified.");
+        });
     });
 });

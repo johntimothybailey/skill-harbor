@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import kleur from "kleur";
 import Spinnies from "spinnies";
@@ -23,7 +24,6 @@ import {
 import type { GhostScanContext } from "../services/ghosts";
 import type { BerthDetail } from "../utils";
 import { printHeader, printError, printInfo, printHarborHealthReport, printSuccess } from "../ui";
-import os from "node:os";
 
 type VesselPlacement = {
     name: string;
@@ -44,12 +44,14 @@ export async function fathomAction(options: any, command: any) {
     
     const showDetails = opts.details ?? false;
     const showReport = opts.report ?? false;
+    const format = opts.format ?? "pretty";
+    const isPrettyFormat = format === "pretty";
     const query = opts.query;
     const modelOverride = opts.model;
     const baseUrlOverride = opts.baseUrl;
 
     try {
-        if (!opts.format || opts.format === "pretty") {
+        if (isPrettyFormat) {
             printHeader("Fathom: Skill Profiler");
         }
 
@@ -107,18 +109,17 @@ export async function fathomAction(options: any, command: any) {
         }
 
         // 3. Override Warnings
-        if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0 && (!opts.format || opts.format === "pretty")) {
+        if (!useGlobalScope && manifest.overrides && manifest.overrides.length > 0 && isPrettyFormat) {
             console.log(kleur.yellow(`\n⚠️  Overrides Active: The following skills are being overridden by personal definitions in harbor-manifest.overrides.json:`));
             manifest.overrides.forEach((name: string) => console.log(kleur.yellow(`   - ${name}`)));
             console.log("");
         }
-        if (opts.ghosts && friendlyGhostCount > 0 && (!opts.format || opts.format === "pretty")) {
+        if (opts.ghosts && friendlyGhostCount > 0 && isPrettyFormat) {
             console.log(kleur.cyan(`\n💡 ${friendlyGhostCount} friendly ghost${friendlyGhostCount === 1 ? "" : "s"} hidden from the main ghost list. Use 'skill-harbor ghosts --friendly' for details.`));
         }
 
         // --- Harbor Health Report ---
         if (showReport) {
-            const format = opts.format ?? 'pretty';
             const cacheDirs = [
                 ...new Set(
                     skills
@@ -127,7 +128,7 @@ export async function fathomAction(options: any, command: any) {
                 )
             ];
             
-            if (format === 'pretty') {
+            if (isPrettyFormat) {
                 spinnies.add("harbor-scan", { text: `Scanning Harbor caches: ${kleur.cyan(cacheDirs.join(", "))}` });
             }
             
@@ -144,7 +145,7 @@ export async function fathomAction(options: any, command: any) {
             }
 
             if (skillPaths.length === 0) {
-                if (format === 'pretty') {
+                if (isPrettyFormat) {
                     spinnies.fail("harbor-scan", { text: "No vessels found to fathom. Check manifest or berths." });
                 } else {
                     console.error(JSON.stringify({ error: "No vessels found" }));
@@ -152,7 +153,9 @@ export async function fathomAction(options: any, command: any) {
                 return;
             }
 
-            if (format === 'pretty') spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
+            if (isPrettyFormat) {
+                spinnies.update("harbor-scan", { text: `Analyzing ${skillPaths.length} skills for context bloat...` });
+            }
             
             const thresholds = {
                 maxTokens: opts.maxTokens ? parseInt(opts.maxTokens) : undefined,
@@ -160,7 +163,7 @@ export async function fathomAction(options: any, command: any) {
                 minScore: opts.minScore ? parseFloat(opts.minScore) : undefined
             };
 
-            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar, opts.contracts);
+            const report = await profiler.generateHealthReport(skillPaths, thresholds, query, config.sonar, Boolean(opts.contracts));
             
             // Calculate Fleet Status for the report
             const fleetStatus = { berthed: 0, stowed: 0, dryDock: 0 };
@@ -183,7 +186,7 @@ export async function fathomAction(options: any, command: any) {
             report.fleetStatus = fleetStatus;
             report.vesselPlacements = vesselPlacements;
 
-            if (format === 'pretty') {
+            if (isPrettyFormat) {
                 spinnies.succeed("harbor-scan", { text: `Fleet audit complete. ${skillPaths.length} vessels scanned.` });
             }
             
@@ -245,7 +248,7 @@ export async function fathomAction(options: any, command: any) {
                     spinnies.update(`fathom-${skill.name}`, { text: `Conducting Sonar Audit for ${kleur.bold(skill.name)}...` });
                     try {
                         sonarResult = await profiler.conductSonarAudit(skill.name, cachedPath, query, config.sonar);
-                    } catch (err: any) {
+                    } catch {
                         // Sonar failed but we continue with heuristic
                     }
                 }
@@ -267,7 +270,12 @@ export async function fathomAction(options: any, command: any) {
 
                 let sonarText = kleur.gray("[Offline - Provide --query]");
                 if (sonarResult) {
-                    const sonarColor = sonarResult.score > 80 ? kleur.green : sonarResult.score > 50 ? kleur.yellow : kleur.red;
+                    let sonarColor = kleur.red;
+                    if (sonarResult.score > 80) {
+                        sonarColor = kleur.green;
+                    } else if (sonarResult.score > 50) {
+                        sonarColor = kleur.yellow;
+                    }
                     const barLength = 10;
                     const filledLength = Math.round((sonarResult.score / 100) * barLength);
                     const bar = sonarColor("█".repeat(filledLength)) + kleur.gray("░".repeat(barLength - filledLength));
@@ -293,18 +301,27 @@ export async function fathomAction(options: any, command: any) {
                 console.log(`    ${kleur.cyan("Confidence (Heuristic):")} ${heuristicText} ${heuristicSubtext}`);
                 console.log(`    ${kleur.cyan("Confidence (Sonar):")}     ${sonarText}`);
 
-                if (opts.contracts) {
-                    if (heuristic.contracts?.missingStandard) {
-                        console.log(`    ${kleur.yellow("Contracts:")}              ⚠️  Not explicitly configured for chaining. (See: https://docs.skill-harbor.app/concepts/skill-standards#-semantic-contracts-io)`);
-                    } else if (heuristic.contracts) {
-                        const reqStr = Object.keys(heuristic.contracts.requires).length > 0 
-                            ? Object.keys(heuristic.contracts.requires).join(", ") 
-                            : "none";
-                        const prodStr = Object.keys(heuristic.contracts.produces).length > 0 
-                            ? Object.keys(heuristic.contracts.produces).join(", ") 
-                            : "none";
-                        console.log(`    ${kleur.cyan("Contracts:")}              Requires: [${reqStr}] | Produces: [${prodStr}]`);
-                    }
+                const contracts = heuristic.contracts;
+                if (contracts?.status === "valid" && contracts.warnings.length > 0) {
+                    console.log(`    ${kleur.yellow("Contracts:")}              warning (${contracts.warnings.join("; ")})`);
+                } else if (contracts?.status === "valid") {
+                    const reqStr = Object.keys(contracts.requires).length > 0
+                        ? Object.keys(contracts.requires).join(", ")
+                        : "none";
+                    const prodStr = Object.keys(contracts.produces).length > 0
+                        ? Object.keys(contracts.produces).join(", ")
+                        : "none";
+                    console.log(`    ${kleur.cyan("Contracts:")}              ${kleur.green("healthy")} (Requires: [${reqStr}] | Produces: [${prodStr}])`);
+                } else if (contracts?.status === "invalid") {
+                    console.log(`    ${kleur.red("Contracts:")}              invalid (${contracts.errors.join("; ")})`);
+                } else {
+                    console.log(`    ${kleur.yellow("Contracts:")}              warning (missing explicit chaining contract)`);
+                }
+
+                if (opts.contracts && contracts?.status === "invalid" && contracts.errors.length > 0) {
+                    console.log(`    ${kleur.red("Contract Errors:")}        ${contracts.errors.join("; ")}`);
+                } else if (opts.contracts && contracts?.warnings.length) {
+                    console.log(`    ${kleur.yellow("Contract Warnings:")}     ${contracts.warnings.join("; ")}`);
                 }
 
                 if (showDetails) {
@@ -346,7 +363,7 @@ export async function fathomAction(options: any, command: any) {
                     }
 
                     console.log(kleur.gray("    ─────────────────────────────────────"));
-                    const ratingLabel = heuristic.score >= 9 ? "Excellent" : heuristic.score >= 7 ? "Good" : heuristic.score >= 5 ? "Fair" : heuristic.score >= 3 ? "Poor" : "Critical";
+                    const ratingLabel = getRatingLabel(heuristic.score);
                     console.log(`    ${heuristicEmoji} ${kleur.bold("Rating:")} ${heuristicColor(ratingLabel)} — ${getRatingAdvice(heuristic.score)}`);
                 }
 
@@ -364,7 +381,7 @@ export async function fathomAction(options: any, command: any) {
         }
 
         // 5. Interactive Ghost Docking
-        if (opts.ghosts && ghostSkillPaths.length > 0 && (!opts.format || opts.format === "pretty")) {
+        if (opts.ghosts && ghostSkillPaths.length > 0 && isPrettyFormat) {
             const targetLayer = useGlobalScope ? "global" : "local";
             const scopeLabel = useGlobalScope ? "global" : "local";
 
@@ -387,13 +404,29 @@ export async function fathomAction(options: any, command: any) {
             }
         }
     } catch (error: any) {
+        if (error?.message === "exit") {
+            throw error;
+        }
         printError(`Fathom failed: ${error.message}`);
     }
 }
 
 function printDetailRow(label: string, value: string, explanation: string): void {
-    const valColor = value.startsWith("+") ? kleur.green(value) : value === "0" ? kleur.gray(value) : kleur.red(value);
+    let valColor = kleur.red(value);
+    if (value.startsWith("+")) {
+        valColor = kleur.green(value);
+    } else if (value === "0") {
+        valColor = kleur.gray(value);
+    }
     console.log(`    ${kleur.bold(label.padEnd(12))} ${valColor.padEnd(5)}  ${kleur.gray(explanation)}`);
+}
+
+function getRatingLabel(score: number): string {
+    if (score >= 9) return "Excellent";
+    if (score >= 7) return "Good";
+    if (score >= 5) return "Fair";
+    if (score >= 3) return "Poor";
+    return "Critical";
 }
 
 function getRatingAdvice(score: number): string {

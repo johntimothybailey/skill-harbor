@@ -17,14 +17,14 @@ import { readFileSync } from "fs";
 const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 
 const program = new Command();
-const collectTargets = (value: string, previous: string[] = []) => {
+function collectTargets(value: string, previous: string[] = []): string[] {
     const targets = value
         .split(",")
         .map(target => target.trim())
         .filter(Boolean);
 
     return [...previous, ...targets];
-};
+}
 
 program
     .name("skill-harbor")
@@ -63,6 +63,7 @@ program
     .command("check")
     .description("Verifies that berthed skills have valid metadata and integrity.")
     .option("-g, --global", "Check global manifest skills")
+    .option("--strict", "Fail on missing or underspecified contracts in addition to malformed ones.")
     .action(checkAction);
 
 program
@@ -116,7 +117,7 @@ program
     .option("--max-tokens <number>", "Gate threshold: Maximum total tokens allowed.")
     .option("--max-bloat <percentage>", "Gate threshold: Maximum context bloat percentage (GPT-4o).")
     .option("--min-score <number>", "Gate threshold: Minimum average fleet wake score.")
-    .option("-c, --contracts", "Run semantic contract validation between skills to ensure I/O schema compatibility.")
+    .option("-c, --contracts", "Run strict/focused semantic contract auditing in addition to default contract health analysis.")
     .option("-g, --global", "Target the global manifest (~/.harbor).")
     .action(fathomAction);
 

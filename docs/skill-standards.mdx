@@ -74,21 +74,29 @@ Use `## Requires` and `## Produces` headers with an unordered list of code-ticke
 
 ```markdown
 ## Requires
-- `project_root`: The absolute path to the React project.
-- `target_file`: The relative path to the file for refactoring.
+- `project_root`: path
+- `target_file`: path
 
 ## Produces
-- `refactor_log`: A JSON payload containing the before/after line numbers.
-- `new_component`: The optimized source code as a string.
+- `refactor_log`: json
+- `new_component`: string
 ```
 
 ### Validation Rules
 
-When `skill-harbor fathom --contracts` runs:
+Contracts now participate in the default command model like this:
 
-- **Missing Standards**: If no `contracts` frontmatter or `## Requires`/`## Produces` sections are found, the skill is marked with a warning.
+- **`skill-harbor check`** validates contract structure by default.
+- **`skill-harbor check --strict`** escalates missing or underspecified contracts more aggressively.
+- **`skill-harbor fathom`** surfaces contract health as part of normal fleet analysis.
+- **`skill-harbor fathom --contracts`** acts as a stricter / more focused contract-audit mode during the migration period.
+
+That means:
+
+- **Missing Standards**: If no `contracts` frontmatter or `## Requires`/`## Produces` sections are found, the skill is surfaced as a warning by default.
+- **Malformed Structure**: If contract sections are malformed or declared types are invalid, `check` should fail.
 - **Missing Inputs**: If a skill requires a variable that no other skill produces, Fathom raises a **Warning** (the input may come from the user prompt).
-- **Type Mismatches**: If Skill A produces `user_id` as `integer` but Skill B requires it as `string`, Fathom throws a **Hard Validation Error (Exit Code 1)**.
+- **Type Mismatches**: If Skill A produces `user_id` as `integer` but Skill B requires it as `string`, Fathom can treat that as a fleet health problem and fail report gating.
 
 ### Customization
 

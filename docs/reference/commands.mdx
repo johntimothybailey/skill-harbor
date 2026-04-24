@@ -84,9 +84,13 @@ The skill intelligence and profiling engine. Measures token saturation, quality 
 - `--report`: Generates a high-level Harbor Health Report.
 - `--details`: Provides a deep heuristic breakdown for every skill.
 - `--query <text>`: Conducts a probabilistic **Sonar** audit using the configured LLM provider.
-- `--contracts`: Audits semantic I/O contract alignment between fleet members.
+- `--contracts`: Runs a stricter or more contract-focused semantic I/O audit mode during migration.
 - `--ghosts`: Scans agent folders for unregistered "Ghost" skills and offers to dock them.
 - `--scan-mode <mode>`: Ghost-only scan mode for `--ghosts`. `autodetect` is the default; `targets-only` uses the selected manifest's declared targets exactly.
+
+**Notes:**
+- Fathom now includes contract health in default output and report modes.
+- `--contracts` is now a stricter / more focused contract-audit surface rather than the only way to see contract health.
 
 *For more details on the science behind Fathom, see the [Fathom Deep Dive](/docs/foundations/fathom).*
 
@@ -155,6 +159,15 @@ Manage your agent's environment state.
 
 ## `check`
 Verifies that all berthed skills have valid metadata and are correctly indexed for agent discovery.
+
+**Flags:**
+- `-g, --global`: Check skills from the global manifest.
+- `--strict`: Escalate missing or underspecified contracts in addition to malformed ones.
+
+**Notes:**
+- `check` now validates contract structure by default as part of skill correctness.
+- Missing contracts are warnings by default.
+- Malformed or contradictory contract declarations fail the command.
 
 ---
 
