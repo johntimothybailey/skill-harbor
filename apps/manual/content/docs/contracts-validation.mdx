@@ -1,0 +1,99 @@
+---
+title: Contracts & Validation
+description: How Skill Harbor treats contracts as part of default validation and fleet analysis
+---
+
+# Contracts & Validation
+
+Skill Harbor now treats **contracts** as a more native part of the product instead of a niche add-on hidden behind `fathom --contracts`.
+
+The command model is now clearer:
+
+- **`check`** = structural validity
+- **`fathom`** = analysis and predictive fleet risk
+- **`voyager`** = empirical scenario behavior
+
+## Why this matters
+
+Contracts are one of the most important building blocks for reliable skill composition.
+
+If a skill declares the wrong inputs or outputs, or uses invalid types, that is not just an analytics detail — it is part of whether the skill is structurally sound in the first place.
+
+## `skill-harbor check`
+
+`check` now validates contract structure by default.
+
+### Default behavior
+- validates metadata
+- validates contract parsing and structure
+- reports whether contracts are:
+  - valid
+  - missing
+  - invalid
+
+### Default severity
+- **invalid contracts** fail `check`
+- **missing contracts** warn by default
+- **underspecified contracts** warn by default
+
+### Strict mode
+Use `check --strict` when you want tighter enforcement.
+
+In strict mode:
+- missing contracts can fail
+- underspecified contracts can fail
+
+## `skill-harbor fathom`
+
+Fathom now includes contract health as part of normal analysis.
+
+### Default behavior
+- per-skill output can show contract health
+- report mode can show:
+  - contract coverage
+  - contract warnings
+  - contract mismatches
+
+### `fathom --contracts`
+This flag still exists, but it should be understood as a **stricter or more focused contract audit mode** rather than the only way to see contract health.
+
+## Example: frontmatter contracts
+
+```yaml
+---
+name: fetch-logs
+description: Fetches application logs from AWS Cloudwatch
+contracts:
+  requires:
+    aws_region: string
+    service_name: string
+  produces:
+    log_stream: json array
+---
+```
+
+## Example: markdown contracts
+
+```markdown
+## Requires
+- `project_root`: path
+- `target_file`: path
+
+## Produces
+- `refactor_log`: json
+- `new_component`: string
+```
+
+## Mental model
+
+A simple way to remember the split:
+
+- **check** tells you whether the skill is structurally valid
+- **fathom** tells you whether the fleet looks risky or healthy
+- **voyager** tells you whether the scenario actually works
+
+## Related docs
+
+- `/docs/skill-standards`
+- `/docs/foundations/fathom`
+- `/docs/reference/commands`
