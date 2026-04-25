@@ -2,28 +2,35 @@
   "version": "1.0",
   "dependencies": {
     "scryer": "https://github.com/johntimothybailey/sia/skills/scryer",
-    "quartermaster": "./skills/quartermaster"
+    "quartermaster": "/Users/johnbailey/Development/Yamanu/skill-harbor/skills/quartermaster"
   },
   "skills": {
     "scryer": {
       "name": "scryer",
       "source": "https://github.com/johntimothybailey/sia/skills/scryer",
       "localPath": "/Users/johnbailey/Development/Yamanu/skill-harbor/.harbor/skills/scryer",
-      "lastSyncHash": "https://github.com/johntimothybailey/sia/skills/scryer:c0ec1c92c4ed71a094bcc39adcc0b414a317102c",
+      "lastSyncHash": "https://github.com/johntimothybailey/sia/skills/scryer:76860f416b8a60a0c6facc483310c2ca30362d66",
       "lastSyncTargets": [
         "claude",
-        "cursor"
+        "cursor",
+        "copilot",
+        "codex",
+        "rulesync"
       ]
-    },
-    "test-skill": {
-      "name": "test-skill",
-      "source": "local",
-      "localPath": ".harbor/test-skill"
     },
     "quartermaster": {
       "name": "quartermaster",
-      "source": "./skills/quartermaster",
-      "localPath": ""
+      "source": "/Users/johnbailey/Development/Yamanu/skill-harbor/skills/quartermaster",
+      "sourceType": "single",
+      "localPath": "/Users/johnbailey/Development/Yamanu/skill-harbor/.harbor/skills/quartermaster",
+      "lastSyncHash": "ae26087dd079d5ab3ed0f0904da02ec3",
+      "lastSyncTargets": [
+        "claude",
+        "cursor",
+        "copilot",
+        "codex",
+        "rulesync"
+      ]
     }
   }
 }

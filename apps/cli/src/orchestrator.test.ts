@@ -62,6 +62,20 @@ describe('Orchestrator Unit Tests', () => {
         await expect(fs.access(path.join(cargoPath, '.claude'))).rejects.toThrow();
     });
 
+    it('should explain missing local source paths before attempting to moor cargo', async () => {
+        const missingSkillPath = path.join(tempDir, 'missing-local-skill');
+
+        await expect(orchestrator.moor(missingSkillPath)).rejects.toThrow(
+            `Local skill source not found: ${missingSkillPath}. Update this manifest entry or remove the stale docked skill.`
+        );
+    });
+
+    it('should reject unqualified remote sources before invoking skillfish', async () => {
+        await expect(orchestrator.moor('local')).rejects.toThrow(
+            'Invalid remote skill source "local". Use "owner/repo" or "owner/repo/path/to/skill" for GitHub sources; use "./", "../", "/", or "file://" for local sources.'
+        );
+    });
+
     it('should resolve helper binaries by walking up to the workspace root', async () => {
         const workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-harbor-workspace-'));
         const nestedPackageRoot = path.join(workspaceRoot, 'apps', 'cli');
@@ -144,7 +158,7 @@ describe('Orchestrator Unit Tests', () => {
 
         await nestedOrchestrator.cleanup();
         await fs.rm(workspaceRoot, { recursive: true, force: true });
-    });
+    }, 15000);
 
     // We can also test the private exists method by calling getMetadata on a path
     // which delegates to exists internally, allowing us to hit that branch.

@@ -72,6 +72,54 @@ describe("ManifestManager", () => {
         expect(manager.getLocalPath()).toBe(path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json"));
     });
 
+    it("preserves relative manifest sources while exposing resolved runtime sources", async () => {
+        await fs.mkdir(path.join(workspaceDir, ".harbor"), { recursive: true });
+        await fs.writeFile(
+            path.join(workspaceDir, ".harbor", "harbor-manifest.json"),
+            JSON.stringify({
+                version: "1.0",
+                dependencies: {},
+                skills: {
+                    quartermaster: {
+                        name: "quartermaster",
+                        source: "./skills/quartermaster",
+                        localPath: ""
+                    }
+                }
+            }),
+            "utf-8"
+        );
+
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        const manifest = await manager.readMerged();
+
+        expect(manifest.skills.quartermaster.source).toBe("./skills/quartermaster");
+        expect(manifest.skills.quartermaster.resolvedSource).toBe(path.join(workspaceDir, "skills", "quartermaster"));
+    });
+
+    it("does not write runtime-only resolved sources back to manifests", async () => {
+        const manager = new ManifestManager({ cwd: workspaceDir });
+        await manager.init();
+
+        await manager.write({
+            version: "1.0",
+            dependencies: {},
+            skills: {
+                quartermaster: {
+                    name: "quartermaster",
+                    source: "./skills/quartermaster",
+                    resolvedSource: path.join(workspaceDir, "skills", "quartermaster"),
+                    localPath: ""
+                }
+            }
+        } as any);
+
+        const written = JSON.parse(await fs.readFile(path.join(workspaceDir, ".harbor", "harbor-manifest.json"), "utf-8"));
+
+        expect(written.skills.quartermaster.source).toBe("./skills/quartermaster");
+        expect(written.skills.quartermaster.resolvedSource).toBeUndefined();
+    });
+
     it("migrates a legacy local manifest filename to the overrides manifest path", async () => {
         const legacyPath = path.join(workspaceDir, "harbor-manifest.local.json");
         const preferredPath = path.join(workspaceDir, ".harbor", "harbor-manifest.overrides.json");
