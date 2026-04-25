@@ -2,20 +2,20 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { lstatSync } from "node:fs";
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import crypto from "node:crypto";
 import glob from "fast-glob";
 import kleur from "kleur";
-import Spinnies from "spinnies";
 import { GeneratedSkillEntry, ManifestLayer, ManifestManager, SkillEntry } from "../manifest";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, getAgentBerths, exists, getManagedAgentTargets, getSupportedTargetKeys } from "../utils";
 import { printHeader, printSuccess, printError, printInfo, promptEmptyProjectHarborAction, promptSelectTargets } from "../ui";
 import { migrateAction } from "./migrate";
 import { ProfilerService } from "../services/profiler";
+import { createSyncProgressReporter, type ProgressReporter } from "../progress";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Automates adding local-only harbor files and cache directories to .gitignore.
@@ -104,7 +104,7 @@ async function getSourceHash(source: string): Promise<string> {
 
             if (repo) {
                 const repoUrl = `https://github.com/${repo}.git`;
-                const { stdout } = await execAsync(`git ls-remote ${repoUrl} ${ref}`, { timeout: 5000 });
+                const { stdout } = await execFileAsync("git", ["ls-remote", repoUrl, ref], { timeout: 5000 });
                 const remoteHash = stdout.split(/\s+/)[0];
                 if (remoteHash) return `${source}:${remoteHash}`;
             }
@@ -159,6 +159,10 @@ type SyncLeafSkill = {
     previous?: GeneratedSkillEntry | SkillEntry;
 };
 
+function getSyncSource(skill: SkillEntry | GeneratedSkillEntry): string {
+    return (skill as SkillEntry).resolvedSource ?? skill.source;
+}
+
 function normalizeLocalSourcePath(source: string): string {
     return path.resolve(process.cwd(), source.replace("file://", ""));
 }
@@ -168,7 +172,7 @@ async function syncLeafSkill(params: {
     skillLayer: string;
     activeTargetConfigs: Array<{ path: string; label: string; key: string }>;
     manifestManager: any;
-    spinnies: Spinnies;
+    spinnies: ProgressReporter;
     options: any;
 }): Promise<GeneratedSkillEntry> {
     const { leaf, skillLayer, activeTargetConfigs, manifestManager, spinnies, options } = params;
@@ -268,7 +272,7 @@ export async function upAction(options: any, command: any) {
     const manifestManager = getManifestManager(opts);
     // Concurrent sync is easier to read as deterministic line updates than as
     // animated multi-spinner rendering, especially in mixed success/failure runs.
-    const spinnies = new Spinnies({ disableSpins: true });
+    const spinnies = createSyncProgressReporter();
 
     try {
         printHeader("Workspace Synchronization Initiated");
@@ -406,13 +410,13 @@ export async function upAction(options: any, command: any) {
         const syncPromises = skills.map(async (skill) => {
             try {
                 const skillLayer = skill.layer || (useGlobalScope ? "global" : "shared");
-                const currentSourceHash = await getSourceHash(skill.source);
+                const currentSourceHash = await getSourceHash(getSyncSource(skill));
                 const activeTargets = activeTargetConfigs.map(target => target.key);
                 const targetsChanged = JSON.stringify([...activeTargets].sort()) !== JSON.stringify([...(skill.lastSyncTargets || [])].sort());
                 const sourceChanged = currentSourceHash !== skill.lastSyncHash;
 
                 if (skill.sourceType === "folder") {
-                    const absoluteRoot = normalizeLocalSourcePath(skill.source);
+                    const absoluteRoot = normalizeLocalSourcePath(getSyncSource(skill));
                     const discovered = (await profiler.findSkills(absoluteRoot))
                         .filter(foundPath => path.resolve(foundPath) !== absoluteRoot)
                         .sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
@@ -504,7 +508,7 @@ export async function upAction(options: any, command: any) {
                 const syncedLeaf = await syncLeafSkill({
                     leaf: {
                         name: skill.name,
-                        source: skill.source,
+                        source: getSyncSource(skill),
                         previous: skill
                     },
                     skillLayer,

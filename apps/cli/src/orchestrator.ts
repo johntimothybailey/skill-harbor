@@ -2,19 +2,56 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
-import Spinnies from "spinnies";
 import kleur from "kleur";
+import type { ProgressReporter } from "./progress";
+
+function isExplicitLocalSource(source: string): boolean {
+    return source.startsWith("file://") || source.startsWith("/") || source.startsWith("./") || source.startsWith("../");
+}
+
+function resolveLocalSourcePath(source: string): string {
+    return path.resolve(process.cwd(), source.replace("file://", ""));
+}
+
+function parseRemoteSkillSource(source: string): { repo: string; skillName: string } {
+    const cleanSource = source
+        .trim()
+        .replace(/^https?:\/\/(www\.)?github\.com\//, "")
+        .replace(/\/$/, "");
+
+    const spaceParts = cleanSource.split(/\s+/).filter(Boolean);
+    let repo = "";
+    let skillName = "";
+
+    if (spaceParts.length > 1) {
+        repo = spaceParts[0];
+        skillName = spaceParts.slice(1).join("/");
+    } else {
+        const slashParts = cleanSource.split("/").filter(Boolean);
+        if (slashParts.length >= 2) {
+            repo = `${slashParts[0]}/${slashParts[1]}`;
+            skillName = slashParts.length > 2 ? slashParts.slice(2).join("/") : "";
+        }
+    }
+
+    const repoParts = repo.split("/");
+    if (repoParts.length !== 2 || repoParts.some(part => part.trim().length === 0)) {
+        throw new Error(`Invalid remote skill source "${source}". Use "owner/repo" or "owner/repo/path/to/skill" for GitHub sources; use "./", "../", "/", or "file://" for local sources.`);
+    }
+
+    return { repo, skillName };
+}
 
 export class Orchestrator {
     private tempDir: string;
     private debugMode: boolean;
-    private spinnies: Spinnies;
+    private spinnies: ProgressReporter;
     private skillName: string;
     private packageRoot: string;
 
     constructor(options: { 
         skillName: string, 
-        spinnies: Spinnies, 
+        spinnies: ProgressReporter,
         debug?: boolean,
         packageRoot?: string
     }) {
@@ -72,10 +109,15 @@ export class Orchestrator {
             // Create .claude directory so skillfish detects it as a project
             await fs.mkdir(path.join(this.tempDir, ".claude"), { recursive: true });
 
-            // Pass local paths directly if needed, otherwise parse skillfish owner/repo format
-            if (url.startsWith('file://') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) {
-                const localPath = url.replace('file://', '');
-                const localStats = await fs.stat(localPath);
+            // Pass explicit local paths directly, otherwise parse skillfish owner/repo format.
+            if (isExplicitLocalSource(url)) {
+                const localPath = resolveLocalSourcePath(url);
+                const localStats = await fs.stat(localPath).catch((error: any) => {
+                    if (error?.code === "ENOENT") {
+                        throw new Error(`Local skill source not found: ${localPath}. Update this manifest entry or remove the stale docked skill.`);
+                    }
+                    throw error;
+                });
                 const localCargoPath = path.join(this.tempDir, path.basename(localPath));
 
                 if (localStats.isDirectory()) {
@@ -89,23 +131,7 @@ export class Orchestrator {
                 return localCargoPath;
             }
 
-            // Handle full GitHub URLs by stripping protocol
-            let cleanUrl = url.replace(/^https?:\/\/(www\.)?github\.com\//, '');
-            
-            // Format for skillfish: 'owner/repo skillname'
-            let repo = cleanUrl;
-            let skillName = "";
-            const parts = cleanUrl.split(" ");
-            if (parts.length > 1) {
-                repo = parts[0];
-                skillName = parts[1];
-            } else {
-                const slashParts = cleanUrl.split("/");
-                if (slashParts.length >= 2) {
-                    repo = `${slashParts[0]}/${slashParts[1]}`;
-                    if (slashParts.length > 2) skillName = slashParts.slice(2).join("/");
-                }
-            }
+            const { repo, skillName } = parseRemoteSkillSource(url);
 
             const binPath = await this.resolveLocalBin("skillfish");
             const args = ["add", repo];

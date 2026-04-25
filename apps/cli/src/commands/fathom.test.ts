@@ -332,6 +332,133 @@ describe("fathomAction", () => {
         logSpy.mockRestore();
     });
 
+    it("shows contract health in default per-skill output without --contracts", async () => {
+        const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+        const options = {};
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => candidatePath === "/harbor/skill1");
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🛶",
+            shipClass: "Dinghy",
+            tokens: 100,
+            cost: { gpt4o: 0.001, gpt4oMini: 0.0001 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 7,
+            condition: "Calm Seas",
+            skillType: "Agent Skill",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: 0,
+                negativeConstraints: 0,
+                tagDensity: 0,
+                triggerClarity: 1
+            },
+            contracts: {
+                missingStandard: false,
+                requires: { input_text: "string" },
+                produces: { summary: "json" },
+                isValid: true,
+                status: "valid",
+                errors: [],
+                warnings: []
+            }
+        });
+
+        await fathomAction(options, mockCommand);
+
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Contracts:"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("healthy"));
+        logSpy.mockRestore();
+    });
+
+    it("includes contract coverage and mismatches in report mode by default", async () => {
+        const options = { report: true, format: "json" };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        mockProfiler.findSkills.mockResolvedValue(["/harbor/skill1"]);
+        mockProfiler.generateHealthReport.mockResolvedValue({
+            totalSkills: 1,
+            totalTokens: 100,
+            totalCost: { gpt4o: 0.001, gpt4oMini: 0.0001 },
+            averageHeuristicConfidence: 7,
+            composition: { agent: 1, tools: 0 },
+            shipDistribution: { Dinghy: 1, Schooner: 0, Brigantine: 0, Frigate: 0, Galleon: 0 },
+            contextBloat: [],
+            status: { isHealthy: true, violations: [] },
+            contractCoverage: 100,
+            contractWarnings: [],
+            contractMismatches: []
+        });
+        (exists as any).mockImplementation(async (candidatePath: string) => candidatePath === "/codex/skill1");
+        (getAgentBerths as any).mockResolvedValue([{ path: "/codex", label: "Codex", key: "codex" }]);
+        (getStowageBerths as any).mockResolvedValue([]);
+
+        await fathomAction(options, mockCommand);
+
+        expect(mockProfiler.generateHealthReport).toHaveBeenCalledWith(
+            ["/harbor/skill1"],
+            expect.anything(),
+            undefined,
+            expect.anything(),
+            false
+        );
+        expect(printHarborHealthReport).toHaveBeenCalledWith(expect.objectContaining({
+            contractCoverage: 100
+        }), "json");
+    });
+
+    it("includes parser-level contract warnings in report mode and strict mode", async () => {
+        const options = { report: true, format: "json", contracts: true };
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        mockProfiler.findSkills.mockResolvedValue(["/harbor/skill1"]);
+        mockProfiler.generateHealthReport.mockResolvedValue({
+            totalSkills: 1,
+            totalTokens: 100,
+            totalCost: { gpt4o: 0.001, gpt4oMini: 0.0001 },
+            averageHeuristicConfidence: 7,
+            composition: { agent: 1, tools: 0 },
+            shipDistribution: { Dinghy: 1, Schooner: 0, Brigantine: 0, Frigate: 0, Galleon: 0 },
+            contextBloat: [],
+            status: { isHealthy: false, violations: ["[skill1] contracts.requires.input_text is underspecified."] },
+            contractCoverage: 100,
+            contractWarnings: ["[skill1] contracts.requires.input_text is underspecified."],
+            contractMismatches: []
+        });
+        (exists as any).mockImplementation(async (candidatePath: string) => candidatePath === "/codex/skill1");
+        (getAgentBerths as any).mockResolvedValue([{ path: "/codex", label: "Codex", key: "codex" }]);
+        (getStowageBerths as any).mockResolvedValue([]);
+        vi.spyOn(process, "exit").mockImplementation((() => {
+            throw new Error("exit");
+        }) as any);
+
+        await expect(fathomAction(options, mockCommand)).rejects.toThrow("exit");
+
+        expect(printHarborHealthReport).toHaveBeenCalledWith(expect.objectContaining({
+            contractWarnings: ["[skill1] contracts.requires.input_text is underspecified."]
+        }), "json");
+    });
+
     it("adds structured vessel placement detail to report output", async () => {
         const options = { report: true, format: "json" };
         const mockCommand = { opts: vi.fn().mockReturnValue(options) };

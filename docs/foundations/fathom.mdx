@@ -61,16 +61,25 @@ Fathom can be used as a **Pull Request Gate** to prevent context exhaustion or q
 - **`--max-tokens <n>`**: Fail if total fleet tokens exceed limit.
 - **`--max-bloat <p>`**: Fail if GPT-4o context saturation exceeds percentage.
 - **`--min-score <s>`**: Fail if average fleet quality score falls below threshold.
-- **`--contracts`**: Fail if explicit upstream outputs do not match downstream input requirements.
+- **default contract health**: contract warnings, invalid declarations, and mismatch data are part of normal Fathom analysis.
+- **`--contracts`**: Run a stricter or more contract-focused audit mode during the migration period.
 - **`--format json`**: Output machine-parsable data for programmatic consumption.
 
 ---
 
 ## 🤝 Semantic Contracts (Chaining Validation)
 
-To prevent hallucinations when passing unstructured data between linked skills, Fathom includes a **Semantic Contract Validation** engine. By running `skill-harbor fathom --contracts`, Fathom globally inspects all your skills to ensure their input and output requirements align safely.
+To prevent hallucinations when passing unstructured data between linked skills, Fathom includes a **Semantic Contract Validation** engine.
 
-If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill B requires `string`), Fathom will aggressively reject the build (Exit Code 1).
+Contract health is now part of the normal Fathom model:
+
+- default output can show whether a skill's contracts are healthy, missing, or invalid
+- `--report` can surface fleet-level contract coverage, warnings, and mismatches
+- severe cross-skill mismatches can affect fleet health status
+
+Use `skill-harbor fathom --contracts` when you want a stricter or more focused contract audit during the migration period.
+
+If any explicit type mismatch is found (e.g., Skill A produces `json`, but Skill B requires `string`), Fathom can treat that as a hard fleet integrity problem.
 
 ---
 

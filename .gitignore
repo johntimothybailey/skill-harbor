@@ -11,7 +11,7 @@ tsconfig.tsbuildinfo
 .env*
 .npmrc
 *.tgz
-harbor-manifest.local.json
+.harbor/harbor-manifest.overrides.json
 harbor-compass.yaml
 *voyage-test.yaml
 

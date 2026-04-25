@@ -15,6 +15,10 @@ export interface ContractValidation {
     missingStandard: boolean;
     requires: Record<string, string>;
     produces: Record<string, string>;
+    isValid: boolean;
+    status: "valid" | "missing" | "invalid";
+    errors: string[];
+    warnings: string[];
 }
 
 export interface FathomMetrics {
@@ -85,6 +89,7 @@ export interface HarborHealthReport {
     };
     contractMismatches?: string[];
     contractWarnings?: string[];
+    contractCoverage?: number;
     fleetStatus?: {
         berthed: number;
         stowed: number;

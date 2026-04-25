@@ -5,6 +5,7 @@ import glob from "fast-glob";
 import { getEncoding } from "js-tiktoken";
 import { FathomMetrics, ShipClass, WaterCondition, SkillType, HarborHealthReport, FathomThresholds } from "../types/profiler";
 import { ConfigManager, SonarConfig } from "./config";
+import { calculateContractCompatibility, parseAndValidateContracts } from "./contracts";
 
 export class ProfilerService {
     private readonly encoding = getEncoding("cl100k_base");
@@ -37,12 +38,11 @@ export class ProfilerService {
      * Confidence (Heuristic): Calculates trigger likelihood (1-10) based on local heuristics.
      */
     async calculateHeuristicConfidence(skillPath: string): Promise<FathomMetrics["heuristicConfidence"] & { heuristics: FathomMetrics["heuristics"], validation: FathomMetrics["validation"], contracts: FathomMetrics["contracts"] }> {
-        const { metadata, content } = await this.readSkillMetadata(skillPath);
+        const { metadata, content, parseError } = await this.readSkillMetadata(skillPath);
         const validation = this.validateMetadata(metadata);
         const skillType = await this.detectSkillType(skillPath, metadata);
 
-        const configManager = ConfigManager.getInstance();
-        const contracts = this.extractContracts(metadata, content, configManager);
+        const contracts = this.getContractsForMetadata(metadata, content, parseError);
 
         let result: { 
             score: number; 
@@ -72,6 +72,11 @@ export class ProfilerService {
             heuristics: result.heuristics,
             contracts
         };
+    }
+
+    async getContractValidation(skillPath: string): Promise<FathomMetrics["contracts"]> {
+        const { metadata, content, parseError } = await this.readSkillMetadata(skillPath);
+        return this.getContractsForMetadata(metadata, content, parseError);
     }
 
     /**
@@ -167,7 +172,7 @@ export class ProfilerService {
     /**
      * Generates a comprehensive health report by aggregating metrics from all discovered skills.
      */
-    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds, query?: string, sonarConfig?: SonarConfig, validateContracts: boolean = false): Promise<HarborHealthReport> {
+    async generateHealthReport(skillPaths: string[], thresholds?: FathomThresholds, query?: string, sonarConfig?: SonarConfig, strictContracts: boolean = false): Promise<HarborHealthReport> {
         let totalTokens = 0;
         let totalScoreSum = 0;
         let totalSonarSum = 0;
@@ -184,10 +189,11 @@ export class ProfilerService {
             "Galleon": 0
         };
 
-        const globalProduces: Record<string, { type: string; skillName: string }[]> = {};
-        const globalRequires: { skillName: string; variableName: string; requiredType: string }[] = [];
+        const contractsBySkill: Array<{ skillName: string; contracts: NonNullable<FathomMetrics["contracts"]> }> = [];
         const contractWarnings: string[] = [];
         const contractMismatches: string[] = [];
+        let explicitContractsCount = 0;
+        const violations: string[] = [];
 
         for (const skillPath of skillPaths) {
             const skillName = path.basename(skillPath);
@@ -215,16 +221,23 @@ export class ProfilerService {
 
             shipDistribution[disp.shipClass]++;
 
-            if (validateContracts) {
-                if (heuristic.contracts?.missingStandard) {
-                    contractWarnings.push(`[${skillName}] ⚠️  Not explicitly configured for chaining.`);
-                } else if (heuristic.contracts) {
-                    for (const [varName, type] of Object.entries(heuristic.contracts.produces)) {
-                        if (!globalProduces[varName]) globalProduces[varName] = [];
-                        globalProduces[varName].push({ type, skillName });
+            if (heuristic.contracts) {
+                contractsBySkill.push({ skillName, contracts: heuristic.contracts });
+                if (!heuristic.contracts.missingStandard) {
+                    explicitContractsCount++;
+                }
+                if (heuristic.contracts.warnings.length > 0) {
+                    const parserWarnings = heuristic.contracts.warnings.map(warning => `[${skillName}] ${warning}`);
+                    contractWarnings.push(...parserWarnings);
+                    if (strictContracts) {
+                        violations.push(...parserWarnings);
                     }
-                    for (const [varName, requiredType] of Object.entries(heuristic.contracts.requires)) {
-                        globalRequires.push({ skillName, variableName: varName, requiredType });
+                }
+                if (heuristic.contracts.status === "invalid") {
+                    const invalidMessage = `[${skillName}] Invalid contract declaration: ${heuristic.contracts.errors.join("; ")}`;
+                    contractWarnings.push(invalidMessage);
+                    if (strictContracts) {
+                        violations.push(invalidMessage);
                     }
                 }
             }
@@ -240,7 +253,6 @@ export class ProfilerService {
             { model: "GPT-4o-mini", limit: 128000, percentage: (totalTokens / 128000) * 100 }
         ];
 
-        const violations: string[] = [];
         if (thresholds) {
             if (thresholds.maxTokens && totalTokens > thresholds.maxTokens) {
                 violations.push(`Total tokens (${totalTokens.toLocaleString()}) exceed threshold of ${thresholds.maxTokens.toLocaleString()}.`);
@@ -254,22 +266,16 @@ export class ProfilerService {
             }
         }
 
-        if (validateContracts) {
-            for (const req of globalRequires) {
-                const producers = globalProduces[req.variableName];
-                if (!producers || producers.length === 0) {
-                    contractWarnings.push(`[${req.skillName}] Requires '${req.variableName}', but no skill in the harbor produces it. (May be provided by prompt).`);
-                } else {
-                    for (const producer of producers) {
-                        if (producer.type.toLowerCase() !== req.requiredType.toLowerCase()) {
-                            const mismatchMsg = `[${req.skillName}] Type mismatch for '${req.variableName}': ${req.skillName} requires '${req.requiredType}', but ${producer.skillName} produces '${producer.type}'.`;
-                            contractMismatches.push(mismatchMsg);
-                            violations.push(mismatchMsg); // Fails CI/CD
-                        }
-                    }
-                }
+        const compatibility = calculateContractCompatibility(contractsBySkill);
+        contractWarnings.push(...compatibility.warnings);
+        contractMismatches.push(...compatibility.mismatches);
+
+        if (strictContracts) {
+            for (const warning of compatibility.warnings) {
+                violations.push(warning);
             }
         }
+        violations.push(...compatibility.mismatches);
 
         return {
             totalSkills: skillPaths.length,
@@ -288,7 +294,8 @@ export class ProfilerService {
                 violations
             },
             contractMismatches,
-            contractWarnings
+            contractWarnings,
+            contractCoverage: skillPaths.length > 0 ? (explicitContractsCount / skillPaths.length) * 100 : 0
         };
     }
 
@@ -478,59 +485,44 @@ export class ProfilerService {
         return Array.prototype.concat(...files);
     }
 
-    private extractContracts(metadata: any, content: string, config: ConfigManager): FathomMetrics["contracts"] {
+    private getContractsForMetadata(metadata: any, content: string, parseError?: string): FathomMetrics["contracts"] {
+        if (parseError) {
+            return {
+                missingStandard: false,
+                requires: {},
+                produces: {},
+                isValid: false,
+                status: "invalid",
+                errors: [parseError],
+                warnings: []
+            };
+        }
+
+        const configManager = ConfigManager.getInstance();
         let contractsConfig;
         try {
-            contractsConfig = config.getConfig().contracts;
+            contractsConfig = configManager.getConfig().contracts;
         } catch {
             contractsConfig = { requiresHeader: "Requires", producesHeader: "Produces" };
         }
-        const requiresHeader = contractsConfig?.requiresHeader || "Requires";
-        const producesHeader = contractsConfig?.producesHeader || "Produces";
 
-        let requires: Record<string, string> = {};
-        let produces: Record<string, string> = {};
-        let missingStandard = true;
-
-        // 1. Try YAML frontmatter first
-        if (metadata.contracts) {
-            missingStandard = false;
-            requires = metadata.contracts.requires || {};
-            produces = metadata.contracts.produces || {};
-            return { missingStandard, requires, produces };
-        }
-
-        // 2. Fallback to Markdown parsing
-        const parseSection = (headerName: string): Record<string, string> => {
-            const result: Record<string, string> = {};
-            const headerRegex = new RegExp(`##\\s+${headerName}\\s*\\n([\\s\\S]*?)(?:\\n##|$)`, 'i');
-            const match = content.match(headerRegex);
-            
-            if (match && match[1]) {
-                missingStandard = false;
-                const sectionContent = match[1];
-                
-                const itemRegex = /-\s*`?([a-zA-Z0-9_\-]+)`?:\s*(.+)/g;
-                let itemMatch;
-                while ((itemMatch = itemRegex.exec(sectionContent)) !== null) {
-                    result[itemMatch[1]] = itemMatch[2].trim();
-                }
-            }
-            return result;
-        };
-
-        requires = parseSection(requiresHeader);
-        produces = parseSection(producesHeader);
-
-        return { missingStandard, requires, produces };
+        return parseAndValidateContracts(metadata, content, contractsConfig);
     }
 
-    private async readSkillMetadata(skillPath: string): Promise<{ metadata: any, content: string }> {
+    private async readSkillMetadata(skillPath: string): Promise<{ metadata: any, content: string, parseError?: string }> {
         const skillFile = path.join(skillPath, "SKILL.md");
         try {
             const rawContent = await fs.readFile(skillFile, "utf-8");
-            const { data, content } = matter(rawContent);
-            return { metadata: data, content };
+            try {
+                const { data, content } = matter(rawContent);
+                return { metadata: data, content };
+            } catch (error: any) {
+                return {
+                    metadata: {},
+                    content: rawContent,
+                    parseError: `Failed to parse SKILL.md frontmatter: ${error.message}`
+                };
+            }
         } catch {
             return { metadata: {}, content: "" };
         }

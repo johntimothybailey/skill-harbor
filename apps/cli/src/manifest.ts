@@ -32,6 +32,7 @@ export interface SkillEntry {
     generated?: boolean; // Expanded runtime-only child marker
     managedBy?: string; // Expanded runtime-only parent collection name
     collectionRoot?: string; // Expanded runtime-only folder root
+    resolvedSource?: string; // Runtime-only absolute source used for sync without rewriting manifests
 }
 
 export interface HarborManifest {
@@ -283,16 +284,17 @@ export class ManifestManager {
             ...(localManifest.targets || [])
         ]);
 
-        // Normalize local paths relative to manifest location
+        // Resolve local paths relative to manifest location for runtime use without
+        // mutating the manifest source that should be written back to disk.
         for (const skill of Object.values(mergedSkills)) {
             if (skill.source.startsWith('.') || skill.source.startsWith('file://.')) {
                 let manifestDir = this.cwd;
                 if (skill.layer === "global") manifestDir = path.dirname(ManifestManager.getGlobalPath());
-                
+
                 const rawPath = skill.source.replace('file://', '');
                 const absolutePath = path.resolve(manifestDir, rawPath);
-                // Maintain file:// protocol if it was present
-                skill.source = skill.source.startsWith('file://') ? `file://${absolutePath}` : absolutePath;
+                // Maintain file:// protocol if it was present.
+                skill.resolvedSource = skill.source.startsWith('file://') ? `file://${absolutePath}` : absolutePath;
             }
         }
 
@@ -351,6 +353,7 @@ export class ManifestManager {
         if (cleanManifest.skills) {
             for (const skill of Object.values(cleanManifest.skills as Record<string, any>)) {
                 delete skill.layer;
+                delete skill.resolvedSource;
             }
         }
 

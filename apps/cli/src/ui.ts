@@ -103,6 +103,11 @@ export const printHarborHealthReport = (report: any, format: string = 'pretty') 
         }
     }
 
+    if (report.contractCoverage !== undefined) {
+        content += `${kleur.bold().magenta('🤝 Contract Coverage')}\n`;
+        content += `${report.contractCoverage.toFixed(1)}% of scanned skills declare explicit contracts\n\n`;
+    }
+
     if (report.contractMismatches || report.contractWarnings) {
         if ((report.contractMismatches && report.contractMismatches.length > 0) || (report.contractWarnings && report.contractWarnings.length > 0)) {
             content += `${kleur.bold().magenta('🤝 Contract Integrity')}\n`;

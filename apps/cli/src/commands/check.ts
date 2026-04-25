@@ -6,12 +6,15 @@ import { resolveCommandScope } from "../command-scope";
 import { Orchestrator } from "../orchestrator";
 import { getManifestManager, exists, getAgentBerths } from "../utils";
 import { printHeader, printError, printInfo } from "../ui";
+import { ProfilerService } from "../services/profiler";
 
 export async function checkAction(options: any, command: any) {
     const opts = command.opts();
     const manifestManager = getManifestManager(opts);
     const baseDir = opts.global ? os.homedir() : process.cwd();
     const spinnies = new Spinnies();
+    const profiler = new ProfilerService();
+    let hasFailures = false;
 
     try {
         printHeader("Lighthouse Health Check");
@@ -59,6 +62,17 @@ export async function checkAction(options: any, command: any) {
                 ? kleur.green(`📡 Discoverable (${meta!.description.substring(0, 40)}...)`)
                 : kleur.red("📡 Blind (Missing or invalid SKILL.md)");
 
+            const contracts = (await profiler.getContractValidation(cachedPath)) ?? {
+                missingStandard: true,
+                requires: {},
+                produces: {},
+                isValid: true,
+                status: "missing" as const,
+                errors: [],
+                warnings: []
+            };
+            const contractStatus = formatContractCheckStatus(contracts);
+
             // 2. Berth Verification
             const mooredIn: string[] = [];
             const missingFrom: string[] = [];
@@ -84,15 +98,44 @@ export async function checkAction(options: any, command: any) {
                 berthStatus = kleur.gray("No active agent berths detected.");
             }
 
-            const statusText = `[${kleur.bold(skill.name)}]${layerLabel}\n    ${metaStatus}\n    ${berthStatus}`;
+            const statusText = `[${kleur.bold(skill.name)}]${layerLabel}\n    ${metaStatus}\n    ${contractStatus}\n    ${berthStatus}`;
+            const contractInvalid = contracts.status === "invalid";
+            const contractMissingStrict = opts.strict && contracts.status === "missing";
+            const contractWarningStrict = opts.strict && contracts.warnings.length > 0;
+            const skillFailed = !isDiscoverable || missingFrom.length > 0 || contractInvalid || contractMissingStrict || contractWarningStrict;
             
-            if (isDiscoverable && missingFrom.length === 0) {
+            if (!skillFailed) {
                 spinnies.succeed(`check-${skill.name}`, { text: statusText });
             } else {
+                hasFailures = true;
                 spinnies.fail(`check-${skill.name}`, { text: statusText });
             }
         }
+
+        if (hasFailures) {
+            process.exit(1);
+        }
     } catch (error: any) {
+        if (error?.message === "exit") {
+            throw error;
+        }
         printError(`Check failed: ${error.message}`);
     }
+}
+
+function formatContractCheckStatus(contracts: NonNullable<Awaited<ReturnType<ProfilerService["getContractValidation"]>>>) {
+    if (contracts.status === "valid") {
+        const requires = Object.keys(contracts.requires);
+        const produces = Object.keys(contracts.produces);
+        if (contracts.warnings.length > 0) {
+            return kleur.yellow(`🤝 Contracts: warning (${contracts.warnings.join("; ")})`);
+        }
+        return kleur.green(`🤝 Contracts: valid${requires.length || produces.length ? ` (Requires: [${requires.join(", ") || "none"}] | Produces: [${produces.join(", ") || "none"}])` : ""}`);
+    }
+
+    if (contracts.status === "invalid") {
+        return kleur.red(`🤝 Contracts: invalid (${contracts.errors.join("; ")})`);
+    }
+
+    return kleur.yellow("🤝 Contracts: missing");
 }

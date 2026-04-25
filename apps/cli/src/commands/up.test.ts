@@ -31,8 +31,7 @@ vi.mock('spinnies', () => ({
 }));
 vi.mock('fast-glob');
 vi.mock('node:child_process', () => ({
-    exec: vi.fn(),
-    execAsync: vi.fn().mockResolvedValue({ stdout: '' })
+    execFile: vi.fn((_command: string, _args: string[], _options: any, callback: any) => callback(null, { stdout: '' }))
 }));
 
 import { lstatSync } from 'node:fs';
@@ -545,6 +544,37 @@ describe('upAction', () => {
         await upAction(options, mockCommand);
 
         expect(mockOrchestrator.moor).toHaveBeenCalledWith('./local-skill');
+    });
+
+    it('should sync with resolved relative paths without persisting absolute sources', async () => {
+        const options = {};
+        const mockCommand = {
+            opts: vi.fn().mockReturnValue(options),
+        };
+        process.cwd = vi.fn().mockReturnValue('/app');
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                'quartermaster': {
+                    name: 'quartermaster',
+                    source: './skills/quartermaster',
+                    resolvedSource: '/app/skills/quartermaster',
+                    layer: 'shared'
+                }
+            }
+        });
+        (glob as any).mockResolvedValue(['/app/skills/quartermaster/SKILL.md']);
+
+        await upAction(options, mockCommand);
+
+        expect(mockOrchestrator.moor).toHaveBeenCalledWith('/app/skills/quartermaster');
+        expect(mockManifestManager.addSkill).toHaveBeenCalledWith(
+            expect.objectContaining({
+                name: 'quartermaster',
+                source: './skills/quartermaster',
+                localPath: '/harbor/quartermaster'
+            }),
+            'shared'
+        );
     });
 
     it('should report failures and exit 1', async () => {
