@@ -35,6 +35,11 @@ function formatStatusEntries(entries: BerthDetail[]): string {
     return entries.map(formatBerthDetail).join(", ");
 }
 
+function removeSpinner(spinnies: Spinnies, name: string): void {
+    spinnies.remove(name);
+    spinnies.stopAll();
+}
+
 export async function fathomAction(options: any, command: any) {
     const opts = command.opts();
     const manifestManager = getManifestManager(opts);
@@ -253,7 +258,7 @@ export async function fathomAction(options: any, command: any) {
                     }
                 }
 
-                spinnies.remove(`fathom-${skill.name}`);
+                removeSpinner(spinnies, `fathom-${skill.name}`);
 
                 const costGpt4 = displacement.cost.gpt4o.toFixed(4);
                 const costMini = displacement.cost.gpt4oMini.toFixed(6);
