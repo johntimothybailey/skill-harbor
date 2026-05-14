@@ -13,6 +13,8 @@ import {
 } from "../services/ghosts";
 import { printHarborHealthReport, printHeader, printInfo } from "../ui";
 
+const spinniesInstances = vi.hoisted(() => [] as any[]);
+
 vi.mock("../command-scope");
 vi.mock("../utils");
 vi.mock("../services/config");
@@ -22,11 +24,16 @@ vi.mock("../ui");
 vi.mock("node:os");
 vi.mock("spinnies", () => ({
     default: class MockSpinnies {
+        constructor() {
+            spinniesInstances.push(this);
+        }
+
         add = vi.fn();
         update = vi.fn();
         fail = vi.fn();
         succeed = vi.fn();
         remove = vi.fn();
+        stopAll = vi.fn();
     }
 }));
 
@@ -42,6 +49,7 @@ describe("fathomAction", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        spinniesInstances.length = 0;
         Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
         Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
 
@@ -289,6 +297,46 @@ describe("fathomAction", () => {
         expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("✓ [skill1]"));
         expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("<Agent Skill>"));
         logSpy.mockRestore();
+    });
+
+    it("stops the spinner manager after removing an individual fathom spinner", async () => {
+        const options = {};
+        const mockCommand = { opts: vi.fn().mockReturnValue(options) };
+
+        mockManifestManager.readMerged.mockResolvedValue({
+            skills: {
+                skill1: { name: "skill1", source: "source1", layer: "shared" }
+            }
+        });
+        mockManifestManager.materializeSkills.mockReturnValue([{ name: "skill1", layer: "shared" }]);
+        (exists as any).mockImplementation(async (candidatePath: string) => (
+            candidatePath === "/harbor/skill1"
+        ));
+        mockProfiler.calculateDisplacement.mockResolvedValue({
+            icon: "🛳️",
+            shipClass: "Frigate",
+            tokens: 5001,
+            cost: { gpt4o: 0.025, gpt4oMini: 0.00075 }
+        });
+        mockProfiler.calculateHeuristicConfidence.mockResolvedValue({
+            score: 10,
+            condition: "Glassy Water",
+            skillType: "Agent Skill",
+            validation: { isProperlyFormatted: true, errors: [] },
+            heuristics: {
+                semanticVagueness: -1,
+                negativeConstraints: 0,
+                tagDensity: -2,
+                triggerClarity: -1
+            },
+            contracts: null
+        });
+
+        await fathomAction(options, mockCommand);
+
+        const spinniesInstance = spinniesInstances.at(-1);
+        expect(spinniesInstance.remove).toHaveBeenCalledWith("fathom-skill1");
+        expect(spinniesInstance.stopAll).toHaveBeenCalled();
     });
 
     it("shows API Tool in the default line and explains the type in details mode", async () => {
